@@ -18,6 +18,7 @@ export type GameState = {
   turn: Team;
   phase: "CLUE" | "GUESS";
   clue: { word: string; number: number } | null;
+  remainingGuesses: number;
   score: Record<Team, number>;
   chat: {
     [T in Team]: { role: "system" | "user" | "assistant"; content: string }[];

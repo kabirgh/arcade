@@ -9,6 +9,7 @@ export class CodenamesGame {
     turn: "red",
     phase: "CLUE",
     clue: null,
+    remainingGuesses: 0,
     score: { red: 0, blue: 0 },
     chat: { red: [], blue: [] },
   };
@@ -55,6 +56,7 @@ export class CodenamesGame {
       turn: "red",
       phase: "CLUE",
       clue: null,
+      remainingGuesses: 0,
       score: { red: 0, blue: 0 },
       chat: { red: [], blue: [] },
     };
@@ -70,6 +72,7 @@ export class CodenamesGame {
 
     this.gameState.clue = { word: clueWord, number: clueNum };
     this.gameState.phase = "GUESS";
+    this.gameState.remainingGuesses = clueNum + 1;
 
     this.gameState.chat[this.gameState.turn].push({
       role: "user",
@@ -118,12 +121,13 @@ export class CodenamesGame {
         content: `You picked the assassin! ${winner.toUpperCase()} team wins!`,
       });
       this.gameState.score[winner]++;
-      this.startGame(); // Reset the game
     } else if (
       (card.type === CardType.Red && this.gameState.turn === "red") ||
       (card.type === CardType.Blue && this.gameState.turn === "blue")
     ) {
       // Correct guess
+      this.gameState.remainingGuesses -= 1;
+
       this.gameState.chat[this.gameState.turn].push({
         role: "system",
         content: `Correct! That's a ${this.gameState.turn} card.`,
@@ -145,17 +149,15 @@ export class CodenamesGame {
           content: `${this.gameState.turn.toUpperCase()} team has found all their cards and wins!`,
         });
         this.gameState.score[this.gameState.turn]++;
-        this.startGame(); // Reset the game
         return this.gameState;
       }
-
-      // Team can continue guessing
-      return this.gameState;
     } else if (
       (card.type === CardType.Red && this.gameState.turn === "blue") ||
       (card.type === CardType.Blue && this.gameState.turn === "red")
     ) {
       // Incorrect guess - opponent's card
+      this.gameState.remainingGuesses = 0;
+
       const opponent: Team = this.gameState.turn === "red" ? "blue" : "red";
       this.gameState.chat[this.gameState.turn].push({
         role: "system",
@@ -176,20 +178,18 @@ export class CodenamesGame {
           content: `${opponent.toUpperCase()} team has found all their cards and wins!`,
         });
         this.gameState.score[opponent]++;
-        this.startGame(); // Reset the game
-        return this.gameState;
       }
-
-      // End turn
-      this.endTurn();
     } else {
       // Neutral card
+      this.gameState.remainingGuesses = 0;
+
       this.gameState.chat[this.gameState.turn].push({
         role: "system",
         content: `That's a neutral card. Turn ends.`,
       });
+    }
 
-      // End turn
+    if (this.gameState.remainingGuesses === 0) {
       this.endTurn();
     }
 

@@ -70,7 +70,6 @@ export const Codenames = () => {
   const [error, setError] = useState<string | null>(null);
   const [clueWord, setClueWord] = useState("");
   const [clueNumber, setClueNumber] = useState<number>(1);
-  const [remainingGuesses, setRemainingGuesses] = useState<number>(0);
   const clueInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch game state from server
@@ -82,11 +81,6 @@ export const Codenames = () => {
       }
       const data = await response.json();
       setGameState(data.state);
-
-      // Set remaining guesses based on clue if in GUESS phase
-      if (data.state.phase === "GUESS" && data.state.clue) {
-        setRemainingGuesses(data.state.clue.number + 1);
-      }
     } catch (error) {
       console.error("Failed to fetch game state:", error);
       setError("Failed to fetch game state");
@@ -105,7 +99,6 @@ export const Codenames = () => {
       }
       const data = await response.json();
       setGameState(data.state);
-      setRemainingGuesses(0);
     } catch (error) {
       console.error("Failed to start game:", error);
       setError("Failed to start game");
@@ -141,9 +134,6 @@ export const Codenames = () => {
       const data = await response.json();
       setGameState(data.state);
 
-      // Set remaining guesses based on the clue number
-      setRemainingGuesses(clueNumber + 1);
-
       setClueWord("");
       if (clueInputRef.current) {
         clueInputRef.current.value = "";
@@ -164,7 +154,7 @@ export const Codenames = () => {
       !clickedCard ||
       clickedCard.isRevealed ||
       gameState.phase !== "GUESS" ||
-      remainingGuesses <= 0
+      gameState.remainingGuesses <= 0
     ) {
       return;
     }
@@ -187,20 +177,6 @@ export const Codenames = () => {
       }
 
       setGameState(data.state);
-
-      // Decrement remaining guesses
-      const newRemainingGuesses = remainingGuesses - 1;
-      setRemainingGuesses(newRemainingGuesses);
-
-      // Check if the guess was incorrect (card type doesn't match team color) or if the remaining guesses are zero
-      const cardTypeMatchesTeam =
-        (gameState.turn === "red" && clickedCard.type === CardType.Red) ||
-        (gameState.turn === "blue" && clickedCard.type === CardType.Blue);
-
-      if (!cardTypeMatchesTeam || newRemainingGuesses === 0) {
-        // Allow the API to handle turn switching by not doing anything special here
-        // The updated gameState should reflect the new turn and phase
-      }
     } catch (error: any) {
       console.error("Failed to make guess:", error);
       setError(error.message || "Failed to make guess");
@@ -211,13 +187,6 @@ export const Codenames = () => {
     // Start game when component mounts
     startGame();
   }, []);
-
-  // Update remaining guesses when a new clue is set in the game state
-  useEffect(() => {
-    if (gameState && gameState.clue && gameState.phase === "GUESS") {
-      setRemainingGuesses(gameState.clue.number + 1);
-    }
-  }, [gameState?.clue, gameState?.phase]);
 
   if (loading) {
     return <div>Loading game...</div>;
@@ -250,7 +219,7 @@ export const Codenames = () => {
       className="grid items-center min-h-screen min-w-full"
       style={{
         gridTemplateColumns: "2fr 6fr 2fr",
-        gridTemplateRows: "1fr 7fr 2fr",
+        gridTemplateRows: "1.2fr 7fr 1.8fr",
         gridTemplateAreas: `
           "header header header"
           "left center right"
@@ -317,21 +286,21 @@ export const Codenames = () => {
           gridArea: "header",
         }}
       >
-        <div className="flex space-x-4 items-center">
+        <div className="flex flex-col items-center font-bold">
           <div
-            className={`font-bold ${
-              gameState.turn === "red" ? "text-[#D13030]" : "text-[#4183CC]"
-            }`}
+            style={{
+              color: gameState.turn === "red" ? "#D13030" : "#4183CC",
+            }}
           >
-            Current turn: {gameState.turn.toUpperCase()} -{" "}
-            {gameState.phase === "CLUE" ? "Give clue" : "Guess"}
+            {gameState.turn.toUpperCase()}
           </div>
+          <div>{gameState.phase === "CLUE" ? "Give clue" : "Guess"}</div>
           {gameState.clue && (
             <div className="font-bold">
               Current clue: {gameState.clue.word} ({gameState.clue.number})
               {gameState.phase === "GUESS" && (
                 <span className="ml-2">
-                  Remaining guesses: {remainingGuesses}
+                  Remaining guesses: {gameState.remainingGuesses}
                 </span>
               )}
             </div>
@@ -376,8 +345,6 @@ export const Codenames = () => {
             <button
               className="h-full text-white bg-blue-700 hover:bg-blue-800 cursor-pointer px-3 py-1.5 rounded-sm"
               onClick={() => {
-                // End turn early by setting remaining guesses to 0 and triggering a guess with a non-existent word
-                setRemainingGuesses(0);
                 fetch("/api/codenames/end-turn", {
                   method: "POST",
                   headers: {

@@ -1,21 +1,15 @@
-# bun-react-tailwind-template
+# Elysia with Bun runtime
 
-To install dependencies:
-
+## Getting Started
+To get started with this template, simply paste this command into your terminal:
 ```bash
-bun install
+bun create elysia ./elysia-example
 ```
 
-To start a development server:
-
+## Development
+To start the development server run:
 ```bash
-bun dev
+bun run dev
 ```
 
-To run for production:
-
-```bash
-bun start
-```
-
-This project was created using `bun init` in bun v1.2.12. [Bun](https://bun.sh) is a fast all-in-one JavaScript runtime.
+Open http://localhost:3000/ with your browser to see the result.

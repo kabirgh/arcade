@@ -8,14 +8,14 @@ export function App() {
   return (
     <div className="min-h-screen min-w-full mx-auto text-center relative z-10">
       <Switch>
-        <Route path="/codenames">
-          <Codenames />
+        <Route path="/">
+          <Home />
         </Route>
         <Route path="/join">
           <JoinScreen />
         </Route>
-        <Route path="/">
-          <Home />
+        <Route path="/codenames">
+          <Codenames />
         </Route>
         <Route>404 Not Found</Route>
       </Switch>

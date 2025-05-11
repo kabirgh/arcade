@@ -23,7 +23,7 @@ if (process.env.NODE_ENV === "production") {
     .use(html()) // Enables HTML templating
     .use(
       staticPlugin({
-        assets: "client/dist", // Use forward slashes for portability
+        assets: "client\\dist", // Do not change: must be escaped backslash to work on Windows
         prefix: "/",
       })
     )

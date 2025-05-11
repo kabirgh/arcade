@@ -4,7 +4,18 @@ import { html } from "@elysiajs/html";
 import { addCodenamesRoutes } from "./codenames";
 import path from "path";
 
-const app = new Elysia();
+const app = new Elysia().ws("/ws", {
+  message(ws, message) {
+    console.log(message);
+    ws.send(JSON.stringify({ type: "join" }));
+  },
+  open(ws) {
+    console.log("open");
+  },
+  close(ws) {
+    console.log("close");
+  },
+});
 
 // Add API routes first so they are matched before the SPA catch-all
 addCodenamesRoutes(app);

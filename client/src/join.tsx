@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { Link } from "wouter";
 
 interface AvatarOption {
   name: string;
@@ -15,27 +14,27 @@ export default function JoinScreen() {
   useEffect(() => {
     // List of avatar files
     const avatars = [
-      "apple",
+      "icecream",
+      "bulb",
       "asparagus",
       "barrel",
       "book",
       "bottle",
-      "bulb",
-      "candle",
       "cap",
       "carrot",
+      "apple",
       "chimney",
       "cloud",
       "hourglass",
-      "icecream",
       "kite",
       "mug",
-      "palette",
-      "pillow",
+      "candle",
+      "stopwatch",
       "puzzle",
       "rocket",
+      "pillow",
       "spikyball",
-      "stopwatch",
+      "palette",
       "tree",
       "umbrella",
       "world",
@@ -76,83 +75,59 @@ export default function JoinScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-indigo-800 text-white flex flex-col">
-      {/* Header */}
-      <header className="bg-indigo-900 p-4 text-center">
-        <h1 className="text-3xl font-bold">Join Game</h1>
-      </header>
+    <div className="h-screen bg-white text-gray-900 flex flex-col max-w-screen-sm mx-auto">
+      {/* Name Input */}
+      <div className="mb-6">
+        <input
+          type="text"
+          id="playerName"
+          value={playerName}
+          onChange={handleNameChange}
+          maxLength={12}
+          placeholder="TYPE NAME HERE"
+          className="w-full p-4 text-xl text-center text-gray-900 bg-gray-50 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent placeholder-gray-400"
+          autoFocus
+        />
+      </div>
 
-      {/* Main Content */}
-      <main className="flex-1 p-4 flex flex-col">
-        <form onSubmit={handleSubmit} className="flex-1 flex flex-col">
-          {/* Name Input */}
-          <div className="mb-6">
-            <label
-              htmlFor="playerName"
-              className="block text-lg font-medium mb-2"
-            >
-              ENTER YOUR NAME:
-            </label>
-            <input
-              type="text"
-              id="playerName"
-              value={playerName}
-              onChange={handleNameChange}
-              maxLength={12}
-              placeholder="TYPE NAME HERE"
-              className="w-full p-4 text-xl text-center bg-indigo-600 border-2 border-indigo-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent placeholder-indigo-300"
-              autoFocus
+      {/* Avatar Selection */}
+
+      <div className="grid grid-cols-4 grid-rows-6 gap-2 h-screen overflow-hidden">
+        {avatarOptions.map((avatar) => (
+          <div
+            className="flex items-center justify-center cursor-pointer"
+            onClick={() => handleAvatarSelect(avatar.name)}
+            style={{
+              border:
+                selectedAvatar === avatar.name
+                  ? "2px solid #FFD700"
+                  : "2px solid transparent",
+            }}
+          >
+            <img
+              src={avatar.path}
+              alt={avatar.name}
+              className="w-full h-full object-contain"
             />
           </div>
+        ))}
+      </div>
 
-          {/* Avatar Selection */}
-          <div className="flex-1">
-            <h2 className="text-lg font-medium mb-2">CHOOSE YOUR AVATAR:</h2>
-            <div className="grid grid-cols-3 gap-3 md:grid-cols-4">
-              {avatarOptions.map((avatar) => (
-                <button
-                  key={avatar.name}
-                  type="button"
-                  onClick={() => handleAvatarSelect(avatar.name)}
-                  className={`aspect-square p-2 rounded-lg ${
-                    selectedAvatar === avatar.name
-                      ? "bg-yellow-400 ring-4 ring-white"
-                      : "bg-indigo-700 hover:bg-indigo-600"
-                  }`}
-                >
-                  <img
-                    src={avatar.path}
-                    alt={avatar.name}
-                    className="w-full h-full object-contain"
-                  />
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Join Button */}
-          <div className="mt-6">
-            <button
-              type="submit"
-              disabled={!isJoinEnabled}
-              className={`w-full py-3 text-xl font-bold rounded-lg transition-all ${
-                isJoinEnabled
-                  ? "bg-yellow-400 text-indigo-900 hover:bg-yellow-300"
-                  : "bg-indigo-700 text-indigo-300 cursor-not-allowed"
-              }`}
-            >
-              JOIN
-            </button>
-          </div>
-        </form>
-      </main>
-
-      {/* Footer */}
-      <footer className="bg-indigo-900 p-4 text-center">
-        <Link href="/" className="text-yellow-400 hover:text-yellow-300">
-          Back to Home
-        </Link>
-      </footer>
+      {/* Join Button */}
+      <div className="mt-6">
+        <button
+          type="submit"
+          onClick={handleSubmit}
+          disabled={!isJoinEnabled}
+          className={`cursor-pointer w-full py-3 text-xl font-bold rounded-lg transition-all ${
+            isJoinEnabled
+              ? "bg-yellow-400 text-black hover:bg-yellow-300"
+              : "bg-gray-300 text-gray-500 cursor-not-allowed"
+          }`}
+        >
+          JOIN
+        </button>
+      </div>
     </div>
   );
 }

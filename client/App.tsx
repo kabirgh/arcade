@@ -1,7 +1,8 @@
 import "./index.css";
-import { APITester } from "./APITester";
-import { Link, Route, Switch } from "wouter";
+import { Route, Switch } from "wouter";
 import Codenames from "./codenames";
+import Home from "./home";
+import JoinScreen from "./join";
 
 export function App() {
   return (
@@ -10,16 +11,11 @@ export function App() {
         <Route path="/codenames">
           <Codenames />
         </Route>
+        <Route path="/join">
+          <JoinScreen />
+        </Route>
         <Route path="/">
-          <h1 className="text-5xl font-bold my-4 leading-tight">Bun + React</h1>
-          <p>
-            Edit{" "}
-            <code className="bg-[#1a1a1a] px-2 py-1 rounded font-mono">
-              client/App.tsx
-            </code>{" "}
-            and save to test HMR
-          </p>
-          <APITester />
+          <Home />
         </Route>
       </Switch>
     </div>

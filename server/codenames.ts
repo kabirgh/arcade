@@ -3,7 +3,7 @@ import { shuffle } from "shared/utils";
 
 const words = await Bun.file("client/codenames/words.txt").text();
 
-export class CodenamesGame {
+class CodenamesGame {
   private gameState: GameState = {
     board: [],
     turn: "red",
@@ -205,3 +205,71 @@ export class CodenamesGame {
 
 // Create and export a singleton instance
 export const codenamesGame = new CodenamesGame();
+
+export const CODENAMES_ROUTES = {
+  "/codenames/start": {
+    async GET(req: Bun.BunRequest) {
+      codenamesGame.startGame();
+      return Response.json({
+        state: codenamesGame.getGameState(),
+      });
+    },
+  },
+
+  "/codenames/state": {
+    async GET(req: Bun.BunRequest) {
+      return Response.json({
+        state: codenamesGame.getGameState(),
+      });
+    },
+  },
+
+  "/codenames/clue": {
+    async POST(req: Bun.BunRequest) {
+      const { clueWord, clueNumber } = await req.json();
+      const state = await codenamesGame.submitClue(clueWord, clueNumber);
+      return Response.json({
+        state,
+      });
+    },
+  },
+
+  "/codenames/guess": {
+    async POST(req: Bun.BunRequest) {
+      const { word } = await req.json();
+      try {
+        const state = codenamesGame.submitGuess(word);
+        return Response.json({
+          state,
+        });
+      } catch (error: any) {
+        return Response.json(
+          {
+            error: error.message,
+            state: codenamesGame.getGameState(),
+          },
+          { status: 400 }
+        );
+      }
+    },
+  },
+
+  "/codenames/end-turn": {
+    async POST(req: Bun.BunRequest) {
+      try {
+        const state = codenamesGame.endTurn();
+        return Response.json({
+          state,
+        });
+      } catch (error: any) {
+        return Response.json(
+          {
+            error: error.message,
+            state: codenamesGame.getGameState(),
+          },
+          { status: 400 }
+        );
+      }
+    },
+  },
+};

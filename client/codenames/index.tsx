@@ -75,7 +75,7 @@ export const Codenames = () => {
   // Fetch game state from server
   const fetchGameState = async () => {
     try {
-      const response = await fetch("/api/codenames/state");
+      const response = await fetch("/codenames/state");
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -93,7 +93,7 @@ export const Codenames = () => {
   const startGame = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/codenames/start");
+      const response = await fetch("/codenames/start");
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -115,7 +115,7 @@ export const Codenames = () => {
     }
 
     try {
-      const response = await fetch("/api/codenames/clue", {
+      const response = await fetch("/codenames/clue", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -160,7 +160,7 @@ export const Codenames = () => {
     }
 
     try {
-      const response = await fetch("/api/codenames/guess", {
+      const response = await fetch("/codenames/guess", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -293,11 +293,13 @@ export const Codenames = () => {
             }}
           >
             {gameState.turn.toUpperCase()}
+            {" - "}
+            {gameState.phase === "CLUE" ? "Give clue" : "Guess"}
           </div>
-          <div>{gameState.phase === "CLUE" ? "Give clue" : "Guess"}</div>
           {gameState.clue && (
             <div className="font-bold">
               Current clue: {gameState.clue.word} ({gameState.clue.number})
+              <br />
               {gameState.phase === "GUESS" && (
                 <span className="ml-2">
                   Remaining guesses: {gameState.remainingGuesses}
@@ -345,7 +347,7 @@ export const Codenames = () => {
             <button
               className="h-full text-white bg-blue-700 hover:bg-blue-800 cursor-pointer px-3 py-1.5 rounded-sm"
               onClick={() => {
-                fetch("/api/codenames/end-turn", {
+                fetch("/codenames/end-turn", {
                   method: "POST",
                   headers: {
                     "Content-Type": "application/json",

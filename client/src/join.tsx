@@ -1,51 +1,50 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import type { Player } from "../../shared/types/player";
-import { Color } from "../../shared/types/player";
+import { Color, Avatar } from "../../shared/types/player";
 import { useWebSocket } from "./contexts/WebSocketContext";
 import { Channel } from "../../shared/types/websocket";
 
 type AvatarOption = {
-  name: string;
+  name: Avatar;
   path: string;
 };
 
-const AVATAR_OPTIONS: AvatarOption[] = [
-  "icecream",
-  "bulb",
-  "asparagus",
-  "barrel",
-  "book",
-  "bottle",
-  "cap",
-  "carrot",
-  "apple",
-  "chimney",
-  "cloud",
-  "hourglass",
-  "kite",
-  "mug",
-  "candle",
-  "stopwatch",
-  "puzzle",
-  "rocket",
-  "pillow",
-  "spikyball",
-  "palette",
-  "tree",
-  "umbrella",
-  "world",
-].map((name) => ({
+const AVATAR_OPTIONS: AvatarOption[] = Object.values(Avatar).map((name) => ({
   name,
   path: `/avatars/${name}.png`,
 }));
 
+const TeamCircle = ({
+  color,
+  teamColor,
+  onClick,
+}: {
+  color: Color;
+  teamColor: Color | null;
+  onClick: () => void;
+}) => {
+  return (
+    <div
+      className="w-10 h-10 rounded-full cursor-pointer"
+      style={{
+        backgroundColor: color,
+        outline: teamColor === color ? "4px solid var(--color-gray-900)" : "",
+      }}
+      onClick={onClick}
+    ></div>
+  );
+};
+
 export default function JoinScreen() {
   const [playerName, setPlayerName] = useState("");
+  const [nameError, setNameError] = useState<string | null>(null);
   const [teamColor, setTeamColor] = useState<Color | null>(null);
-  const [avatarName, setAvatarName] = useState<string | null>(null);
+  const [avatarName, setAvatarName] = useState<Avatar | null>(null);
   const [isJoinEnabled, setIsJoinEnabled] = useState(false);
-  const [existingPlayers, setExistingPlayers] = useState<Player[]>([]);
+  const [existingPlayers, setExistingPlayers] = useState<Player[]>([
+    { name: "NAME", color: Color.Red, avatar: Avatar.World },
+  ]);
   const [isConnected, setIsConnected] = useState(false);
   const [, setLocation] = useLocation();
   const {
@@ -55,7 +54,7 @@ export default function JoinScreen() {
     status: connectionStatus,
   } = useWebSocket();
 
-  // Subscribe to taken avatars updates
+  // Subscribe to taken player name and avatar updates
   useEffect(() => {
     subscribe(Channel.PLAYER, (payload: Player[]) => {
       setExistingPlayers(payload);
@@ -67,26 +66,43 @@ export default function JoinScreen() {
   useEffect(() => {
     // Enable join button when both name and avatar are selected
     setIsJoinEnabled(
-      playerName.trim().length > 0 && avatarName !== null && teamColor !== null
+      playerName.trim().length > 0 &&
+        avatarName !== null &&
+        teamColor !== null &&
+        nameError === null
     );
-  }, [playerName, avatarName, teamColor]);
+  }, [playerName, avatarName, teamColor, nameError]);
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setPlayerName(e.target.value.toUpperCase());
+    const name = e.target.value.toUpperCase();
+    if (existingPlayers.some((player) => player.name === name)) {
+      setNameError("This name has been taken by another player");
+    } else {
+      setNameError(null);
+    }
+    setPlayerName(name);
   };
 
-  const handleAvatarSelect = (avatar: string) => {
+  const handleAvatarSelect = (avatar: Avatar) => {
     // If this avatar is already taken, don't select it
     if (existingPlayers.some((player) => player.avatar === avatar)) {
       return;
     }
-
     // Select new avatar
     setAvatarName(avatar);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (playerName.trim().length < 1) {
+      setNameError("Your name must be at least 1 character");
+      return;
+    }
+    if (playerName.trim().length > 12) {
+      setNameError("Your name must be 12 characters or less");
+      return;
+    }
 
     if (isJoinEnabled && avatarName && teamColor) {
       const player: Player = {
@@ -104,7 +120,7 @@ export default function JoinScreen() {
         player,
       });
 
-      // Navigate to buzzer screen
+      // Navigate to lobby screen
       setLocation("/buzzer");
     }
   };
@@ -116,18 +132,6 @@ export default function JoinScreen() {
   return (
     <div className="h-screen">
       <div className="bg-white text-gray-900 flex flex-col h-full max-w-[400px] p-6 mx-auto">
-        {/* Connection status */}
-        <div className="mb-4 flex justify-end">
-          <div className="bg-gray-200 text-sm px-3 py-1 rounded-full">
-            {isConnected ? (
-              <span className="text-green-600">●</span>
-            ) : (
-              <span className="text-red-600">●</span>
-            )}
-            <span className="ml-1">{connectionStatus}</span>
-          </div>
-        </div>
-
         {/* Name Input */}
         <div className="mb-4">
           <p className="text-left text-md font-bold mb-1">NAME</p>
@@ -137,59 +141,42 @@ export default function JoinScreen() {
             onChange={handleNameChange}
             placeholder="Enter your name"
             maxLength={12}
-            className="w-full p-2 text-md bg-gray-50 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-200"
             autoFocus
+            autoComplete="off"
+            data-1p-ignore="true"
+            className={`w-full p-2 text-md bg-gray-50 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 ${
+              nameError ? "ring-red-300" : "focus:ring-sky-200"
+            }`}
           />
+          <div className="text-left mt-1">
+            {nameError && <p className="text-red-500 text-xs">{nameError}</p>}
+          </div>
         </div>
 
         {/* Team color picker */}
         <div className="mb-4">
           <p className="text-left text-md font-bold mb-1">TEAM</p>
           <div className="flex flex-row justify-center items-center gap-4">
-            <div
-              className="w-10 h-10 rounded-full cursor-pointer"
-              style={{
-                backgroundColor: Color.Red,
-                outline:
-                  teamColor === Color.Red
-                    ? "4px solid var(--color-gray-900)"
-                    : "",
-              }}
+            <TeamCircle
+              color={Color.Red}
+              teamColor={teamColor}
               onClick={() => setTeamColor(Color.Red)}
-            ></div>
-            <div
-              className="w-10 h-10 rounded-full cursor-pointer"
-              style={{
-                backgroundColor: Color.Blue,
-                outline:
-                  teamColor === Color.Blue
-                    ? "4px solid var(--color-gray-900)"
-                    : "",
-              }}
+            />
+            <TeamCircle
+              color={Color.Blue}
+              teamColor={teamColor}
               onClick={() => setTeamColor(Color.Blue)}
-            ></div>
-            <div
-              className="w-10 h-10 rounded-full cursor-pointer"
-              style={{
-                backgroundColor: Color.Green,
-                outline:
-                  teamColor === Color.Green
-                    ? "4px solid var(--color-gray-900)"
-                    : "",
-              }}
+            />
+            <TeamCircle
+              color={Color.Green}
+              teamColor={teamColor}
               onClick={() => setTeamColor(Color.Green)}
-            ></div>
-            <div
-              className="w-10 h-10 rounded-full cursor-pointer"
-              style={{
-                backgroundColor: Color.Yellow,
-                outline:
-                  teamColor === Color.Yellow
-                    ? "4px solid var(--color-gray-900)"
-                    : "",
-              }}
+            />
+            <TeamCircle
+              color={Color.Yellow}
+              teamColor={teamColor}
               onClick={() => setTeamColor(Color.Yellow)}
-            ></div>
+            />
           </div>
         </div>
 
@@ -205,8 +192,8 @@ export default function JoinScreen() {
               <div
                 key={avatar.name}
                 onClick={() => !isTaken && handleAvatarSelect(avatar.name)}
-                className={`p-1.5 aspect-square cursor-pointer rounded-lg ${
-                  isTaken ? "opacity-40 cursor-not-allowed" : ""
+                className={`p-1.5 aspect-square rounded-lg ${
+                  isTaken ? "opacity-40 cursor-not-allowed" : "cursor-pointer"
                 }`}
                 style={{
                   backgroundColor:

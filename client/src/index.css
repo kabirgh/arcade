@@ -41,18 +41,20 @@ body {
   z-index: 1; /* Lifts content above the ::before pseudo-element */
 }
 
-/* #qr-wifi {
-  background-image: url("./home/qr-wifi.png");
-  background-size: contain;
-  background-position: center;
-  background-repeat: no-repeat;
-  margin: 0 auto;
+@keyframes gentle-move {
+  0% {
+    transform: translate(0, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate(100px, -50px) rotate(-10deg);
+  }
+  50% {
+    transform: translate(50px, 150px) rotate(6deg);
+  }
+  75% {
+    transform: translate(-100px, -100px) rotate(5deg);
+  }
+  100% {
+    transform: translate(0, 0) rotate(0deg);
+  }
 }
-
-#qr-joinurl {
-  background-image: url("./home/qr-joinurl.png");
-  background-size: contain;
-  background-position: center;
-  background-repeat: no-repeat;
-  margin: 0 auto;
-} */

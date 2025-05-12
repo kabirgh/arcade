@@ -1,7 +1,7 @@
 import "./index.css";
 import { Route, Switch } from "wouter";
 import Codenames from "./codenames";
-import Home from "./home";
+import Lobby from "./lobby";
 import JoinScreen from "./join";
 import Buzzer from "./buzzer";
 import { WebSocketProvider } from "./contexts/WebSocketContext";
@@ -12,7 +12,7 @@ export function App() {
       <div className="min-h-screen min-w-full mx-auto text-center relative z-10">
         <Switch>
           <Route path="/">
-            <Home />
+            <Lobby />
           </Route>
           <Route path="/join">
             <JoinScreen />

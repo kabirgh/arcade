@@ -22,33 +22,13 @@ export default function Lobby() {
         className="grid w-full h-full"
         style={{
           gridTemplateAreas: `
-          "nav nav nav"
-          "left center right"
-          "left center right"
+          "left center right last"
+          "left center right last"
       `,
-          gridTemplateColumns: "40% auto auto",
-          gridTemplateRows: "1fr 4.5fr 4.5fr",
+          gridTemplateColumns: "40% auto auto 5%",
+          gridTemplateRows: "50% auto",
         }}
       >
-        {/* Nav */}
-        <div
-          className="flex flex-col items-center justify-center w-full h-full"
-          style={{
-            gridArea: "nav",
-            /* From https://css.glass */
-            background: "rgba(255, 255, 255, 0.2)",
-            boxShadow: "0 2px 15px rgba(0, 0, 0, 0.05)",
-            backdropFilter: "blur(5px)",
-            WebkitBackdropFilter: "blur(5px)",
-            border: "1px solid rgba(255, 255, 255, 0.3)",
-          }}
-        >
-          <div className="flex flex-row items-center justify-evenly w-[600px] h-full">
-            <p>BUZZER</p>
-            <p>GAMES</p>
-          </div>
-        </div>
-
         {/* QR codes */}
         <div
           className="flex flex-col items-center justify-evenly w-full h-full"

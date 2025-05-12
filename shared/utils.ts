@@ -1,3 +1,5 @@
+import { Avatar } from "./types/player";
+
 export const shuffle = <T>(array: T[]): T[] => {
   const newArray = [...array];
   for (let i = newArray.length - 1; i > 0; i--) {
@@ -5,4 +7,8 @@ export const shuffle = <T>(array: T[]): T[] => {
     [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
   }
   return newArray;
+};
+
+export const avatarToPath = (avatar: Avatar) => {
+  return `/avatars/${avatar}.png`;
 };

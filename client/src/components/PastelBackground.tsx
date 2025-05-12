@@ -1,4 +1,10 @@
-export default function PastelBackground() {
+type PastelBackgroundProps = {
+  animate?: boolean;
+};
+
+export default function PastelBackground({
+  animate = false,
+}: PastelBackgroundProps) {
   return (
     <div
       className="absolute -inset-60"
@@ -12,7 +18,7 @@ export default function PastelBackground() {
           `,
         filter: "blur(100px)",
         zIndex: -1,
-        animation: "gentle-move 30s ease-in-out infinite",
+        animation: animate ? "gentle-move 30s ease-in-out infinite" : "none",
       }}
     />
   );

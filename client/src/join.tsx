@@ -4,16 +4,8 @@ import type { Player } from "../../shared/types/player";
 import { Color, Avatar } from "../../shared/types/player";
 import { useWebSocket } from "./contexts/WebSocketContext";
 import { Channel } from "../../shared/types/websocket";
-
-type AvatarOption = {
-  name: Avatar;
-  path: string;
-};
-
-const AVATAR_OPTIONS: AvatarOption[] = Object.values(Avatar).map((name) => ({
-  name,
-  path: `/avatars/${name}.png`,
-}));
+import { avatarToPath } from "../../shared/utils";
+import PastelBackground from "./components/PastelBackground";
 
 const TeamCircle = ({
   color,
@@ -40,7 +32,7 @@ export default function JoinScreen() {
   const [playerName, setPlayerName] = useState("");
   const [nameError, setNameError] = useState<string | null>(null);
   const [teamColor, setTeamColor] = useState<Color | null>(null);
-  const [avatarName, setAvatarName] = useState<Avatar | null>(null);
+  const [selectedAvatar, setSelectedAvatar] = useState<Avatar | null>(null);
   const [isJoinEnabled, setIsJoinEnabled] = useState(false);
   const [existingPlayers, setExistingPlayers] = useState<Player[]>([
     { name: "NAME", color: Color.Red, avatar: Avatar.World },
@@ -57,21 +49,31 @@ export default function JoinScreen() {
   // Subscribe to taken player name and avatar updates
   useEffect(() => {
     subscribe(Channel.PLAYER, (payload: Player[]) => {
-      setExistingPlayers(payload);
+      setExistingPlayers((prevPlayers) => {
+        const allPlayers = [...prevPlayers, ...payload];
+        return [...new Set(allPlayers)];
+      });
     });
 
     return () => unsubscribe(Channel.PLAYER);
   }, [subscribe, unsubscribe]);
 
+  // If an existing player has the same avatar is this player, deselect the avatar
   useEffect(() => {
-    // Enable join button when both name and avatar are selected
+    if (existingPlayers.some((player) => player.avatar === selectedAvatar)) {
+      setSelectedAvatar(null);
+    }
+  }, [existingPlayers, selectedAvatar]);
+
+  // Enable join button when name, team color, and avatar are selected and there are no errors
+  useEffect(() => {
     setIsJoinEnabled(
       playerName.trim().length > 0 &&
-        avatarName !== null &&
+        selectedAvatar !== null &&
         teamColor !== null &&
         nameError === null
     );
-  }, [playerName, avatarName, teamColor, nameError]);
+  }, [playerName, selectedAvatar, teamColor, nameError]);
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const name = e.target.value.toUpperCase();
@@ -89,7 +91,7 @@ export default function JoinScreen() {
       return;
     }
     // Select new avatar
-    setAvatarName(avatar);
+    setSelectedAvatar(avatar);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -104,11 +106,11 @@ export default function JoinScreen() {
       return;
     }
 
-    if (isJoinEnabled && avatarName && teamColor) {
+    if (isJoinEnabled && selectedAvatar && teamColor) {
       const player: Player = {
         name: playerName,
         color: teamColor,
-        avatar: avatarName,
+        avatar: selectedAvatar,
       };
 
       // Store player info in localStorage
@@ -130,8 +132,9 @@ export default function JoinScreen() {
   }, [connectionStatus]);
 
   return (
-    <div className="h-screen">
-      <div className="bg-white text-gray-900 flex flex-col h-full max-w-[400px] p-6 mx-auto">
+    <div className="h-screen relative overflow-hidden">
+      <PastelBackground />
+      <div className="text-gray-900 flex flex-col h-full max-w-[400px] p-6 mx-auto">
         {/* Name Input */}
         <div className="mb-4">
           <p className="text-left text-md font-bold mb-1">NAME</p>
@@ -184,25 +187,24 @@ export default function JoinScreen() {
         <p className="text-left text-md font-bold mb-1">AVATAR</p>
         {/* self-center switches the grid's cross‑axis alignment from stretch to center, so width is now "shrink‑to‑fit" and aspect-[2/3] can decide it. */}
         <div className="grid flex-1 self-center aspect-[2/3] grid-cols-4 grid-rows-6 gap-2 max-w-full">
-          {AVATAR_OPTIONS.map((avatar) => {
+          {Object.values(Avatar).map((avatar) => {
             const isTaken = existingPlayers.some(
-              (player) => player.avatar === avatar.name
+              (player) => player.avatar === avatar
             );
             return (
               <div
-                key={avatar.name}
-                onClick={() => !isTaken && handleAvatarSelect(avatar.name)}
+                key={avatar}
+                onClick={() => !isTaken && handleAvatarSelect(avatar)}
                 className={`p-1.5 aspect-square rounded-lg ${
                   isTaken ? "opacity-40 cursor-not-allowed" : "cursor-pointer"
                 }`}
                 style={{
-                  backgroundColor:
-                    avatarName === avatar.name ? "var(--color-stone-200)" : "",
+                  backgroundColor: selectedAvatar === avatar ? "white" : "",
                 }}
               >
                 <div
                   style={{
-                    backgroundImage: `url(${avatar.path})`,
+                    backgroundImage: `url(${avatarToPath(avatar)})`,
                     backgroundSize: "cover",
                     backgroundPosition: "center",
                     width: "100%",

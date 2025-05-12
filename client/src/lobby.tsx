@@ -1,7 +1,16 @@
-import { Color } from "../../shared/types/player";
+import { useEffect, useState } from "react";
+import { Color, type Player } from "../../shared/types/player";
+import { Channel } from "../../shared/types/websocket";
 import PastelBackground from "./components/PastelBackground";
+import { useWebSocket } from "./contexts/WebSocketContext";
 
-const TeamSection = ({ name, color }: { name: string; color: Color }) => {
+type TeamSectionProps = {
+  name: string;
+  color: Color;
+  players: Player[];
+};
+
+const TeamSection = ({ name, color, players }: TeamSectionProps) => {
   return (
     <div className="flex flex-col justify-center w-[300px] h-full">
       <p className="text-lg font-bold mb-1 text-left">{name}</p>
@@ -14,10 +23,24 @@ const TeamSection = ({ name, color }: { name: string; color: Color }) => {
 };
 
 export default function Lobby() {
+  const [players, setPlayers] = useState<Player[]>([]);
+  const { subscribe, unsubscribe } = useWebSocket();
+
+  useEffect(() => {
+    subscribe(Channel.PLAYER, (payload: Player[]) => {
+      setPlayers((prevPlayers) => {
+        const allPlayers = [...prevPlayers, ...payload];
+        return [...new Set(allPlayers)];
+      });
+    });
+
+    return () => unsubscribe(Channel.PLAYER);
+  }, [subscribe, unsubscribe]);
+
   return (
     <div className="w-full h-full relative overflow-hidden">
       {/* Parent needs to be relative to keep the pastel background in view */}
-      <PastelBackground />
+      <PastelBackground animate />
       <div
         className="grid w-full h-full"
         style={{
@@ -51,15 +74,15 @@ export default function Lobby() {
           className="flex flex-col justify-evenly items-center"
           style={{ gridArea: "center" }}
         >
-          <TeamSection name="Team 1" color={Color.Red} />
-          <TeamSection name="Team 2" color={Color.Blue} />
+          <TeamSection name="Team 1" color={Color.Red} players={players} />
+          <TeamSection name="Team 2" color={Color.Blue} players={players} />
         </div>
         <div
           className="flex flex-col justify-around items-center"
           style={{ gridArea: "right" }}
         >
-          <TeamSection name="Team 3" color={Color.Green} />
-          <TeamSection name="Team 4" color={Color.Yellow} />
+          <TeamSection name="Team 3" color={Color.Green} players={players} />
+          <TeamSection name="Team 4" color={Color.Yellow} players={players} />
         </div>
       </div>
     </div>

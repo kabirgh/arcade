@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { Color, type Player } from "../../shared/types/player";
-import { Channel } from "../../shared/types/websocket";
+import {
+  Channel,
+  MessageType,
+  type WebSocketMessage,
+} from "../../shared/types/websocket";
 import PastelBackground from "./components/PastelBackground";
 import { useWebSocket } from "./contexts/WebSocketContext";
 
@@ -10,7 +14,8 @@ type TeamSectionProps = {
   players: Player[];
 };
 
-const TeamSection = ({ name, color, players }: TeamSectionProps) => {
+const TeamSection = ({ name, color }: TeamSectionProps) => {
+  // TODO: Add player avatars to the team section
   return (
     <div className="flex flex-col justify-center w-[300px] h-full">
       <p className="text-lg font-bold mb-1 text-left">{name}</p>
@@ -27,11 +32,13 @@ export default function Lobby() {
   const { subscribe, unsubscribe } = useWebSocket();
 
   useEffect(() => {
-    subscribe(Channel.PLAYER, (payload: Player[]) => {
-      setPlayers((prevPlayers) => {
-        const allPlayers = [...prevPlayers, ...payload];
-        return [...new Set(allPlayers)];
-      });
+    subscribe(Channel.PLAYER, (message: WebSocketMessage) => {
+      if (message.messageType === MessageType.ALL_PLAYERS) {
+        setPlayers((prevPlayers) => {
+          const allPlayers = [...prevPlayers, ...message.payload];
+          return [...new Set(allPlayers)];
+        });
+      }
     });
 
     return () => unsubscribe(Channel.PLAYER);

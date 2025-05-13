@@ -5,27 +5,30 @@ import Lobby from "./lobby";
 import JoinScreen from "./join";
 import Buzzer from "./buzzer";
 import { WebSocketProvider } from "./contexts/WebSocketContext";
+import { PlayerProvider } from "./contexts/PlayerContext";
 
 export function App() {
   return (
     <WebSocketProvider>
-      <div className="min-h-screen min-w-full mx-auto text-center relative z-10">
-        <Switch>
-          <Route path="/">
-            <Lobby />
-          </Route>
-          <Route path="/join">
-            <JoinScreen />
-          </Route>
-          <Route path="/codenames">
-            <Codenames />
-          </Route>
-          <Route path="/buzzer">
-            <Buzzer />
-          </Route>
-          <Route>404 Not Found</Route>
-        </Switch>
-      </div>
+      <PlayerProvider>
+        <div className="min-h-screen min-w-full mx-auto text-center relative z-10">
+          <Switch>
+            <Route path="/">
+              <Lobby />
+            </Route>
+            <Route path="/join">
+              <JoinScreen />
+            </Route>
+            <Route path="/codenames">
+              <Codenames />
+            </Route>
+            <Route path="/buzzer">
+              <Buzzer />
+            </Route>
+            <Route>404 Not Found</Route>
+          </Switch>
+        </div>
+      </PlayerProvider>
     </WebSocketProvider>
   );
 }

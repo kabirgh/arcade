@@ -17,9 +17,12 @@ const WS_URL = `ws://${window.location.hostname}:3001/ws`;
 
 // Define the context type
 interface WebSocketContextType {
-  subscribe: (channel: Channel, callback: (payload: any) => void) => void;
+  subscribe: (
+    channel: Channel,
+    callback: (message: WebSocketMessage) => void
+  ) => void;
   unsubscribe: (channel: Channel) => void;
-  publish: (channel: Channel, payload: any) => void;
+  publish: (message: WebSocketMessage) => void;
   status: WebSocketConnectionStatus;
 }
 
@@ -44,14 +47,16 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
   // WebSocket reference
   const ws = useRef<WebSocket | null>(null);
   // Map channels to callbacks
-  const channels = useRef<Map<Channel, Set<(payload: any) => void>>>(new Map());
+  const channels = useRef<
+    Map<Channel, Set<(message: WebSocketMessage) => void>>
+  >(new Map());
   // Track connection status with state in case children need to re-render based on status
   const [status, setStatus] =
     useState<WebSocketConnectionStatus>("disconnected");
 
   // Subscribe to a channel
   const subscribe = useCallback(
-    (channel: Channel, callback: (payload: any) => void) => {
+    (channel: Channel, callback: (message: WebSocketMessage) => void) => {
       if (!channels.current.has(channel)) {
         channels.current.set(channel, new Set());
       }
@@ -66,9 +71,8 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   // Send a message to the server
-  const publish = useCallback((channel: Channel, payload: any) => {
+  const publish = useCallback((message: WebSocketMessage) => {
     if (ws.current?.readyState === WebSocket.OPEN) {
-      const message: WebSocketMessage = { channel, payload };
       ws.current.send(JSON.stringify(message));
     } else {
       console.warn("[WebSocket] Not connected, unable to send message");
@@ -107,14 +111,13 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
     ws.current.onmessage = (event) => {
       try {
         const message: WebSocketMessage = JSON.parse(event.data);
-        const { channel, payload } = message;
 
         // Notify subscribers for this channel
-        const callbacks = channels.current.get(channel);
+        const callbacks = channels.current.get(message.channel);
         if (callbacks) {
           callbacks.forEach((callback) => {
             try {
-              callback(payload);
+              callback(message);
             } catch (err) {
               console.error(
                 `[${new Date().toISOString()}] Error in subscriber callback:`,

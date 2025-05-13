@@ -40,7 +40,6 @@ export default function JoinScreen() {
   const [selectedAvatar, setSelectedAvatar] = useState<Avatar | null>(null);
   const [isJoinEnabled, setIsJoinEnabled] = useState(false);
   const [existingPlayers, setExistingPlayers] = useState<Player[]>([]);
-  const [isConnected, setIsConnected] = useState(false);
   const [, setLocation] = useLocation();
   const {
     subscribe,
@@ -235,10 +234,6 @@ export default function JoinScreen() {
     }
   };
 
-  useEffect(() => {
-    setIsConnected(connectionStatus === "connected");
-  }, [connectionStatus]);
-
   return (
     <div className="h-screen relative overflow-hidden">
       <PastelBackground />
@@ -328,10 +323,10 @@ export default function JoinScreen() {
         <div className="flex justify-center">
           <button
             onClick={handleSubmit}
-            disabled={!isJoinEnabled || !isConnected}
+            disabled={!isJoinEnabled || connectionStatus !== "connected"}
             className={`mt-3 mb-10 w-full py-2 text-xl font-bold rounded-lg transition-all
                    ${
-                     isJoinEnabled && isConnected
+                     isJoinEnabled && connectionStatus === "connected"
                        ? "bg-[#238551] text-white hover:bg-[#32A467] cursor-pointer"
                        : "bg-stone-300 text-stone-500 cursor-not-allowed"
                    }`}

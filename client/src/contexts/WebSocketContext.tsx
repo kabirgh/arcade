@@ -43,13 +43,107 @@ export const useWebSocket = () => {
 export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  // WebSocket reference
   const ws = useRef<WebSocket | null>(null);
-  // Map channels to callbacks
   const channels = useRef<Map<Channel, Set<WebSocketCallback>>>(new Map());
-  // Track connection status with state in case children need to re-render based on status
   const [status, setStatus] =
     useState<WebSocketConnectionStatus>("disconnected");
+
+  const connectWebSocket = useCallback(() => {
+    // If there's an existing WebSocket, ensure it's properly closed before creating a new one.
+    // This helps prevent multiple connections if connectWebSocket is called unexpectedly.
+    if (ws.current) {
+      // Remove event listeners to prevent them from firing on an old instance
+      ws.current.onopen = null;
+      ws.current.onmessage = null;
+      ws.current.onerror = null;
+      ws.current.onclose = null;
+      // Close if it's in a connecting or open state
+      if (
+        ws.current.readyState === WebSocket.OPEN ||
+        ws.current.readyState === WebSocket.CONNECTING
+      ) {
+        console.log(
+          `[${new Date().toISOString()}] [WebSocket] Closing existing connection before reconnecting.`
+        );
+        ws.current.close();
+      }
+    }
+
+    console.log(
+      `[${new Date().toISOString()}] [WebSocket] Attempting to connect...`
+    );
+    const socket = new WebSocket(WS_URL);
+    // Assign to ws.current immediately so other parts of the code can reference it,
+    // e.g., to check readyState, even if it's still connecting.
+    ws.current = socket;
+
+    socket.onopen = () => {
+      console.log(`[${new Date().toISOString()}] [WebSocket] Connected`);
+      setStatus("connected");
+    };
+
+    socket.onclose = (event) => {
+      console.log(
+        `[${new Date().toISOString()}] [WebSocket] Disconnected. Code: ${
+          event.code
+        }, Reason: ${event.reason}`
+      );
+      setStatus("disconnected");
+      // Only try to reconnect if this socket (ws.current at the time of closure) was the one this handler was attached to.
+      // And ensure we are not in a state where the component is unmounting (handled by useEffect cleanup).
+      if (ws.current === socket) {
+        // Check if it's the same instance that triggered this onclose
+        ws.current = null; // Clear the current socket ref as it's now closed
+        // Simple reconnect after 2 seconds. More sophisticated strategies could be used (e.g., exponential backoff).
+        console.log(
+          `[${new Date().toISOString()}] [WebSocket] Attempting reconnection in 1 second...`
+        );
+        setTimeout(connectWebSocket, 2000);
+      } else {
+        console.log(
+          `[${new Date().toISOString()}] [WebSocket] Old socket closed, no auto-reconnect.`
+        );
+      }
+    };
+
+    socket.onerror = (error) => {
+      console.error(`[${new Date().toISOString()}] [WebSocket] Error:`, error);
+      // Note: 'onerror' will usually be followed by 'onclose', which handles reconnection.
+    };
+
+    socket.onmessage = (event) => {
+      try {
+        // Ensure event.data is a string before parsing
+        if (typeof event.data !== "string") {
+          console.error(
+            `[${new Date().toISOString()}] [WebSocket] Received non-string message:`,
+            event.data
+          );
+          return;
+        }
+        const message: WebSocketMessage = JSON.parse(event.data);
+
+        const callbacks = channels.current.get(message.channel);
+        if (callbacks) {
+          callbacks.forEach((callback) => {
+            try {
+              callback(message);
+            } catch (err) {
+              console.error(
+                `[${new Date().toISOString()}] Error in subscriber callback:`,
+                err
+              );
+            }
+          });
+        }
+      } catch (err) {
+        console.error(
+          `[${new Date().toISOString()}] Error parsing WebSocket message:`,
+          err
+        );
+      }
+    };
+  }, []); // WS_URL is module-level constant, so useCallback has no dependencies.
 
   // Subscribe to a channel
   const subscribe = useCallback(
@@ -72,73 +166,31 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
     if (ws.current?.readyState === WebSocket.OPEN) {
       ws.current.send(JSON.stringify(message));
     } else {
-      console.warn("[WebSocket] Not connected, unable to send message");
+      console.warn(
+        `[WebSocket] Not connected (readyState: ${ws.current?.readyState}), unable to send message`,
+        message
+      );
     }
   }, []);
 
-  // Initialize WebSocket on mount
   useEffect(() => {
-    // Set up WebSocket connection
-    ws.current = new WebSocket(WS_URL);
-
-    ws.current.onopen = () => {
-      console.log(`[${new Date().toISOString()}] [WebSocket] Connected`);
-      setStatus("connected");
-    };
-
-    ws.current.onclose = () => {
-      console.log(`[${new Date().toISOString()}] [WebSocket] Disconnected`);
-      setStatus("disconnected");
-
-      // Simple reconnect after 1 second
-      setTimeout(() => {
-        if (ws.current?.readyState !== WebSocket.OPEN) {
-          console.log(
-            `[${new Date().toISOString()}] [WebSocket] Attempting reconnection`
-          );
-          ws.current = new WebSocket(WS_URL);
-        }
-      }, 1000);
-    };
-
-    ws.current.onerror = (error) => {
-      console.error(`[${new Date().toISOString()}] [WebSocket] Error:`, error);
-    };
-
-    ws.current.onmessage = (event) => {
-      try {
-        const message: WebSocketMessage = JSON.parse(event.data);
-
-        // Notify subscribers for this channel
-        const callbacks = channels.current.get(message.channel);
-        if (callbacks) {
-          callbacks.forEach((callback) => {
-            try {
-              callback(message);
-            } catch (err) {
-              console.error(
-                `[${new Date().toISOString()}] Error in subscriber callback:`,
-                err
-              );
-            }
-          });
-        }
-      } catch (err) {
-        console.error(
-          `[${new Date().toISOString()}] Error parsing WebSocket message:`,
-          err
-        );
-      }
-    };
+    connectWebSocket();
 
     // Clean up on unmount
     return () => {
       if (ws.current) {
+        console.log(
+          `[${new Date().toISOString()}] [WebSocket] Cleaning up WebSocket connection on unmount.`
+        );
+        // Crucially, remove the onclose handler or set it to null before closing.
+        // This prevents the onclose handler from attempting to reconnect after the component has unmounted.
+        ws.current.onclose = null;
+        ws.current.onerror = null;
         ws.current.close();
         ws.current = null;
       }
     };
-  }, []); // Empty dependency array - run once on mount
+  }, [connectWebSocket]); // useEffect depends on the connectWebSocket function instance
 
   return (
     <WebSocketContext.Provider

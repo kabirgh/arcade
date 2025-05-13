@@ -51,6 +51,8 @@ const app = new Elysia().ws("/ws", {
       case Channel.PLAYER:
         switch (message.messageType) {
           case MessageType.JOIN:
+            // TODO: Check if the player is already in the list, validate no overlapping avatars
+            // Define and send error message type
             clients.set(ws, { player: message.payload });
             break;
           case MessageType.LEAVE:

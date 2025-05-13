@@ -23,7 +23,7 @@ const TeamCircle = ({
 }) => {
   return (
     <div
-      className="w-10 h-10 rounded-full cursor-pointer"
+      className="w-9 h-9 rounded-full cursor-pointer"
       style={{
         backgroundColor: color,
         outline: teamColor === color ? "4px solid var(--color-gray-900)" : "",
@@ -329,7 +329,7 @@ export default function JoinScreen() {
           <button
             onClick={handleSubmit}
             disabled={!isJoinEnabled || !isConnected}
-            className={`mt-6 w-full py-3 text-xl font-bold rounded-lg transition-all
+            className={`mt-3 mb-10 w-full py-2 text-xl font-bold rounded-lg transition-all
                    ${
                      isJoinEnabled && isConnected
                        ? "bg-[#238551] text-white hover:bg-[#32A467] cursor-pointer"

@@ -15,12 +15,11 @@ import { Channel } from "../../../shared/types/websocket";
 // Use relative URL for WebSocket connection
 const WS_URL = `ws://${window.location.hostname}:3001/ws`;
 
+type WebSocketCallback = (message: WebSocketMessage) => void;
+
 // Define the context type
 interface WebSocketContextType {
-  subscribe: (
-    channel: Channel,
-    callback: (message: WebSocketMessage) => void
-  ) => void;
+  subscribe: (channel: Channel, callback: WebSocketCallback) => void;
   unsubscribe: (channel: Channel) => void;
   publish: (message: WebSocketMessage) => void;
   status: WebSocketConnectionStatus;
@@ -47,16 +46,14 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
   // WebSocket reference
   const ws = useRef<WebSocket | null>(null);
   // Map channels to callbacks
-  const channels = useRef<
-    Map<Channel, Set<(message: WebSocketMessage) => void>>
-  >(new Map());
+  const channels = useRef<Map<Channel, Set<WebSocketCallback>>>(new Map());
   // Track connection status with state in case children need to re-render based on status
   const [status, setStatus] =
     useState<WebSocketConnectionStatus>("disconnected");
 
   // Subscribe to a channel
   const subscribe = useCallback(
-    (channel: Channel, callback: (message: WebSocketMessage) => void) => {
+    (channel: Channel, callback: WebSocketCallback) => {
       if (!channels.current.has(channel)) {
         channels.current.set(channel, new Set());
       }
@@ -149,7 +146,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
         subscribe,
         unsubscribe,
         publish,
-        status: status, // Use state instead of ref
+        status,
       }}
     >
       {children}

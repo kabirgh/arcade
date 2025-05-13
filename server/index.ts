@@ -1,21 +1,36 @@
 import { Elysia, t } from "elysia";
 import { staticPlugin } from "@elysiajs/static";
 import { html } from "@elysiajs/html";
-import { addCodenamesRoutes } from "./codenames";
+import {
+  handleCodenamesState,
+  handleCodenamesStart,
+  handleCodenamesClue,
+  handleCodenamesGuess,
+  handleCodenamesEndTurn,
+} from "./codenames";
 import path from "path";
 import {
   Channel,
-  MessageType,
+  WebSocketMessageType,
   type WebSocketMessage,
+  MessageType,
 } from "../shared/types/websocket";
 import { ElysiaWS } from "elysia/dist/ws";
-import { Player } from "../shared/types/player";
+import type { Player, Color, Avatar } from "../shared/types/player";
+import { APIRoute } from "../shared/types/routes";
+import {
+  CodenamesClueRequestType,
+  CodenamesGuessRequestType,
+  CodenamesEndTurnRequestType,
+  CodenamesStartRequestType,
+} from "../shared/types/codenames";
 
 type Client = {
   player: Player | null;
 };
 
 const clients = new Map<ElysiaWS, Client>();
+let screen: string = "join";
 
 function getPlayers(): Player[] {
   return Array.from(clients.values())
@@ -25,7 +40,7 @@ function getPlayers(): Player[] {
 
 function broadcast(message: WebSocketMessage): void {
   console.log("Broadcasting message:", message);
-  for (const [ws, client] of clients.entries()) {
+  for (const [ws, _client] of clients.entries()) {
     ws.send(JSON.stringify(message));
   }
 }
@@ -39,11 +54,7 @@ function broadcastAllPlayers(): void {
 }
 
 const app = new Elysia().ws("/ws", {
-  body: t.Object({
-    channel: t.Enum(Channel),
-    messageType: t.Enum(MessageType),
-    payload: t.Optional(t.Any()),
-  }),
+  body: WebSocketMessageType,
   message(ws, message: WebSocketMessage) {
     console.log("Received message:", message);
 
@@ -80,11 +91,57 @@ const app = new Elysia().ws("/ws", {
 });
 
 // Add API routes first so they are matched before the SPA catch-all
-addCodenamesRoutes(app);
-
-app.get("/players", () => {
-  return getPlayers();
-});
+// Retrieve the current screen
+app
+  .get(APIRoute.Screen, () => {
+    return { screen };
+  })
+  .get(APIRoute.Players, () => {
+    return getPlayers();
+  })
+  .post(
+    APIRoute.Broadcast,
+    ({ body }) => {
+      broadcast(body);
+      return { success: true };
+    },
+    { body: WebSocketMessageType }
+  )
+  .get(
+    APIRoute.CodenamesState,
+    () => {
+      return handleCodenamesState();
+    },
+    { body: CodenamesClueRequestType }
+  )
+  .post(
+    APIRoute.CodenamesStart,
+    () => {
+      return handleCodenamesStart();
+    },
+    { body: CodenamesStartRequestType }
+  )
+  .post(
+    APIRoute.CodenamesClue,
+    ({ body }) => {
+      return handleCodenamesClue(body);
+    },
+    { body: CodenamesClueRequestType }
+  )
+  .post(
+    APIRoute.CodenamesGuess,
+    ({ body }) => {
+      return handleCodenamesGuess(body);
+    },
+    { body: CodenamesGuessRequestType }
+  )
+  .post(
+    APIRoute.CodenamesEndTurn,
+    () => {
+      return handleCodenamesEndTurn();
+    },
+    { body: CodenamesEndTurnRequestType }
+  );
 
 if (process.env.NODE_ENV === "production") {
   // Path to index.html relative to the executable's directory

@@ -1,6 +1,12 @@
-import { type Player } from "./player";
-
 // WebSocket message types for the game
+import { type Static, t } from "elysia";
+import { PlayerType } from "./player";
+
+export type WebSocketConnectionStatus =
+  | "connecting"
+  | "connected"
+  | "disconnected"
+  | "reconnecting";
 
 export enum Channel {
   PLAYER = "PLAYER",
@@ -16,38 +22,41 @@ export enum MessageType {
   BUZZ = "BUZZ",
 }
 
-interface AllPlayersMessage {
-  channel: Channel.PLAYER;
-  messageType: MessageType.ALL_PLAYERS;
-  payload: Player[];
-}
+const AllPlayersMessageType = t.Object({
+  channel: t.Literal(Channel.PLAYER),
+  messageType: t.Literal(MessageType.ALL_PLAYERS),
+  payload: t.Array(PlayerType),
+});
 
-interface JoinMessage {
-  channel: Channel.PLAYER;
-  messageType: MessageType.JOIN;
-  payload: Player;
-}
+export type AllPlayersMessage = Static<typeof AllPlayersMessageType>;
 
-interface LeaveMessage {
-  channel: Channel.PLAYER;
-  messageType: MessageType.LEAVE;
-  // Player data derived from websocket connection map
-}
+const JoinMessageType = t.Object({
+  channel: t.Literal(Channel.PLAYER),
+  messageType: t.Literal(MessageType.JOIN),
+  payload: PlayerType,
+});
+export type JoinMessage = Static<typeof JoinMessageType>;
 
-interface BuzzMessage {
-  channel: Channel.BUZZER;
-  messageType: MessageType.BUZZ;
-  payload: { playerName: string };
-}
+const LeaveMessageType = t.Object({
+  channel: t.Literal(Channel.PLAYER),
+  messageType: t.Literal(MessageType.LEAVE),
+  // No payload as relevant player is derived from websocket connection map
+});
+export type LeaveMessage = Static<typeof LeaveMessageType>;
 
-export type WebSocketMessage =
-  | AllPlayersMessage
-  | JoinMessage
-  | LeaveMessage
-  | BuzzMessage;
+const BuzzMessageType = t.Object({
+  channel: t.Literal(Channel.BUZZER),
+  messageType: t.Literal(MessageType.BUZZ),
+  payload: t.Object({
+    playerName: t.String(),
+  }),
+});
+export type BuzzMessage = Static<typeof BuzzMessageType>;
 
-export type WebSocketConnectionStatus =
-  | "connecting"
-  | "connected"
-  | "disconnected"
-  | "reconnecting";
+export const WebSocketMessageType = t.Union([
+  AllPlayersMessageType,
+  JoinMessageType,
+  LeaveMessageType,
+  BuzzMessageType,
+]);
+export type WebSocketMessage = Static<typeof WebSocketMessageType>;

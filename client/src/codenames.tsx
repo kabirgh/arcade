@@ -1,38 +1,39 @@
 import { useEffect, useState, useRef } from "react";
 import {
   type Card,
-  CardType,
+  CardClass,
   type GameState,
 } from "../../shared/types/codenames";
+import { APIRoute } from "../../shared/types/routes";
 
 const UNSELECTED_CARD_STYLES = {
-  [CardType.Red]: "bg-white text-black box-border border-6 border-[#D13030]",
-  [CardType.Blue]: "bg-white text-black box-border border-6 border-[#4183CC]",
-  [CardType.Neutral]:
+  [CardClass.Red]: "bg-white text-black box-border border-6 border-[#D13030]",
+  [CardClass.Blue]: "bg-white text-black box-border border-6 border-[#4183CC]",
+  [CardClass.Neutral]:
     "bg-white text-black box-border border-6 border-[#F8E4C8]",
-  [CardType.Assassin]:
+  [CardClass.Assassin]:
     "bg-white text-black box-border border-6 border-gray-900",
 };
 
 const SELECTED_CARD_STYLES = {
-  [CardType.Red]: "bg-[#D13030] text-white",
-  [CardType.Blue]: "bg-[#4183CC] text-white",
-  [CardType.Neutral]: "bg-[#F8E4C8] text-black",
-  [CardType.Assassin]: "bg-gray-900 text-white",
+  [CardClass.Red]: "bg-[#D13030] text-white",
+  [CardClass.Blue]: "bg-[#4183CC] text-white",
+  [CardClass.Neutral]: "bg-[#F8E4C8] text-black",
+  [CardClass.Assassin]: "bg-gray-900 text-white",
 };
 
 type TeamWordsListProps = {
   teamName: string;
   teamColor: string;
   cards: Card[];
-  cardType: CardType;
+  cardClass: CardClass;
 };
 
 const TeamWordsList: React.FC<TeamWordsListProps> = ({
   teamName,
   teamColor,
   cards,
-  cardType,
+  cardClass,
 }) => {
   return (
     <div
@@ -42,7 +43,7 @@ const TeamWordsList: React.FC<TeamWordsListProps> = ({
       <h3 className="text-lg font-bold mb-2 text-left">{teamName}</h3>
       <ul className="list-none">
         {cards
-          .filter((card) => card.type === cardType)
+          .filter((card) => card.class === cardClass)
           .map((card, index) => (
             <li
               key={index}
@@ -71,7 +72,7 @@ export const Codenames = () => {
   // Fetch game state from server
   const fetchGameState = async () => {
     try {
-      const response = await fetch("/api/codenames/state");
+      const response = await fetch(APIRoute.CodenamesState);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -89,7 +90,7 @@ export const Codenames = () => {
   const startGame = async () => {
     try {
       setLoading(true);
-      const response = await fetch("/api/codenames/start");
+      const response = await fetch(APIRoute.CodenamesStart);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -111,7 +112,7 @@ export const Codenames = () => {
     }
 
     try {
-      const response = await fetch("/api/codenames/clue", {
+      const response = await fetch(APIRoute.CodenamesClue, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -156,7 +157,7 @@ export const Codenames = () => {
     }
 
     try {
-      const response = await fetch("/api/codenames/guess", {
+      const response = await fetch(APIRoute.CodenamesGuess, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -233,7 +234,7 @@ export const Codenames = () => {
           teamName="Red team"
           teamColor="#D13030"
           cards={gameState.board}
-          cardType={CardType.Red}
+          cardClass={CardClass.Red}
         />
       </div>
 
@@ -245,8 +246,8 @@ export const Codenames = () => {
       >
         {gameState.board.map((card, index) => {
           const style = card.isRevealed
-            ? SELECTED_CARD_STYLES[card.type]
-            : UNSELECTED_CARD_STYLES[card.type];
+            ? SELECTED_CARD_STYLES[card.class]
+            : UNSELECTED_CARD_STYLES[card.class];
           return (
             <div
               key={index}
@@ -272,7 +273,7 @@ export const Codenames = () => {
           teamName="Blue team"
           teamColor="#4183CC"
           cards={gameState.board}
-          cardType={CardType.Blue}
+          cardClass={CardClass.Blue}
         />
       </div>
 

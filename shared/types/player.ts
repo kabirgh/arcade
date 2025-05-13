@@ -1,15 +1,11 @@
+import { type Static, t } from "elysia";
+
 export enum Color {
   Red = "#E8293C",
   Blue = "#5596E6",
   Green = "#00B4A0",
   Yellow = "#FDD600",
 }
-
-export type Player = {
-  name: string;
-  color: Color;
-  avatar: Avatar;
-};
 
 export enum Avatar {
   Icecream = "icecream",
@@ -37,3 +33,11 @@ export enum Avatar {
   Umbrella = "umbrella",
   World = "world",
 }
+
+export const PlayerType = t.Object({
+  name: t.String(),
+  color: t.Enum(Color),
+  avatar: t.Enum(Avatar),
+});
+
+export type Player = Static<typeof PlayerType>;

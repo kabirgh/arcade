@@ -1,6 +1,19 @@
 import { Elysia, t } from "elysia";
-import { CardType, GameState, Team } from "../shared/types/codenames";
+import {
+  CardClass,
+  CardType,
+  type Card,
+  type CodenamesClueRequest,
+  type CodenamesClueResponse,
+  type CodenamesGuessRequest,
+  type CodenamesGuessResponse,
+  type CodenamesStartResponse,
+  type CodenamesStateResponse,
+  type GameState,
+  type Team,
+} from "../shared/types/codenames";
 import { shuffle } from "../shared/utils";
+import { APIRoute } from "../shared/types/routes";
 
 const words = await Bun.file("./server/words.txt").text();
 
@@ -29,9 +42,9 @@ class CodenamesGame {
     const gameWords = shuffledWords.slice(0, 25);
 
     // Create a board with the cards
-    const board = gameWords.map((word) => ({
+    const board: Card[] = gameWords.map((word) => ({
       word,
-      type: CardType.Neutral,
+      class: CardClass.Neutral,
       isRevealed: false,
     }));
 
@@ -40,16 +53,16 @@ class CodenamesGame {
 
     // Assign 9 red cards (first team gets 9, second gets 8)
     for (let i = 0; i < 9; i++) {
-      board[cardIndices[i]].type = CardType.Red;
+      board[cardIndices[i]].class = CardClass.Red;
     }
 
     // Assign 8 blue cards
     for (let i = 9; i < 17; i++) {
-      board[cardIndices[i]].type = CardType.Blue;
+      board[cardIndices[i]].class = CardClass.Blue;
     }
 
     // Assign 1 assassin card
-    board[cardIndices[17]].type = CardType.Assassin;
+    board[cardIndices[17]].class = CardClass.Assassin;
     // The rest remain neutral
 
     this.gameState = {
@@ -111,7 +124,7 @@ class CodenamesGame {
     });
 
     // Handle the result based on card type
-    if (card.type === CardType.Assassin) {
+    if (card.class === CardClass.Assassin) {
       // Game over - the other team wins
       const winner: Team = this.gameState.turn === "red" ? "blue" : "red";
       this.gameState.chat[this.gameState.turn].push({
@@ -120,8 +133,8 @@ class CodenamesGame {
       });
       this.gameState.score[winner]++;
     } else if (
-      (card.type === CardType.Red && this.gameState.turn === "red") ||
-      (card.type === CardType.Blue && this.gameState.turn === "blue")
+      (card.class === CardClass.Red && this.gameState.turn === "red") ||
+      (card.class === CardClass.Blue && this.gameState.turn === "blue")
     ) {
       // Correct guess
       this.gameState.remainingGuesses -= 1;
@@ -135,8 +148,8 @@ class CodenamesGame {
       const allTeamCardsRevealed = this.gameState.board
         .filter(
           (c) =>
-            c.type ===
-            (this.gameState.turn === "red" ? CardType.Red : CardType.Blue)
+            c.class ===
+            (this.gameState.turn === "red" ? CardClass.Red : CardClass.Blue)
         )
         .every((c) => c.isRevealed);
 
@@ -150,8 +163,8 @@ class CodenamesGame {
         return this.gameState;
       }
     } else if (
-      (card.type === CardType.Red && this.gameState.turn === "blue") ||
-      (card.type === CardType.Blue && this.gameState.turn === "red")
+      (card.class === CardClass.Red && this.gameState.turn === "blue") ||
+      (card.class === CardClass.Blue && this.gameState.turn === "red")
     ) {
       // Incorrect guess - opponent's card
       this.gameState.remainingGuesses = 0;
@@ -165,7 +178,8 @@ class CodenamesGame {
       // Check if all cards of the opponent's color are revealed
       const allOpponentCardsRevealed = this.gameState.board
         .filter(
-          (c) => c.type === (opponent === "red" ? CardType.Red : CardType.Blue)
+          (c) =>
+            c.class === (opponent === "red" ? CardClass.Red : CardClass.Blue)
         )
         .every((c) => c.isRevealed);
 
@@ -194,73 +208,71 @@ class CodenamesGame {
     return this.gameState;
   }
 
-  public endTurn(): void {
+  public endTurn(): GameState {
     this.gameState.turn = this.gameState.turn === "red" ? "blue" : "red";
     this.gameState.phase = "CLUE";
     this.gameState.clue = null;
+    return this.gameState;
   }
 }
 
 // Create and export a singleton instance
 export const codenamesGame = new CodenamesGame();
 
-export const addCodenamesRoutes = (app: Elysia) => {
-  app
-    .get("/api/codenames/state", () => {
-      return {
-        state: codenamesGame.getGameState(),
-      };
-    })
-    .get("/api/codenames/start", () => {
-      codenamesGame.startGame();
-      return {
-        state: codenamesGame.getGameState(),
-      };
-    })
-    .post(
-      "/api/codenames/clue",
-      ({ body: { clueWord, clueNumber } }) => {
-        const state = codenamesGame.submitClue(clueWord, clueNumber);
-        return {
-          state,
-        };
-      },
-      { body: t.Object({ clueWord: t.String(), clueNumber: t.Number() }) }
-    )
-    .post(
-      "/api/codenames/guess",
-      ({ body: { word } }) => {
-        try {
-          const state = codenamesGame.submitGuess(word);
-          return {
-            state,
-          };
-        } catch (error: any) {
-          return Response.json(
-            {
-              error: error.message,
-              state: codenamesGame.getGameState(),
-            },
-            { status: 400 }
-          );
-        }
-      },
-      { body: t.Object({ word: t.String() }) }
-    )
-    .post("/api/codenames/end-turn", () => {
-      try {
-        const state = codenamesGame.endTurn();
-        return {
-          state,
-        };
-      } catch (error: any) {
-        return Response.json(
-          {
-            error: error.message,
-            state: codenamesGame.getGameState(),
-          },
-          { status: 400 }
-        );
-      }
-    });
+export const handleCodenamesState = (): CodenamesStateResponse => {
+  return {
+    state: codenamesGame.getGameState(),
+  };
+};
+
+export const handleCodenamesStart = (): CodenamesStartResponse => {
+  codenamesGame.startGame();
+  return {
+    state: codenamesGame.getGameState(),
+  };
+};
+
+export const handleCodenamesClue = (
+  req: CodenamesClueRequest
+): CodenamesClueResponse => {
+  try {
+    const state = codenamesGame.submitClue(req.clueWord, req.clueNumber);
+    return {
+      state,
+    };
+  } catch (error: any) {
+    return {
+      state: codenamesGame.getGameState(),
+      error: error.message,
+    };
+  }
+};
+
+export const handleCodenamesGuess = (
+  req: CodenamesGuessRequest
+): CodenamesGuessResponse => {
+  try {
+    const state = codenamesGame.submitGuess(req.word);
+    return {
+      state,
+    };
+  } catch (error: any) {
+    return {
+      error: error.message,
+      state: codenamesGame.getGameState(),
+    };
+  }
+};
+
+export const handleCodenamesEndTurn = (): CodenamesGuessResponse => {
+  try {
+    const state = codenamesGame.endTurn();
+    return {
+      state,
+    };
+  } catch (error: any) {
+    return {
+      error: error.message,
+    };
+  }
 };

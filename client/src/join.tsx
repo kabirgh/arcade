@@ -100,7 +100,7 @@ export default function JoinScreen() {
   useEffect(() => {
     subscribe(Channel.PLAYER, (message: WebSocketMessage) => {
       console.log("Received message on player channel:", message);
-      if (message.messageType === MessageType.ALL_PLAYERS) {
+      if (message.messageType === MessageType.LIST) {
         console.log("Updating existing players:", message.payload);
         setExistingPlayers(message.payload);
       }

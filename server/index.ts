@@ -43,7 +43,7 @@ function broadcast(message: WebSocketMessage): void {
 function broadcastAllPlayers(): PlayerListAllMessage {
   const message: PlayerListAllMessage = {
     channel: Channel.PLAYER,
-    messageType: MessageType.ALL_PLAYERS,
+    messageType: MessageType.LIST,
     payload: getPlayers(),
   };
   broadcast(message);
@@ -64,7 +64,7 @@ const handleWebSocketMessage = (ws: ElysiaWS, message: WebSocketMessage) => {
         case MessageType.LEAVE:
           clients.set(ws, { player: null });
           break;
-        case MessageType.ALL_PLAYERS:
+        case MessageType.LIST:
           break;
       }
       broadcastAllPlayers();

@@ -33,7 +33,7 @@ export default function Home() {
 
   useEffect(() => {
     subscribe(Channel.PLAYER, (message: WebSocketMessage) => {
-      if (message.messageType === MessageType.ALL_PLAYERS) {
+      if (message.messageType === MessageType.LIST) {
         setPlayers((prevPlayers) => {
           const allPlayers = [...prevPlayers, ...message.payload];
           return [...new Set(allPlayers)];

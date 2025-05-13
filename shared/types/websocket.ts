@@ -17,7 +17,7 @@ export enum MessageType {
   // Player channel
   JOIN = "JOIN",
   LEAVE = "LEAVE",
-  ALL_PLAYERS = "ALL_PLAYERS",
+  LIST = "LIST",
   // Buzzer channel
   BUZZ = "BUZZ",
   RESET = "RESET",
@@ -25,7 +25,7 @@ export enum MessageType {
 
 const PlayerListAllMessageType = t.Object({
   channel: t.Literal(Channel.PLAYER),
-  messageType: t.Literal(MessageType.ALL_PLAYERS),
+  messageType: t.Literal(MessageType.LIST),
   payload: t.Array(PlayerType),
 });
 

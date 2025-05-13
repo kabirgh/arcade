@@ -9,7 +9,7 @@ import {
   WebSocketMessageType,
   type WebSocketMessage,
   MessageType,
-  type AllPlayersMessage,
+  type PlayerListAllMessage,
 } from "../shared/types/websocket";
 import { APIRoute, APIRouteToRequestSchema } from "../shared/types/routes";
 import {
@@ -40,8 +40,8 @@ function broadcast(message: WebSocketMessage): void {
   }
 }
 
-function broadcastAllPlayers(): AllPlayersMessage {
-  const message: AllPlayersMessage = {
+function broadcastAllPlayers(): PlayerListAllMessage {
+  const message: PlayerListAllMessage = {
     channel: Channel.PLAYER,
     messageType: MessageType.ALL_PLAYERS,
     payload: getPlayers(),
@@ -69,8 +69,14 @@ const handleWebSocketMessage = (ws: ElysiaWS, message: WebSocketMessage) => {
       }
       broadcastAllPlayers();
       break;
-    default:
-      console.error("Unknown channel:", message.channel);
+    case Channel.BUZZER:
+      console.log("Buzzer message received:", message);
+      switch (message.messageType) {
+        case MessageType.BUZZ:
+          break;
+        case MessageType.RESET:
+          break;
+      }
       break;
   }
 };
@@ -105,6 +111,8 @@ const app = new Elysia()
     },
     { body: APIRouteToRequestSchema[APIRoute.Players] }
   )
+  // Admin
+  // TODO: return id: player map
   .get(
     APIRoute.ListWebSocketClientIds,
     () => {
@@ -131,6 +139,7 @@ const app = new Elysia()
     },
     { body: APIRouteToRequestSchema[APIRoute.BroadcastAllPlayers] }
   )
+  // Codenames
   .get(
     APIRoute.CodenamesState,
     () => {

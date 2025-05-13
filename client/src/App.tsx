@@ -1,7 +1,7 @@
 import "./index.css";
 import { Route, Switch } from "wouter";
 import Codenames from "./codenames";
-import Lobby from "./lobby";
+import Home from "./home";
 import Join from "./join";
 import Buzzer from "./buzzer";
 import { WebSocketProvider } from "./contexts/WebSocketContext";
@@ -14,19 +14,21 @@ export function App() {
       <PlayerProvider>
         <div className="min-h-screen min-w-full mx-auto text-center relative z-10">
           <Switch>
-            <Route path="/">
-              <Lobby />
-            </Route>
+            {/* Player screens */}
             <Route path="/join">
               <Join />
-            </Route>
-            <Route path="/codenames">
-              <Codenames />
             </Route>
             <Route path="/buzzer">
               <Buzzer />
             </Route>
-            <Route path="/admin1">
+            {/* Host screens */}
+            <Route path="/">
+              <Home />
+            </Route>
+            <Route path="/codenames">
+              <Codenames />
+            </Route>
+            <Route path="/admin">
               <Admin />
             </Route>
             <Route>404 Not Found</Route>

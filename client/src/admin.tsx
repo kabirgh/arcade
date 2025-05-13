@@ -22,7 +22,7 @@ const getBroadcastTemplates = (): Record<string, any> => {
   const templates: Record<string, any> = {};
 
   // WebSocketMessageType is a t.Union. We iterate over its constituent schemas.
-  // Each schema in 'anyOf' is an individual message type like JoinMessage, BuzzMessage, etc.
+  // Each schema in 'anyOf' is an individual message type like PlayerJoinMessage, BuzzerPressMessage, etc.
   if (WebSocketMessageType && WebSocketMessageType.anyOf) {
     WebSocketMessageType.anyOf.forEach((messageSchema: any) => {
       // Ensure properties exist and are literals with a 'const' value
@@ -222,6 +222,8 @@ const AdminPage: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  // TODO: add button to send reset buzzer ws message
 
   return (
     <div className="h-screen relative overflow-hidden">

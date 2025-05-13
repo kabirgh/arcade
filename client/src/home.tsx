@@ -27,7 +27,7 @@ const TeamSection = ({ name, color }: TeamSectionProps) => {
   );
 };
 
-export default function Lobby() {
+export default function Home() {
   const [players, setPlayers] = useState<Player[]>([]);
   const { subscribe, unsubscribe } = useWebSocket();
 

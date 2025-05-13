@@ -20,44 +20,54 @@ export enum MessageType {
   ALL_PLAYERS = "ALL_PLAYERS",
   // Buzzer channel
   BUZZ = "BUZZ",
+  RESET = "RESET",
 }
 
-const AllPlayersMessageType = t.Object({
+const PlayerListAllMessageType = t.Object({
   channel: t.Literal(Channel.PLAYER),
   messageType: t.Literal(MessageType.ALL_PLAYERS),
   payload: t.Array(PlayerType),
 });
 
-export type AllPlayersMessage = Static<typeof AllPlayersMessageType>;
+export type PlayerListAllMessage = Static<typeof PlayerListAllMessageType>;
 
-const JoinMessageType = t.Object({
+const PlayerJoinMessageType = t.Object({
   channel: t.Literal(Channel.PLAYER),
   messageType: t.Literal(MessageType.JOIN),
   payload: PlayerType,
 });
-export type JoinMessage = Static<typeof JoinMessageType>;
+export type PlayerJoinMessage = Static<typeof PlayerJoinMessageType>;
 
-const LeaveMessageType = t.Object({
+const PlayerLeaveMessageType = t.Object({
   channel: t.Literal(Channel.PLAYER),
   messageType: t.Literal(MessageType.LEAVE),
   // No payload as relevant player is derived from websocket connection map
+  // TODO: provide player name in payload
 });
-export type LeaveMessage = Static<typeof LeaveMessageType>;
+export type PlayerLeaveMessage = Static<typeof PlayerLeaveMessageType>;
 
-const BuzzMessageType = t.Object({
+const BuzzerPressMessageType = t.Object({
   channel: t.Literal(Channel.BUZZER),
   messageType: t.Literal(MessageType.BUZZ),
   payload: t.Object({
     playerName: t.String(),
   }),
 });
-export type BuzzMessage = Static<typeof BuzzMessageType>;
+export type BuzzerPressMessage = Static<typeof BuzzerPressMessageType>;
+
+const BuzzerResetMessageType = t.Object({
+  channel: t.Literal(Channel.BUZZER),
+  messageType: t.Literal(MessageType.RESET),
+  // No payload, reset is sent from server to all clients
+});
+export type BuzzerResetMessage = Static<typeof BuzzerResetMessageType>;
 
 export const WebSocketMessageType = t.Union([
-  AllPlayersMessageType,
-  JoinMessageType,
-  LeaveMessageType,
-  BuzzMessageType,
+  PlayerListAllMessageType,
+  PlayerJoinMessageType,
+  PlayerLeaveMessageType,
+  BuzzerPressMessageType,
+  BuzzerResetMessageType,
 ]);
 export type WebSocketMessage = Static<typeof WebSocketMessageType>;
 

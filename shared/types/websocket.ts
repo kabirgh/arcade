@@ -60,3 +60,11 @@ export const WebSocketMessageType = t.Union([
   BuzzMessageType,
 ]);
 export type WebSocketMessage = Static<typeof WebSocketMessageType>;
+
+export const SendWebSocketMessageRequestType = t.Object({
+  id: t.String(),
+  message: WebSocketMessageType,
+});
+export type SendWebSocketMessageRequest = Static<
+  typeof SendWebSocketMessageRequestType
+>;

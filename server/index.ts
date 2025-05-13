@@ -1,6 +1,17 @@
-import { Elysia, t } from "elysia";
+import path from "path";
+import { Elysia } from "elysia";
+import { ElysiaWS } from "elysia/dist/ws";
 import { staticPlugin } from "@elysiajs/static";
 import { html } from "@elysiajs/html";
+import type { Player } from "../shared/types/player";
+import {
+  Channel,
+  WebSocketMessageType,
+  type WebSocketMessage,
+  MessageType,
+  type AllPlayersMessage,
+} from "../shared/types/websocket";
+import { APIRoute, APIRouteToRequestSchema } from "../shared/types/routes";
 import {
   handleCodenamesState,
   handleCodenamesStart,
@@ -8,22 +19,6 @@ import {
   handleCodenamesGuess,
   handleCodenamesEndTurn,
 } from "./codenames";
-import path from "path";
-import {
-  Channel,
-  WebSocketMessageType,
-  type WebSocketMessage,
-  MessageType,
-} from "../shared/types/websocket";
-import { ElysiaWS } from "elysia/dist/ws";
-import type { Player, Color, Avatar } from "../shared/types/player";
-import { APIRoute } from "../shared/types/routes";
-import {
-  CodenamesClueRequestType,
-  CodenamesGuessRequestType,
-  CodenamesEndTurnRequestType,
-  CodenamesStartRequestType,
-} from "../shared/types/codenames";
 
 type Client = {
   player: Player | null;
@@ -45,104 +40,134 @@ function broadcast(message: WebSocketMessage): void {
   }
 }
 
-function broadcastAllPlayers(): void {
-  broadcast({
+function broadcastAllPlayers(): AllPlayersMessage {
+  const message: AllPlayersMessage = {
     channel: Channel.PLAYER,
     messageType: MessageType.ALL_PLAYERS,
     payload: getPlayers(),
-  });
+  };
+  broadcast(message);
+  return message;
 }
 
-const app = new Elysia().ws("/ws", {
-  body: WebSocketMessageType,
-  message(ws, message: WebSocketMessage) {
-    console.log("Received message:", message);
+const handleWebSocketMessage = (ws: ElysiaWS, message: WebSocketMessage) => {
+  console.log("Received message:", message);
 
-    switch (message.channel) {
-      case Channel.PLAYER:
-        switch (message.messageType) {
-          case MessageType.JOIN:
-            // TODO: Check if the player is already in the list, validate no overlapping avatars
-            // Define and send error message type
-            clients.set(ws, { player: message.payload });
-            break;
-          case MessageType.LEAVE:
-            clients.set(ws, { player: null });
-            break;
-          case MessageType.ALL_PLAYERS:
-            break;
-        }
-        broadcastAllPlayers();
-        break;
-      default:
-        console.error("Unknown channel:", message.channel);
-        break;
-    }
-  },
-  open(ws) {
-    console.log("Client connected:", ws.id);
-    clients.set(ws, { player: null });
-  },
-  close(ws) {
-    console.log("Client disconnected:", ws.id);
-    clients.delete(ws);
-    broadcastAllPlayers();
-  },
-});
+  switch (message.channel) {
+    case Channel.PLAYER:
+      switch (message.messageType) {
+        case MessageType.JOIN:
+          // TODO: Check if the player is already in the list, validate no overlapping avatars
+          // Define and send error message type
+          clients.set(ws, { player: message.payload });
+          break;
+        case MessageType.LEAVE:
+          clients.set(ws, { player: null });
+          break;
+        case MessageType.ALL_PLAYERS:
+          break;
+      }
+      broadcastAllPlayers();
+      break;
+    default:
+      console.error("Unknown channel:", message.channel);
+      break;
+  }
+};
 
-// Add API routes first so they are matched before the SPA catch-all
-// Retrieve the current screen
-app
-  .get(APIRoute.Screen, () => {
-    return { screen };
+const app = new Elysia()
+  .ws("/ws", {
+    body: WebSocketMessageType,
+    message(ws, message: WebSocketMessage) {
+      handleWebSocketMessage(ws, message);
+    },
+    open(ws) {
+      console.log("Client connected:", ws.id);
+      clients.set(ws, { player: null });
+    },
+    close(ws) {
+      console.log("Client disconnected:", ws.id);
+      clients.delete(ws);
+      broadcastAllPlayers();
+    },
   })
-  .get(APIRoute.Players, () => {
-    return getPlayers();
-  })
+  .get(
+    APIRoute.Screen,
+    () => {
+      return { screen };
+    },
+    { body: APIRouteToRequestSchema[APIRoute.Screen] }
+  )
+  .get(
+    APIRoute.Players,
+    () => {
+      return getPlayers();
+    },
+    { body: APIRouteToRequestSchema[APIRoute.Players] }
+  )
+  .get(
+    APIRoute.ListWebSocketClientIds,
+    () => {
+      return [...clients.keys()].map((ws) => ws.id);
+    },
+    { body: APIRouteToRequestSchema[APIRoute.ListWebSocketClientIds] }
+  )
   .post(
-    APIRoute.Broadcast,
+    APIRoute.SendWebSocketMessage,
     ({ body }) => {
-      broadcast(body);
+      const ws = [...clients.keys()].find((ws) => ws.id === body.id);
+      if (!ws) {
+        return { success: false, error: "Client not found" };
+      }
+      handleWebSocketMessage(ws, body.message);
       return { success: true };
     },
-    { body: WebSocketMessageType }
+    { body: APIRouteToRequestSchema[APIRoute.SendWebSocketMessage] }
+  )
+  .post(
+    APIRoute.BroadcastAllPlayers,
+    () => {
+      return broadcastAllPlayers();
+    },
+    { body: APIRouteToRequestSchema[APIRoute.BroadcastAllPlayers] }
   )
   .get(
     APIRoute.CodenamesState,
     () => {
       return handleCodenamesState();
     },
-    { body: CodenamesClueRequestType }
+    { body: APIRouteToRequestSchema[APIRoute.CodenamesState] }
   )
   .post(
     APIRoute.CodenamesStart,
     () => {
       return handleCodenamesStart();
     },
-    { body: CodenamesStartRequestType }
+    { body: APIRouteToRequestSchema[APIRoute.CodenamesStart] }
   )
   .post(
     APIRoute.CodenamesClue,
     ({ body }) => {
       return handleCodenamesClue(body);
     },
-    { body: CodenamesClueRequestType }
+    { body: APIRouteToRequestSchema[APIRoute.CodenamesClue] }
   )
   .post(
     APIRoute.CodenamesGuess,
     ({ body }) => {
       return handleCodenamesGuess(body);
     },
-    { body: CodenamesGuessRequestType }
+    { body: APIRouteToRequestSchema[APIRoute.CodenamesGuess] }
   )
   .post(
     APIRoute.CodenamesEndTurn,
     () => {
       return handleCodenamesEndTurn();
     },
-    { body: CodenamesEndTurnRequestType }
+    { body: APIRouteToRequestSchema[APIRoute.CodenamesEndTurn] }
   );
 
+// Add catch-all route last so API routes above are matched before the SPA catch-all
 if (process.env.NODE_ENV === "production") {
   // Path to index.html relative to the executable's directory
   const pathToIndexHTML = path.join(

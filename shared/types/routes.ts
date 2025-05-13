@@ -1,13 +1,22 @@
+import type { Static } from "elysia";
+import { t } from "elysia";
 import {
   CodenamesClueRequestType,
+  CodenamesEndTurnRequestType,
   CodenamesGuessRequestType,
+  CodenamesStartRequestType,
 } from "./codenames";
-import { WebSocketMessageType } from "./websocket";
+import { SendWebSocketMessageRequestType } from "./websocket";
+
+export const EmptyRequestType = t.Object({});
+export type EmptyRequest = Static<typeof EmptyRequestType>;
 
 export enum APIRoute {
   Screen = "/api/screen",
   Players = "/api/players",
-  Broadcast = "/api/broadcast",
+  ListWebSocketClientIds = "/api/list-websocket-client-ids",
+  SendWebSocketMessage = "/api/send-websocket-message",
+  BroadcastAllPlayers = "/api/broadcast-all-players",
   CodenamesState = "/api/codenames/state",
   CodenamesStart = "/api/codenames/start",
   CodenamesClue = "/api/codenames/clue",
@@ -16,13 +25,16 @@ export enum APIRoute {
 }
 
 // Schemas for each API route
-export const APIRouteSchemas = {
-  [APIRoute.Screen]: null,
-  [APIRoute.Players]: null,
-  [APIRoute.Broadcast]: { body: WebSocketMessageType },
-  [APIRoute.CodenamesState]: null,
-  [APIRoute.CodenamesStart]: null,
-  [APIRoute.CodenamesClue]: { body: CodenamesClueRequestType },
-  [APIRoute.CodenamesGuess]: { body: CodenamesGuessRequestType },
-  [APIRoute.CodenamesEndTurn]: null,
+// Does not include "body" since that is added by Elysia
+export const APIRouteToRequestSchema = {
+  [APIRoute.Screen]: EmptyRequestType,
+  [APIRoute.Players]: EmptyRequestType,
+  [APIRoute.ListWebSocketClientIds]: EmptyRequestType,
+  [APIRoute.SendWebSocketMessage]: SendWebSocketMessageRequestType,
+  [APIRoute.BroadcastAllPlayers]: EmptyRequestType,
+  [APIRoute.CodenamesState]: CodenamesClueRequestType,
+  [APIRoute.CodenamesStart]: CodenamesStartRequestType,
+  [APIRoute.CodenamesClue]: CodenamesClueRequestType,
+  [APIRoute.CodenamesGuess]: CodenamesGuessRequestType,
+  [APIRoute.CodenamesEndTurn]: CodenamesEndTurnRequestType,
 } as const;

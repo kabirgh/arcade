@@ -2,10 +2,11 @@ import "./index.css";
 import { Route, Switch } from "wouter";
 import Codenames from "./codenames";
 import Lobby from "./lobby";
-import JoinScreen from "./join";
+import Join from "./join";
 import Buzzer from "./buzzer";
 import { WebSocketProvider } from "./contexts/WebSocketContext";
 import { PlayerProvider } from "./contexts/PlayerContext";
+import Admin from "./admin";
 
 export function App() {
   return (
@@ -17,13 +18,16 @@ export function App() {
               <Lobby />
             </Route>
             <Route path="/join">
-              <JoinScreen />
+              <Join />
             </Route>
             <Route path="/codenames">
               <Codenames />
             </Route>
             <Route path="/buzzer">
               <Buzzer />
+            </Route>
+            <Route path="/admin1">
+              <Admin />
             </Route>
             <Route>404 Not Found</Route>
           </Switch>

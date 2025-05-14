@@ -1,6 +1,8 @@
 {
   "name": "arcade",
   "version": "1.0.50",
+  "type": "module",
+  "module": "src/index.js",
   "scripts": {
     "dev": "cross-env NODE_ENV=development concurrently -k -n server,client \"bun --watch server/index.ts\" \"bun run --cwd client dev\"",
     "build:client": "bun run --cwd client build",
@@ -14,9 +16,11 @@
     "elysia": "latest"
   },
   "devDependencies": {
+    "@eslint/js": "^9.26.0",
     "bun-types": "latest",
     "concurrently": "^9.1.2",
-    "cross-env": "^7.0.3"
-  },
-  "module": "src/index.js"
+    "cross-env": "^7.0.3",
+    "eslint": "^9.26.0",
+    "typescript-eslint": "^8.32.1"
+  }
 }

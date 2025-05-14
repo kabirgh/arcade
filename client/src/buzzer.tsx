@@ -1,4 +1,4 @@
-import { useState } from "react";
+import "./buzzer.css";
 import PastelBackground from "./components/PastelBackground";
 import { useWebSocket } from "./contexts/WebSocketContext";
 import { Channel, MessageType } from "../../shared/types/websocket";
@@ -6,12 +6,10 @@ import { Avatar } from "../../shared/types/player";
 import { Color } from "../../shared/types/player";
 
 export default function Buzzer() {
-  const [isPressed, setIsPressed] = useState(false);
   const { publish } = useWebSocket();
 
   const handlePress = () => {
-    setIsPressed(true);
-    console.log("Publishing buzz message");
+    console.log("pressed");
     publish({
       channel: Channel.BUZZER,
       messageType: MessageType.BUZZ,
@@ -25,23 +23,20 @@ export default function Buzzer() {
     });
   };
 
-  const handleRelease = () => {
-    setIsPressed(false);
-  };
-
   return (
     <div className="flex flex-col items-center justify-center h-screen relative overflow-hidden">
       <PastelBackground />
-      <button
-        className={`w-[200px] h-[200px] rounded-full bg-red-500 transition-all duration-100 ease-in-out ${
-          isPressed ? "transform scale-90 shadow-2xl shadow-inner" : "shadow-lg"
-        }`}
-        onMouseDown={handlePress}
-        onTouchStart={handlePress}
-        onMouseUp={handleRelease}
-        onMouseLeave={handleRelease}
-        onTouchEnd={handleRelease}
-      ></button>
+      <div className="flex items-center justify-center w-[80vmin] h-[80vmin]">
+        <button
+          className="pushable"
+          onTouchStart={handlePress}
+          onMouseDown={handlePress}
+        >
+          <span className="shadow"></span>
+          <span className="edge"></span>
+          <span className="front"></span>
+        </button>
+      </div>
     </div>
   );
 }

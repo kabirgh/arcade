@@ -9,8 +9,6 @@ import type { WebSocketMessage } from "../../shared/types/websocket";
 import { useWebSocket } from "./contexts/WebSocketContext";
 import { useLocation } from "wouter";
 
-const VOLUME_STEP = 0.1;
-
 const BuzzerHost: React.FC = () => {
   const [, setLocation] = useLocation();
   const { subscribe } = useWebSocket();
@@ -18,6 +16,7 @@ const BuzzerHost: React.FC = () => {
   const [played, setPlayed] = useState([] as Team[]);
   const { volume } = useVolumeControl(0.5);
   const teamRowRef = useRef<HTMLElement>(null);
+  // TODO: unlock audio https://chatgpt.com/c/68246cd3-479c-8002-8f17-434e2b9f5844
   const audioRef = useRef<HTMLAudioElement>(null);
   const rect = useClientRect(teamRowRef);
 

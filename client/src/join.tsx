@@ -34,13 +34,13 @@ const TeamCircle = ({
 };
 
 export default function JoinScreen() {
+  const [, setLocation] = useLocation();
   const [playerName, setPlayerName] = useState("");
   const [nameError, setNameError] = useState<string | null>(null);
   const [teamColor, setTeamColor] = useState<Color | null>(null);
   const [selectedAvatar, setSelectedAvatar] = useState<Avatar | null>(null);
   const [isJoinEnabled, setIsJoinEnabled] = useState(false);
   const [existingPlayers, setExistingPlayers] = useState<Player[]>([]);
-  const [, setLocation] = useLocation();
   const {
     subscribe,
     unsubscribe,

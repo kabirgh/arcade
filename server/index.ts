@@ -3,7 +3,7 @@ import { Elysia } from "elysia";
 import { ElysiaWS } from "elysia/dist/ws";
 import { staticPlugin } from "@elysiajs/static";
 import { html } from "@elysiajs/html";
-import type { Player } from "../shared/types/player";
+import { Color, type Player } from "../shared/types/player";
 import {
   Channel,
   WebSocketMessageType,
@@ -23,6 +23,13 @@ import {
 type Client = {
   player: Player | null;
 };
+
+const teams = [
+  { name: "Team 1", color: Color.Red },
+  { name: "Team 2", color: Color.Blue },
+  { name: "Team 3", color: Color.Green },
+  { name: "Team 4", color: Color.Yellow },
+];
 
 const clients = new Map<ElysiaWS, Client>();
 let screen: string = "join";
@@ -70,11 +77,12 @@ const handleWebSocketMessage = (ws: ElysiaWS, message: WebSocketMessage) => {
       broadcastAllPlayers();
       break;
     case Channel.BUZZER:
-      console.log("Buzzer message received:", message);
       switch (message.messageType) {
         case MessageType.BUZZ:
+          broadcast(message);
           break;
         case MessageType.RESET:
+          broadcast(message);
           break;
       }
       break;
@@ -103,6 +111,13 @@ const app = new Elysia()
       return { screen };
     },
     { body: APIRouteToRequestSchema[APIRoute.Screen] }
+  )
+  .get(
+    APIRoute.Teams,
+    () => {
+      return teams;
+    },
+    { body: APIRouteToRequestSchema[APIRoute.Teams] }
   )
   .get(
     APIRoute.Players,

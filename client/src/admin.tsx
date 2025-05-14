@@ -1,8 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { WebSocketMessageType } from "../../shared/types/websocket";
+import {
+  Channel,
+  MessageType,
+  WebSocketMessageType,
+} from "../../shared/types/websocket";
 import { APIRoute, APIRouteToRequestSchema } from "../../shared/types/routes";
 import PastelBackground from "./components/PastelBackground";
 import { Value } from "@sinclair/typebox/value";
+import { useWebSocket } from "./contexts/WebSocketContext";
 
 // Function to generate schema templates dynamically based on route
 const generateSchemaTemplate = (route: string): any => {
@@ -66,6 +71,8 @@ const getBroadcastTemplates = (): Record<string, any> => {
 };
 
 const AdminPage: React.FC = () => {
+  const { publish } = useWebSocket();
+
   const [selectedAPI, setSelectedAPI] = useState<string>(
     APIRoute.SendWebSocketMessage
   );
@@ -141,7 +148,14 @@ const AdminPage: React.FC = () => {
       // If the current selectedAPI is NOT SendWebSocketMessage, clear selectedMessageType.
       setSelectedMessageType("");
     }
-  }, [selectedAPI, broadcastTemplates, selectedMessageType]); // Dependencies ensure this runs when API, templates, or the message type itself changes.
+  }, [selectedAPI, broadcastTemplates, selectedMessageType]);
+
+  const handleResetBuzzers = () => {
+    publish({
+      channel: Channel.BUZZER,
+      messageType: MessageType.RESET,
+    });
+  };
 
   const handleAPIChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedAPI(e.target.value);
@@ -228,17 +242,23 @@ const AdminPage: React.FC = () => {
   return (
     <div className="h-screen relative overflow-hidden">
       <PastelBackground />
-      <div className="flex h-full">
-        {/* Left side - Form */}
-        <div className="w-1/2 text-gray-900 flex flex-col h-full max-w-[500px] p-6 mx-auto">
-          <h1 className="text-2xl font-bold mb-6">Admin Dashboard</h1>
-
+      <div className="grid grid-cols-7 h-full gap-4">
+        <div className="col-span-1 flex items-center justify-center">
+          <button
+            className="bg-red-600 text-white p-2 w-32 rounded-md cursor-pointer hover:bg-red-500
+                       transition duration-100 ease-in-out active:bg-red-700"
+            onClick={handleResetBuzzers}
+          >
+            Reset buzzers
+          </button>
+        </div>
+        <div className="col-span-3 text-gray-900 flex flex-col h-full p-6">
           <form onSubmit={handleSubmit} className="flex flex-col h-full">
-            {/* API Endpoint and Method Selection */}
             <div className="mb-4">
-              <p className="text-left text-md font-bold mb-1">API ENDPOINT</p>
+              <p className="text-md text-left font-bold min-w-[150px] mb-1">
+                API ENDPOINT
+              </p>
               <div className="flex items-center gap-2">
-                {/* HTTP Method Radio Buttons */}
                 <div className="flex items-center space-x-4 mr-2">
                   <label className="flex items-center">
                     <input
@@ -264,11 +284,11 @@ const AdminPage: React.FC = () => {
                   </label>
                 </div>
 
-                {/* API Dropdown */}
                 <select
                   value={selectedAPI}
                   onChange={handleAPIChange}
-                  className="flex-1 p-2 text-md bg-gray-50 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-200"
+                  className="flex-1 w-full p-2 text-md bg-gray-50 border-2 border-gray-300 rounded-lg
+                             focus:outline-none focus:ring-2 focus:ring-sky-200"
                 >
                   {Object.values(APIRoute).map((route) => (
                     <option key={route} value={route}>
@@ -279,28 +299,29 @@ const AdminPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Message Type Selector (only for SendWebSocketMessage endpoint) */}
             {selectedAPI === APIRoute.SendWebSocketMessage &&
               httpMethod === "POST" && (
                 <div className="mb-4">
-                  <p className="text-left text-md font-bold mb-1">
+                  <p className="text-md text-left font-bold mb-1">
                     MESSAGE TYPE
                   </p>
-                  <select
-                    value={selectedMessageType}
-                    onChange={handleMessageTypeChange}
-                    className="w-full p-2 text-md bg-gray-50 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-200"
-                  >
-                    {Object.keys(broadcastTemplates).map((key) => (
-                      <option key={key} value={key}>
-                        {key}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={selectedMessageType}
+                      onChange={handleMessageTypeChange}
+                      className="w-full p-2 text-md bg-gray-50 border-2 border-gray-300 rounded-lg
+                                 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                    >
+                      {Object.keys(broadcastTemplates).map((key) => (
+                        <option key={key} value={key}>
+                          {key}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
               )}
 
-            {/* JSON Input */}
             <div className="mb-4 flex-grow">
               <p className="text-left text-md font-bold mb-1">JSON BODY</p>
               <textarea
@@ -314,11 +335,11 @@ const AdminPage: React.FC = () => {
                       : "Enter JSON payload or select an endpoint to auto-fill"
                     : "GET requests don't require a body"
                 }
-                className="w-full p-2 h-[60%] text-md bg-gray-50 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-sky-200 font-mono"
+                className="w-full p-2 h-[70%] text-sm bg-gray-50 border-2 border-gray-300 rounded-lg
+                           focus:outline-none focus:ring-2 focus:ring-sky-200 font-mono"
               />
             </div>
 
-            {/* Submit Button */}
             <button
               type="submit"
               disabled={
@@ -346,8 +367,7 @@ const AdminPage: React.FC = () => {
           </form>
         </div>
 
-        {/* Right side - Logs */}
-        <div className="w-1/2 h-full p-4 overflow-auto bg-white bg-opacity-80">
+        <div className="col-span-3 h-full p-4 overflow-auto bg-opacity-80">
           <h2 className="text-xl font-bold mb-3 text-left">Response Log</h2>
           {logs.length === 0 ? (
             <p className="text-gray-500 text-left">No requests yet</p>
@@ -361,19 +381,18 @@ const AdminPage: React.FC = () => {
                   {new Date(log.timestamp).toLocaleString()}
                 </div>
                 <div className="mb-1">
-                  <span className="font-bold">Request: </span>
+                  <span className="font-bold">Request&nbsp;&nbsp;</span>
                   <span className="font-mono text-sm">
                     {log.request.method} {log.request.endpoint}
                   </span>
                 </div>
                 <div className="mb-1">
-                  <span className="font-bold">Body: </span>
                   <pre className="font-mono text-sm bg-gray-100 p-1 rounded overflow-auto text-left">
                     {JSON.stringify(log.request.body, null, 2)}
                   </pre>
                 </div>
                 <div>
-                  <span className="font-bold">Response: </span>
+                  <span className="font-bold">Response</span>
                   <pre className="font-mono text-sm bg-gray-100 p-1 rounded overflow-auto text-left">
                     {JSON.stringify(log.response, null, 2)}
                   </pre>

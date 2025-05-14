@@ -3,8 +3,8 @@ import { Nullable } from "./types";
 import { ErrorResponseType } from "./error";
 
 // Types for the engine
-export const TeamType = t.Union([t.Literal("red"), t.Literal("blue")]);
-export type Team = Static<typeof TeamType>;
+export const CodenamesTeamType = t.Union([t.Literal("red"), t.Literal("blue")]);
+export type CodenamesTeam = Static<typeof CodenamesTeamType>;
 
 export const PhaseType = t.Union([t.Literal("CLUE"), t.Literal("GUESS")]);
 export type Phase = Static<typeof PhaseType>;
@@ -33,7 +33,7 @@ export type Card = Static<typeof CardType>;
 
 export const GameStateType = t.Object({
   board: t.Array(CardType),
-  turn: TeamType,
+  turn: CodenamesTeamType,
   phase: PhaseType,
   clue: Nullable(t.Object({ word: t.String(), number: t.Number() })),
   remainingGuesses: t.Number(),

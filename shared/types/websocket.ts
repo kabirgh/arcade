@@ -50,7 +50,7 @@ const BuzzerPressMessageType = t.Object({
   channel: t.Literal(Channel.BUZZER),
   messageType: t.Literal(MessageType.BUZZ),
   payload: t.Object({
-    playerName: t.String(),
+    player: PlayerType,
   }),
 });
 export type BuzzerPressMessage = Static<typeof BuzzerPressMessageType>;

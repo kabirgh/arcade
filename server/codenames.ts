@@ -10,7 +10,7 @@ import {
   type CodenamesStartResponse,
   type CodenamesStateResponse,
   type GameState,
-  type Team,
+  type CodenamesTeam,
 } from "../shared/types/codenames";
 import { shuffle } from "../shared/utils";
 import { APIRoute } from "../shared/types/routes";
@@ -126,7 +126,8 @@ class CodenamesGame {
     // Handle the result based on card type
     if (card.class === CardClass.Assassin) {
       // Game over - the other team wins
-      const winner: Team = this.gameState.turn === "red" ? "blue" : "red";
+      const winner: CodenamesTeam =
+        this.gameState.turn === "red" ? "blue" : "red";
       this.gameState.chat[this.gameState.turn].push({
         role: "system",
         content: `You picked the assassin! ${winner.toUpperCase()} team wins!`,
@@ -169,7 +170,8 @@ class CodenamesGame {
       // Incorrect guess - opponent's card
       this.gameState.remainingGuesses = 0;
 
-      const opponent: Team = this.gameState.turn === "red" ? "blue" : "red";
+      const opponent: CodenamesTeam =
+        this.gameState.turn === "red" ? "blue" : "red";
       this.gameState.chat[this.gameState.turn].push({
         role: "system",
         content: `Oops! That's a ${opponent} card.`,

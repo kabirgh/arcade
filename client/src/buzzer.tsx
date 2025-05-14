@@ -2,6 +2,8 @@ import { useState } from "react";
 import PastelBackground from "./components/PastelBackground";
 import { useWebSocket } from "./contexts/WebSocketContext";
 import { Channel, MessageType } from "../../shared/types/websocket";
+import { Avatar } from "../../shared/types/player";
+import { Color } from "../../shared/types/player";
 
 export default function Buzzer() {
   const [isPressed, setIsPressed] = useState(false);
@@ -14,7 +16,11 @@ export default function Buzzer() {
       channel: Channel.BUZZER,
       messageType: MessageType.BUZZ,
       payload: {
-        playerName: "TEST",
+        player: {
+          name: "TEST",
+          color: Color.Red,
+          avatar: Avatar.Icecream,
+        },
       },
     });
   };

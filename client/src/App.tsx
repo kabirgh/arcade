@@ -4,6 +4,7 @@ import Codenames from "./codenames";
 import Home from "./home";
 import Join from "./join";
 import Buzzer from "./buzzer";
+import BuzzerHost from "./buzzer-host";
 import { WebSocketProvider } from "./contexts/WebSocketContext";
 import { PlayerProvider } from "./contexts/PlayerContext";
 import Admin from "./admin";
@@ -24,6 +25,9 @@ export function App() {
             {/* Host screens */}
             <Route path="/">
               <Home />
+            </Route>
+            <Route path="/buzzer-host">
+              <BuzzerHost />
             </Route>
             <Route path="/codenames">
               <Codenames />

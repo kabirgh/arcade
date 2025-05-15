@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type RefObject,
+} from "react";
 
 import useClientRect from "./hooks/useClientRect";
 import { useVolumeControl } from "./hooks/useVolumeControl";
@@ -63,11 +70,11 @@ const BuzzerHost: React.FC = () => {
         handlePlayerBuzzerPress(message.payload.player);
       }
     });
-  }, [handlePlayerBuzzerPress]);
+  }, [handlePlayerBuzzerPress, subscribe]);
 
   // Reset played teams on right click
   useEffect(() => {
-    const handleMouseDown = (event: any) => {
+    const handleMouseDown = (event: MouseEvent) => {
       event.preventDefault(); // Prevents the default context menu
       setPlayed([]);
     };
@@ -81,7 +88,7 @@ const BuzzerHost: React.FC = () => {
 
   // For testing and going back to home screen
   useEffect(() => {
-    const keydownHandler = (event: any) => {
+    const keydownHandler = (event: KeyboardEvent) => {
       switch (event.code) {
         case "KeyR":
           setPlayed([]);
@@ -124,7 +131,7 @@ const BuzzerHost: React.FC = () => {
         display: "grid",
         gridTemplateColumns: "1fr 8fr 1fr",
         gridTemplateRows: `${spacerSize}fr ${teams
-          .map((_team) => `${cardSize}fr ${spacerSize}fr`)
+          .map(() => `${cardSize}fr ${spacerSize}fr`)
           .join(" ")}`,
       }}
     >
@@ -154,7 +161,7 @@ const BuzzerHost: React.FC = () => {
 
       <div
         id="div-only-for-ref"
-        ref={teamRowRef as any}
+        ref={teamRowRef as RefObject<HTMLDivElement>}
         style={{ gridArea: `2/3/3/4`, height: "100%" }}
       ></div>
       <audio

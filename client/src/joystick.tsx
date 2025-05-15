@@ -5,7 +5,6 @@ import { Channel, MessageType } from "../../shared/types/websocket";
 import ConnectionStatusPill from "./components/ConnectionStatusPill";
 import nipplejs from "nipplejs";
 import { useEffect, useRef } from "react";
-
 // Define the type based on the return type of nipplejs.create
 type NippleManagerType = ReturnType<typeof nipplejs.create>;
 
@@ -78,7 +77,7 @@ export default function Joystick() {
   return (
     <div className="flex flex-col items-center justify-center h-screen relative overflow-hidden">
       <PastelBackground />
-      <ConnectionStatusPill readyState={readyState} />
+      <ConnectionStatusPill />
       <div
         ref={joystickContainerRef}
         className="flex items-center justify-center w-[80vmin] h-[80vmin] relative"

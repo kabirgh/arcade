@@ -1,12 +1,8 @@
 import { ReadyState } from "react-use-websocket";
+import { useWebSocketContext } from "../contexts/WebSocketContext";
 
-type ConnectionStatusPillProps = {
-  readyState: ReadyState;
-};
-
-export default function ConnectionStatusPill({
-  readyState,
-}: ConnectionStatusPillProps) {
+export default function ConnectionStatusPill() {
+  const { readyState } = useWebSocketContext();
   let text, color, opacity;
 
   switch (readyState) {

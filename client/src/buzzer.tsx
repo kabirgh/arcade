@@ -2,12 +2,11 @@ import "./buzzer.css";
 import PastelBackground from "./components/PastelBackground";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
 import { Channel, MessageType } from "../../shared/types/websocket";
-import { Avatar } from "../../shared/types/player";
-import { Color } from "../../shared/types/player";
+import { Avatar, Color } from "../../shared/types/player";
 import ConnectionStatusPill from "./components/ConnectionStatusPill";
 
 export default function Buzzer() {
-  const { publish, readyState } = useWebSocketContext();
+  const { publish } = useWebSocketContext();
 
   const handlePress = () => {
     console.log("pressed");
@@ -17,7 +16,10 @@ export default function Buzzer() {
       payload: {
         player: {
           name: "TEST",
-          color: Color.Red,
+          team: {
+            name: "Team 1",
+            color: Color.Red,
+          },
           avatar: Avatar.Icecream,
         },
       },
@@ -27,7 +29,7 @@ export default function Buzzer() {
   return (
     <div className="flex flex-col items-center justify-center h-screen relative overflow-hidden">
       <PastelBackground />
-      <ConnectionStatusPill readyState={readyState} />
+      <ConnectionStatusPill />
       <div className="flex items-center justify-center w-[80vmin] h-[80vmin]">
         <button
           className="pushable"

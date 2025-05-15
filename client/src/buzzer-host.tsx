@@ -20,9 +20,9 @@ const getPlayersWithDistinctTeams = (players: Player[]): Player[] => {
   const seenTeamNames: Set<string> = new Set();
   const playersToReturn: Player[] = [];
   for (const player of players) {
-    if (!seenTeamNames.has(player.teamName)) {
+    if (!seenTeamNames.has(player.team.name)) {
       playersToReturn.push(player);
-      seenTeamNames.add(player.teamName);
+      seenTeamNames.add(player.team.name);
     }
   }
   return playersToReturn;
@@ -33,7 +33,6 @@ const BuzzerHost: React.FC = () => {
   const { subscribe } = useWebSocketContext();
   const [players, setPlayers] = useState<Player[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
-  const [playerTeamMap, setPlayerTeamMap] = useState<Record<string, Team>>({});
   const [played, setPlayed] = useState<Player[]>([]);
   const { volume } = useVolumeControl(0.5);
   const teamRowRef = useRef<HTMLElement>(null);
@@ -44,7 +43,7 @@ const BuzzerHost: React.FC = () => {
   // Update UI and play sound when a team presses the buzzer
   const handlePlayerBuzzerPress = useCallback(
     (player: Player) => {
-      const team = teams.find((team) => team.name === player.teamName);
+      const team = teams.find((team) => team.name === player.team.name);
       if (!team) {
         return;
       }
@@ -71,31 +70,16 @@ const BuzzerHost: React.FC = () => {
 
   // Get players and teams from backend
   useEffect(() => {
-    const playersPromise: Promise<Player[]> = fetch(APIRoute.Players).then(
-      (res) => res.json()
-    );
-    const teamsPromise: Promise<Team[]> = fetch(APIRoute.Teams).then((res) =>
-      res.json()
-    );
-
-    Promise.all([playersPromise, teamsPromise]).then(([players, teams]) => {
-      // Map players to teams
-      const newPlayerTeamMap = {} as Record<string, Team>;
-      for (const player of players) {
-        const team = teams.find((team) => team.name === player.teamName);
-        if (!team) {
-          console.error(
-            `Team ${player.teamName} for player ${player.name} not found`
-          );
-          continue;
-        }
-        newPlayerTeamMap[player.name] = team;
-      }
-
-      setPlayers(players);
-      setTeams(teams);
-      setPlayerTeamMap(newPlayerTeamMap);
-    });
+    fetch(APIRoute.Players)
+      .then((res) => res.json())
+      .then((players) => {
+        setPlayers(players);
+      });
+    fetch(APIRoute.Teams)
+      .then((res) => res.json())
+      .then((teams) => {
+        setTeams(teams);
+      });
   }, []);
 
   // Listen to buzzer presses
@@ -173,7 +157,6 @@ const BuzzerHost: React.FC = () => {
       {played.map((player, index) => {
         const i = index + 1;
         const id = `row-${i}`;
-        const team = playerTeamMap[player.name];
 
         return (
           <div
@@ -182,7 +165,7 @@ const BuzzerHost: React.FC = () => {
             className="team-row"
             style={{
               gridArea: `${2 * i} / 2 / ${2 * i + 1} / 3`,
-              backgroundColor: `${team.color}`,
+              backgroundColor: `${player.team.color}`,
               color: "black",
               display: "flex",
               justifyContent: "space-between",
@@ -192,7 +175,7 @@ const BuzzerHost: React.FC = () => {
               paddingRight: "20px",
             }}
           >
-            <span>{team.name}</span>
+            <span>{player.team.name}</span>
             <div
               style={{
                 display: "flex",

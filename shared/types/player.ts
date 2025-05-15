@@ -40,9 +40,10 @@ export const TeamType = t.Object({
 });
 export type Team = Static<typeof TeamType>;
 
+// Denormalized
 export const PlayerType = t.Object({
   name: t.String(),
-  teamName: t.String(),
+  team: TeamType, // If team is updated, player also needs to be updated
   avatar: t.Enum(Avatar),
 });
 

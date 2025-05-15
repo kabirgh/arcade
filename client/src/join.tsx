@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import type { Player } from "../../shared/types/player";
 import { Color, Avatar } from "../../shared/types/player";
-import { useWebSocket } from "./contexts/WebSocketContext";
+import { useWebSocketContext } from "./contexts/WebSocketContext";
 import { usePlayer } from "./contexts/PlayerContext";
 import {
   Channel,
@@ -11,6 +11,7 @@ import {
 } from "../../shared/types/websocket";
 import { avatarToPath } from "../../shared/utils";
 import PastelBackground from "./components/PastelBackground";
+import { ReadyState } from "react-use-websocket";
 
 const TeamCircle = ({
   color,
@@ -41,12 +42,7 @@ export default function JoinScreen() {
   const [selectedAvatar, setSelectedAvatar] = useState<Avatar | null>(null);
   const [isJoinEnabled, setIsJoinEnabled] = useState(false);
   const [existingPlayers, setExistingPlayers] = useState<Player[]>([]);
-  const {
-    subscribe,
-    unsubscribe,
-    publish,
-    status: connectionStatus,
-  } = useWebSocket();
+  const { subscribe, unsubscribe, readyState } = useWebSocketContext();
   const { setLoggedInPlayer } = usePlayer();
 
   // Load draft join info from localStorage on mount
@@ -323,10 +319,10 @@ export default function JoinScreen() {
         <div className="flex justify-center">
           <button
             onClick={handleSubmit}
-            disabled={!isJoinEnabled || connectionStatus !== "connected"}
+            disabled={!isJoinEnabled || readyState !== ReadyState.OPEN}
             className={`mt-3 mb-10 w-full py-2 text-xl font-bold rounded-lg transition-all
                    ${
-                     isJoinEnabled && connectionStatus === "connected"
+                     isJoinEnabled && readyState === ReadyState.OPEN
                        ? "bg-[#238551] text-white hover:bg-[#32A467] cursor-pointer"
                        : "bg-stone-300 text-stone-500 cursor-not-allowed"
                    }`}

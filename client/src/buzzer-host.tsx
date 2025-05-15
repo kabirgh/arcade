@@ -6,12 +6,12 @@ import { APIRoute } from "../../shared/types/routes";
 import type { Player, Team } from "../../shared/types/player";
 import { Channel, MessageType } from "../../shared/types/websocket";
 import type { WebSocketMessage } from "../../shared/types/websocket";
-import { useWebSocket } from "./contexts/WebSocketContext";
+import { useWebSocketContext } from "./contexts/WebSocketContext";
 import { useLocation } from "wouter";
 
 const BuzzerHost: React.FC = () => {
   const [, setLocation] = useLocation();
-  const { subscribe } = useWebSocket();
+  const { subscribe } = useWebSocketContext();
   const [teams, setTeams] = useState([] as Team[]);
   const [played, setPlayed] = useState([] as Team[]);
   const { volume } = useVolumeControl(0.5);

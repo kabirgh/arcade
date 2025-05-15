@@ -2,12 +2,6 @@
 import { type Static, t } from "elysia";
 import { PlayerType } from "./player";
 
-export type WebSocketConnectionStatus =
-  | "connecting"
-  | "connected"
-  | "disconnected"
-  | "reconnecting";
-
 export enum Channel {
   PLAYER = "PLAYER",
   BUZZER = "BUZZER",

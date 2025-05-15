@@ -9,7 +9,7 @@ import React, {
 import type { Player } from "../../../shared/types/player";
 import { MessageType } from "../../../shared/types/websocket";
 import { Channel } from "../../../shared/types/websocket";
-import { useWebSocket } from "./WebSocketContext";
+import { useWebSocketContext } from "./WebSocketContext";
 
 // Define the shape of the context data
 interface PlayerContextType {
@@ -24,7 +24,7 @@ const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 export const PlayerProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
-  const { publish } = useWebSocket();
+  const { publish } = useWebSocketContext();
   const [player, setPlayer] = useState<Player | null>(null);
 
   // Load player from localStorage on initial mount

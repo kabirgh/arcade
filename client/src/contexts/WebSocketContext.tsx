@@ -4,12 +4,9 @@ import React, {
   useEffect,
   useRef,
   useCallback,
-  useState,
 } from "react";
-import type {
-  WebSocketMessage,
-  WebSocketConnectionStatus,
-} from "../../../shared/types/websocket";
+import useWebSocket, { ReadyState } from "react-use-websocket";
+import type { WebSocketMessage } from "../../../shared/types/websocket";
 import { Channel } from "../../../shared/types/websocket";
 
 // Use relative URL for WebSocket connection
@@ -22,7 +19,7 @@ interface WebSocketContextType {
   subscribe: (channel: Channel, callback: WebSocketCallback) => void;
   unsubscribe: (channel: Channel) => void;
   publish: (message: WebSocketMessage) => void;
-  status: WebSocketConnectionStatus;
+  readyState: ReadyState;
 }
 
 // Create the context
@@ -31,10 +28,12 @@ const WebSocketContext = createContext<WebSocketContextType | undefined>(
 );
 
 // Custom hook to use the WebSocket context
-export const useWebSocket = () => {
+export const useWebSocketContext = () => {
   const context = useContext(WebSocketContext);
   if (context === undefined) {
-    throw new Error("useWebSocket must be used within a WebSocketProvider");
+    throw new Error(
+      "useWebSocketContext must be used within a WebSocketProvider"
+    );
   }
   return context;
 };
@@ -43,85 +42,48 @@ export const useWebSocket = () => {
 export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const ws = useRef<WebSocket | null>(null);
   const channels = useRef<Map<Channel, Set<WebSocketCallback>>>(new Map());
-  const [status, setStatus] =
-    useState<WebSocketConnectionStatus>("disconnected");
 
-  const connectWebSocket = useCallback(() => {
-    // If there's an existing WebSocket, ensure it's properly closed before creating a new one.
-    // This helps prevent multiple connections if connectWebSocket is called unexpectedly.
-    if (ws.current) {
-      // Remove event listeners to prevent them from firing on an old instance
-      ws.current.onopen = null;
-      ws.current.onmessage = null;
-      ws.current.onerror = null;
-      ws.current.onclose = null;
-      // Close if it's in a connecting or open state
-      if (
-        ws.current.readyState === WebSocket.OPEN ||
-        ws.current.readyState === WebSocket.CONNECTING
-      ) {
-        console.log(
-          `[${new Date().toISOString()}] [WebSocket] Closing existing connection before reconnecting.`
-        );
-        ws.current.close();
-      }
-    }
-
-    console.log(
-      `[${new Date().toISOString()}] [WebSocket] Attempting to connect...`
-    );
-    const socket = new WebSocket(WS_URL);
-    // Assign to ws.current immediately so other parts of the code can reference it,
-    // e.g., to check readyState, even if it's still connecting.
-    ws.current = socket;
-
-    socket.onopen = () => {
+  const { sendMessage, lastMessage, readyState } = useWebSocket(WS_URL, {
+    onOpen: () => {
       console.log(`[${new Date().toISOString()}] [WebSocket] Connected`);
-      setStatus("connected");
-    };
-
-    socket.onclose = (event) => {
+    },
+    onClose: (event: CloseEvent) => {
       console.log(
         `[${new Date().toISOString()}] [WebSocket] Disconnected. Code: ${
           event.code
         }, Reason: ${event.reason}`
       );
-      setStatus("disconnected");
-      // Only try to reconnect if this socket (ws.current at the time of closure) was the one this handler was attached to.
-      // And ensure we are not in a state where the component is unmounting (handled by useEffect cleanup).
-      if (ws.current === socket) {
-        // Check if it's the same instance that triggered this onclose
-        ws.current = null; // Clear the current socket ref as it's now closed
-        // Simple reconnect after 2 seconds. More sophisticated strategies could be used (e.g., exponential backoff).
-        console.log(
-          `[${new Date().toISOString()}] [WebSocket] Attempting reconnection in 1 second...`
-        );
-        setTimeout(connectWebSocket, 2000);
-      } else {
-        console.log(
-          `[${new Date().toISOString()}] [WebSocket] Old socket closed, no auto-reconnect.`
-        );
-      }
-    };
+    },
+    onError: (event: Event) => {
+      console.error(`[${new Date().toISOString()}] [WebSocket] Error:`, event);
+    },
+    shouldReconnect: (closeEvent: CloseEvent) => {
+      console.log(
+        `[${new Date().toISOString()}] [WebSocket] Close event code: ${
+          closeEvent.code
+        }. Attempting reconnection...`
+      );
+      return true; // Instructs react-use-websocket to attempt reconnection
+    },
+  });
 
-    socket.onerror = (error) => {
-      console.error(`[${new Date().toISOString()}] [WebSocket] Error:`, error);
-      // Note: 'onerror' will usually be followed by 'onclose', which handles reconnection.
-    };
-
-    socket.onmessage = (event) => {
+  // Effect to handle incoming messages from react-use-websocket
+  useEffect(() => {
+    const date = new Date().toISOString();
+    if (lastMessage && lastMessage.data) {
       try {
         // Ensure event.data is a string before parsing
-        if (typeof event.data !== "string") {
+        if (typeof lastMessage.data !== "string") {
           console.error(
-            `[${new Date().toISOString()}] [WebSocket] Received non-string message:`,
-            event.data
+            `[${date}] [WebSocket] Received non-string message:`,
+            lastMessage.data
           );
           return;
         }
-        const message: WebSocketMessage = JSON.parse(event.data);
+        const message: WebSocketMessage = JSON.parse(
+          lastMessage.data as string
+        );
 
         const callbacks = channels.current.get(message.channel);
         if (callbacks) {
@@ -129,21 +91,15 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
             try {
               callback(message);
             } catch (err) {
-              console.error(
-                `[${new Date().toISOString()}] Error in subscriber callback:`,
-                err
-              );
+              console.error(`[${date}] Error in subscriber callback:`, err);
             }
           });
         }
       } catch (err) {
-        console.error(
-          `[${new Date().toISOString()}] Error parsing WebSocket message:`,
-          err
-        );
+        console.error(`[${date}] Error parsing WebSocket message:`, err);
       }
-    };
-  }, []); // WS_URL is module-level constant, so useCallback has no dependencies.
+    }
+  }, [lastMessage]); // removed channels.current from dep array as it's a ref
 
   // Subscribe to a channel
   const subscribe = useCallback(
@@ -162,35 +118,19 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
   }, []);
 
   // Send a message to the server
-  const publish = useCallback((message: WebSocketMessage) => {
-    if (ws.current?.readyState === WebSocket.OPEN) {
-      ws.current.send(JSON.stringify(message));
-    } else {
-      console.warn(
-        `[WebSocket] Not connected (readyState: ${ws.current?.readyState}), unable to send message`,
-        message
-      );
-    }
-  }, []);
-
-  useEffect(() => {
-    connectWebSocket();
-
-    // Clean up on unmount
-    return () => {
-      if (ws.current) {
-        console.log(
-          `[${new Date().toISOString()}] [WebSocket] Cleaning up WebSocket connection on unmount.`
+  const publish = useCallback(
+    (message: WebSocketMessage) => {
+      if (readyState === ReadyState.OPEN) {
+        sendMessage(JSON.stringify(message));
+      } else {
+        console.warn(
+          `[WebSocket] Not connected (readyState: ${readyState}), unable to send message`,
+          message
         );
-        // Crucially, remove the onclose handler or set it to null before closing.
-        // This prevents the onclose handler from attempting to reconnect after the component has unmounted.
-        ws.current.onclose = null;
-        ws.current.onerror = null;
-        ws.current.close();
-        ws.current = null;
       }
-    };
-  }, [connectWebSocket]); // useEffect depends on the connectWebSocket function instance
+    },
+    [readyState, sendMessage]
+  );
 
   return (
     <WebSocketContext.Provider
@@ -198,7 +138,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
         subscribe,
         unsubscribe,
         publish,
-        status,
+        readyState,
       }}
     >
       {children}

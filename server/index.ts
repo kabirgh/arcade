@@ -32,7 +32,7 @@ const teams = [
 ];
 
 const clients = new Map<ElysiaWS, Client>();
-let screen: string = "join";
+const screen: string = "join";
 
 function getPlayers(): Player[] {
   return Array.from(clients.values())
@@ -42,7 +42,7 @@ function getPlayers(): Player[] {
 
 function broadcast(message: WebSocketMessage): void {
   console.log("Broadcasting message:", message);
-  for (const [ws, _client] of clients.entries()) {
+  for (const ws of clients.keys()) {
     ws.send(JSON.stringify(message));
   }
 }

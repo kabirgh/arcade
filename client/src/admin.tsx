@@ -7,7 +7,7 @@ import {
 import { APIRoute, APIRouteToRequestSchema } from "../../shared/types/routes";
 import PastelBackground from "./components/PastelBackground";
 import { Value } from "@sinclair/typebox/value";
-import { useWebSocket } from "./contexts/WebSocketContext";
+import { useWebSocketContext } from "./contexts/WebSocketContext";
 
 // Function to generate schema templates dynamically based on route
 const generateSchemaTemplate = (route: string): any => {
@@ -71,7 +71,7 @@ const getBroadcastTemplates = (): Record<string, any> => {
 };
 
 const AdminPage: React.FC = () => {
-  const { publish } = useWebSocket();
+  const { publish } = useWebSocketContext();
 
   const [selectedAPI, setSelectedAPI] = useState<string>(
     APIRoute.SendWebSocketMessage

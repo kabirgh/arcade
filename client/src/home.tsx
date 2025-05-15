@@ -6,7 +6,7 @@ import {
   type WebSocketMessage,
 } from "../../shared/types/websocket";
 import PastelBackground from "./components/PastelBackground";
-import { useWebSocket } from "./contexts/WebSocketContext";
+import { useWebSocketContext } from "./contexts/WebSocketContext";
 
 type TeamSectionProps = {
   name: string;
@@ -29,7 +29,7 @@ const TeamSection = ({ name, color }: TeamSectionProps) => {
 
 export default function Home() {
   const [players, setPlayers] = useState<Player[]>([]);
-  const { subscribe, unsubscribe } = useWebSocket();
+  const { subscribe, unsubscribe } = useWebSocketContext();
 
   useEffect(() => {
     subscribe(Channel.PLAYER, (message: WebSocketMessage) => {

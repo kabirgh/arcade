@@ -1,7 +1,5 @@
-import { Elysia, t } from "elysia";
 import {
   CardClass,
-  CardType,
   type Card,
   type CodenamesClueRequest,
   type CodenamesClueResponse,
@@ -13,7 +11,6 @@ import {
   type CodenamesTeam,
 } from "../shared/types/codenames";
 import { shuffle } from "../shared/utils";
-import { APIRoute } from "../shared/types/routes";
 
 const words = await Bun.file("./server/words.txt").text();
 

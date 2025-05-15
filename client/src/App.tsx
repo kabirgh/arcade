@@ -8,6 +8,7 @@ import BuzzerHost from "./buzzer-host";
 import { WebSocketProvider } from "./contexts/WebSocketContext";
 import { PlayerProvider } from "./contexts/PlayerContext";
 import Admin from "./admin";
+import Joystick from "./joystick";
 
 export function App() {
   return (
@@ -22,6 +23,9 @@ export function App() {
             <Route path="/buzzer">
               <Buzzer />
             </Route>
+            <Route path="/joystick">
+              <Joystick />
+            </Route>
             {/* Host screens */}
             <Route path="/">
               <Home />
@@ -35,7 +39,9 @@ export function App() {
             <Route path="/admin">
               <Admin />
             </Route>
-            <Route>404 Not Found</Route>
+            <Route>
+              <div className="mt-8 text-2xl font-bold">404 Not Found</div>
+            </Route>
           </Switch>
         </div>
       </PlayerProvider>

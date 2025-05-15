@@ -246,7 +246,7 @@ const AdminPage: React.FC = () => {
     }
   };
 
-  // TODO: add button to send reset buzzer ws message
+  // TODO: add a button to set player screen
 
   return (
     <div className="h-screen relative overflow-hidden">

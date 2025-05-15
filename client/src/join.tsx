@@ -11,6 +11,7 @@ import PastelBackground from "./components/PastelBackground";
 import { ReadyState } from "react-use-websocket";
 import { APIRoute } from "../../shared/types/api/schema";
 import { usePlayerContext } from "./contexts/PlayerContext";
+import { fetchApi } from "./util/fetchApi";
 
 const TeamCircle = ({
   team,
@@ -39,7 +40,8 @@ const TeamCircle = ({
 export default function JoinScreen() {
   const [, setLocation] = useLocation();
   const { subscribe, unsubscribe, readyState } = useWebSocketContext();
-  const { sessionPlayer, setSessionPlayer } = usePlayerContext();
+  const { sessionPlayer, setSessionPlayer, clearSessionPlayer } =
+    usePlayerContext();
   const [playerName, setPlayerName] = useState("");
   const [nameError, setNameError] = useState<string | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
@@ -49,37 +51,51 @@ export default function JoinScreen() {
   const [teams, setTeams] = useState<Team[]>([]);
 
   useEffect(() => {
-    // First check if there is player for this session (from localStorage)
-    if (sessionPlayer) {
-      // We shouldn't be here, because we should have been redirected to another screen.
-      // Check what the server thinks the current screen should be.
-      fetch(APIRoute.PlayerScreen)
-        .then((res) => res.json())
-        .then((data) => {
-          console.log("Server says current screen should be:", data.screen);
-          if (data.screen !== PlayerScreen.Join) {
-            setLocation(data.screen);
-          }
-        });
-    }
+    // First check what the server thinks the current screen should be.
+    fetchApi({ route: APIRoute.PlayerScreen }).then((data) => {
+      console.log("Server says current screen should be:", data.screen);
 
-    const storedJoinInfo = localStorage.getItem("playerJoinInfo");
-    if (storedJoinInfo) {
-      try {
-        const joinInfo = JSON.parse(storedJoinInfo);
-        // Only set state if the loaded value is not null/undefined
-        if (joinInfo.name) setPlayerName(joinInfo.name);
-        if (joinInfo.team) setSelectedTeam(joinInfo.team);
-        if (joinInfo.avatar) setSelectedAvatar(joinInfo.avatar);
-      } catch (error) {
-        console.error(
-          "Failed to parse player join info from localStorage",
-          error
-        );
-        localStorage.removeItem("playerJoinInfo"); // Clear invalid item
+      if (data.screen === PlayerScreen.Join) {
+        // If the server thinks the current screen should be join, we have stale player info in localStorage.
+        // Clear it.
+        clearSessionPlayer();
       }
-    }
-  }, [sessionPlayer, setLocation]);
+
+      // If the server thinks the current screen should be anything other than join,
+      // redirect to that screen.
+      if (data.screen !== PlayerScreen.Join) {
+        if (sessionPlayer === null) {
+          // We don't have a user in sessionPlayer and the server thinks we should be on a different screen.
+          // Maybe they joined late. Let them fill out the form again and direct them to the correct screen.
+          clearSessionPlayer();
+        } else {
+          // We have a user in sessionPlayer and the server thinks we should be on a different screen.
+          // Redirect to the correct screen immediately.
+          setLocation(data.screen);
+          return;
+        }
+      }
+
+      // Check if the user was interrupted in the middle of filling out the join form.
+      // If so, fill in the form with the player's last-used values. If not, the form will be blank.
+      const storedJoinInfo = localStorage.getItem("playerJoinInfo");
+      if (storedJoinInfo) {
+        try {
+          const joinInfo = JSON.parse(storedJoinInfo);
+          // Only set state if the loaded value is not null/undefined
+          if (joinInfo.name) setPlayerName(joinInfo.name);
+          if (joinInfo.team) setSelectedTeam(joinInfo.team);
+          if (joinInfo.avatar) setSelectedAvatar(joinInfo.avatar);
+        } catch (error) {
+          console.error(
+            "Failed to parse player join info from localStorage",
+            error
+          );
+          localStorage.removeItem("playerJoinInfo"); // Clear invalid item
+        }
+      }
+    });
+  }, [sessionPlayer, setLocation, clearSessionPlayer]);
 
   // Get existing players from server
   useEffect(() => {
@@ -233,21 +249,8 @@ export default function JoinScreen() {
 
       // Clear the draft join info from localStorage
       localStorage.removeItem("playerJoinInfo");
-
       // Set confirmed player information in localStorage so page reloads can redirect to the correct screen
       localStorage.setItem("playerInfo", JSON.stringify(player));
-      // TODO:
-      // - On page load:
-      //   - Check if playerInfo is set in localStorage. If not, stay on the
-      //     join screen.
-      //   - If yes, ask server what the current screen should be. eg. buzzer,
-      //     joystick for games. Navigate to the correct screen.
-      //   - If the server doesn't know, this means its a new game. Delete the
-      //     playerInfo from localStorage and stay on the join screen. Currently
-      //     playerInfo will be persisted forever.
-      //
-      // Other multiplayer games like jackbox handle this with rooms/sessions,
-      // which I don't want to implement for this project.
 
       // Navigate to lobby screen
       setLocation("/buzzer");

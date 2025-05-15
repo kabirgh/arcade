@@ -10,6 +10,7 @@ import type { Player } from "../../../shared/types/domain/player";
 import { MessageType } from "../../../shared/types/domain/websocket";
 import { Channel } from "../../../shared/types/domain/websocket";
 import { useWebSocketContext } from "./WebSocketContext";
+import { ReadyState } from "react-use-websocket";
 
 // Define the shape of the context data
 interface PlayerContextType {
@@ -25,14 +26,14 @@ const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 export const PlayerProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
-  const { publish } = useWebSocketContext();
+  const { publish, readyState } = useWebSocketContext();
   const [player, setPlayer] = useState<Player | null>(null);
 
   // Load player from localStorage on initial mount
   useEffect(() => {
     try {
       const storedPlayer = localStorage.getItem("player");
-      if (storedPlayer) {
+      if (storedPlayer && readyState === ReadyState.OPEN) {
         setPlayer(JSON.parse(storedPlayer));
         // When the client disconnects, the server will remove the player from the list
         // so we need to send a JOIN message to the server to re-add the player to the list
@@ -46,7 +47,7 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({
       console.error("Failed to parse player data from localStorage", error);
       localStorage.removeItem("player"); // Clear corrupted data
     }
-  }, [publish]);
+  }, [publish, readyState]);
 
   // Function to update player state and localStorage
   const setSessionPlayer = useCallback(

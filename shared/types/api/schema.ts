@@ -10,6 +10,7 @@ import {
 } from "./codenames";
 import { SendWebSocketMessageRequestType } from "../api/websocket";
 import { EmptyRequestType, SuccessResponseType } from "./common";
+import { PlayerScreenResponseType } from "./misc";
 
 export { EmptyRequestType } from "./common";
 
@@ -34,7 +35,7 @@ export const APIRouteToSchema = {
   [APIRoute.PlayerScreen]: {
     method: "GET",
     req: EmptyRequestType,
-    res: SuccessResponseType,
+    res: PlayerScreenResponseType,
   },
   [APIRoute.SetPlayerScreen]: {
     method: "POST",

@@ -15,6 +15,7 @@ import { useWebSocketContext } from "./WebSocketContext";
 interface PlayerContextType {
   sessionPlayer: Player | null;
   setSessionPlayer: (player: Player | null) => void;
+  clearSessionPlayer: () => void;
 }
 
 // Create the context with a default undefined value
@@ -76,8 +77,18 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({
     [publish]
   );
 
+  const clearSessionPlayer = useCallback(() => {
+    localStorage.removeItem("player");
+    publish({
+      channel: Channel.PLAYER,
+      messageType: MessageType.LEAVE,
+    });
+  }, [publish]);
+
   return (
-    <PlayerContext.Provider value={{ sessionPlayer: player, setSessionPlayer }}>
+    <PlayerContext.Provider
+      value={{ sessionPlayer: player, setSessionPlayer, clearSessionPlayer }}
+    >
       {children}
     </PlayerContext.Provider>
   );

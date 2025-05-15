@@ -1,8 +1,8 @@
 import "./buzzer.css";
 import PastelBackground from "./components/PastelBackground";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
-import { Channel, MessageType } from "../../shared/types/websocket";
-import { Avatar, Color } from "../../shared/types/player";
+import { Channel, MessageType } from "../../shared/types/domain/websocket";
+import { Avatar, Color } from "../../shared/types/domain/player";
 import ConnectionStatusPill from "./components/ConnectionStatusPill";
 
 export default function Buzzer() {
@@ -27,7 +27,7 @@ export default function Buzzer() {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen relative overflow-hidden">
+    <div className="buzzer-component flex flex-col items-center justify-center h-screen relative overflow-hidden">
       <PastelBackground />
       <ConnectionStatusPill />
       <div className="flex items-center justify-center w-[80vmin] h-[80vmin]">

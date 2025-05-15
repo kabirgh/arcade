@@ -9,7 +9,7 @@ import {
   type CodenamesStateResponse,
   type GameState,
   type CodenamesTeam,
-} from "../shared/types/codenames";
+} from "../shared/types/domain/codenames";
 import { shuffle } from "../shared/utils";
 
 const words = await Bun.file("./server/words.txt").text();

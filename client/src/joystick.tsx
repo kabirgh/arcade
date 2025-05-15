@@ -1,7 +1,7 @@
 import "./buzzer.css";
 import PastelBackground from "./components/PastelBackground";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
-import { Channel, MessageType } from "../../shared/types/websocket";
+import { Channel, MessageType } from "../../shared/types/domain/websocket";
 import ConnectionStatusPill from "./components/ConnectionStatusPill";
 import nipplejs from "nipplejs";
 import { useEffect, useRef } from "react";

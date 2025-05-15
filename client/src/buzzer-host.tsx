@@ -9,10 +9,10 @@ import {
 
 import useClientRect from "./hooks/useClientRect";
 import { useVolumeControl } from "./hooks/useVolumeControl";
-import { APIRoute } from "../../shared/types/routes";
-import type { Player, Team } from "../../shared/types/player";
-import { Channel, MessageType } from "../../shared/types/websocket";
-import type { WebSocketMessage } from "../../shared/types/websocket";
+import { APIRoute } from "../../shared/types/api/schema";
+import type { Player, Team } from "../../shared/types/domain/player";
+import { Channel, MessageType } from "../../shared/types/domain/websocket";
+import type { WebSocketMessage } from "../../shared/types/api/websocket";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
 import { useLocation } from "wouter";
 

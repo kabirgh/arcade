@@ -6,9 +6,9 @@ import React, {
   useCallback,
   type ReactNode,
 } from "react";
-import type { Player } from "../../../shared/types/player";
-import { MessageType } from "../../../shared/types/websocket";
-import { Channel } from "../../../shared/types/websocket";
+import type { Player } from "../../../shared/types/domain/player";
+import { MessageType } from "../../../shared/types/domain/websocket";
+import { Channel } from "../../../shared/types/domain/websocket";
 import { useWebSocketContext } from "./WebSocketContext";
 
 // Define the shape of the context data

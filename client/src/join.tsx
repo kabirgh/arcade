@@ -1,17 +1,15 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import type { Player, Team } from "../../shared/types/player";
-import { Avatar, PlayerScreen } from "../../shared/types/player";
+import type { Player, Team } from "../../shared/types/domain/player";
+import { Avatar } from "../../shared/types/domain/player";
+import { PlayerScreen } from "../../shared/types/domain/misc";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
-import {
-  Channel,
-  MessageType,
-  type WebSocketMessage,
-} from "../../shared/types/websocket";
+import { Channel, MessageType } from "../../shared/types/domain/websocket";
+import type { WebSocketMessage } from "../../shared/types/api/websocket";
 import { avatarToPath } from "../../shared/utils";
 import PastelBackground from "./components/PastelBackground";
 import { ReadyState } from "react-use-websocket";
-import { APIRoute } from "../../shared/types/routes";
+import { APIRoute } from "../../shared/types/api/schema";
 import { usePlayerContext } from "./contexts/PlayerContext";
 
 const TeamCircle = ({
@@ -81,7 +79,7 @@ export default function JoinScreen() {
         localStorage.removeItem("playerJoinInfo"); // Clear invalid item
       }
     }
-  }, []);
+  }, [sessionPlayer, setLocation]);
 
   // Get existing players from server
   useEffect(() => {

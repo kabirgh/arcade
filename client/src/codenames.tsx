@@ -3,8 +3,8 @@ import {
   type Card,
   CardClass,
   type GameState,
-} from "../../shared/types/codenames";
-import { APIRoute } from "../../shared/types/routes";
+} from "../../shared/types/domain/codenames";
+import { APIRoute } from "../../shared/types/api/schema";
 
 const UNSELECTED_CARD_STYLES = {
   [CardClass.Red]: "bg-white text-black box-border border-6 border-[#D13030]",

@@ -3,15 +3,9 @@ import { Elysia } from "elysia";
 import { ElysiaWS } from "elysia/dist/ws";
 import { staticPlugin } from "@elysiajs/static";
 import { html } from "@elysiajs/html";
-import { Color, type Player } from "../shared/types/player";
-import {
-  Channel,
-  WebSocketMessageType,
-  type WebSocketMessage,
-  MessageType,
-  type PlayerListAllMessage,
-} from "../shared/types/websocket";
-import { APIRoute, APIRouteToRequestSchema } from "../shared/types/routes";
+import { Color, type Player } from "../shared/types/domain/player";
+import { Channel, MessageType } from "../shared/types/domain/websocket";
+import { APIRoute, APIRouteToSchema } from "../shared/types/api/schema";
 import {
   handleCodenamesState,
   handleCodenamesStart,
@@ -19,6 +13,11 @@ import {
   handleCodenamesGuess,
   handleCodenamesEndTurn,
 } from "./codenames";
+import {
+  type PlayerListAllMessage,
+  type WebSocketMessage,
+  WebSocketMessageType,
+} from "../shared/types/api/websocket";
 
 type Client = {
   player: Player | null;
@@ -109,28 +108,28 @@ const app = new Elysia()
     () => {
       return { screen };
     },
-    { body: APIRouteToRequestSchema[APIRoute.PlayerScreen] }
+    { body: APIRouteToSchema[APIRoute.PlayerScreen].req }
   )
   .post(
     APIRoute.SetPlayerScreen,
-    ({ body }) => {
+    () => {
       // TODO
     },
-    { body: APIRouteToRequestSchema[APIRoute.SetPlayerScreen] }
+    { body: APIRouteToSchema[APIRoute.SetPlayerScreen].req }
   )
   .get(
     APIRoute.Teams,
     () => {
       return teams;
     },
-    { body: APIRouteToRequestSchema[APIRoute.Teams] }
+    { body: APIRouteToSchema[APIRoute.Teams].req }
   )
   .get(
     APIRoute.Players,
     () => {
       return getPlayers();
     },
-    { body: APIRouteToRequestSchema[APIRoute.Players] }
+    { body: APIRouteToSchema[APIRoute.Players].req }
   )
   // Admin
   // TODO: return id: player map
@@ -139,7 +138,7 @@ const app = new Elysia()
     () => {
       return [...clients.keys()].map((ws) => ws.id);
     },
-    { body: APIRouteToRequestSchema[APIRoute.ListWebSocketClientIds] }
+    { body: APIRouteToSchema[APIRoute.ListWebSocketClientIds].req }
   )
   .post(
     APIRoute.SendWebSocketMessage,
@@ -151,14 +150,14 @@ const app = new Elysia()
       handleWebSocketMessage(ws, body.message);
       return { success: true };
     },
-    { body: APIRouteToRequestSchema[APIRoute.SendWebSocketMessage] }
+    { body: APIRouteToSchema[APIRoute.SendWebSocketMessage].req }
   )
   .post(
     APIRoute.BroadcastAllPlayers,
     () => {
       return broadcastAllPlayers();
     },
-    { body: APIRouteToRequestSchema[APIRoute.BroadcastAllPlayers] }
+    { body: APIRouteToSchema[APIRoute.BroadcastAllPlayers].req }
   )
   // Codenames
   .get(
@@ -166,35 +165,35 @@ const app = new Elysia()
     () => {
       return handleCodenamesState();
     },
-    { body: APIRouteToRequestSchema[APIRoute.CodenamesState] }
+    { body: APIRouteToSchema[APIRoute.CodenamesState].req }
   )
   .post(
     APIRoute.CodenamesStart,
     () => {
       return handleCodenamesStart();
     },
-    { body: APIRouteToRequestSchema[APIRoute.CodenamesStart] }
+    { body: APIRouteToSchema[APIRoute.CodenamesStart].req }
   )
   .post(
     APIRoute.CodenamesClue,
     ({ body }) => {
       return handleCodenamesClue(body);
     },
-    { body: APIRouteToRequestSchema[APIRoute.CodenamesClue] }
+    { body: APIRouteToSchema[APIRoute.CodenamesClue].req }
   )
   .post(
     APIRoute.CodenamesGuess,
     ({ body }) => {
       return handleCodenamesGuess(body);
     },
-    { body: APIRouteToRequestSchema[APIRoute.CodenamesGuess] }
+    { body: APIRouteToSchema[APIRoute.CodenamesGuess].req }
   )
   .post(
     APIRoute.CodenamesEndTurn,
     () => {
       return handleCodenamesEndTurn();
     },
-    { body: APIRouteToRequestSchema[APIRoute.CodenamesEndTurn] }
+    { body: APIRouteToSchema[APIRoute.CodenamesEndTurn].req }
   );
 
 // Add catch-all route last so API routes above are matched before the SPA catch-all

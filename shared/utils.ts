@@ -1,4 +1,4 @@
-import { Avatar } from "./types/player";
+import { Avatar } from "./types/domain/player";
 
 export const shuffle = <T>(array: T[]): T[] => {
   const newArray = [...array];

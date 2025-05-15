@@ -1,10 +1,7 @@
 import { useEffect, useState } from "react";
-import { Color, type Player } from "../../shared/types/player";
-import {
-  Channel,
-  MessageType,
-  type WebSocketMessage,
-} from "../../shared/types/websocket";
+import { Color, type Player } from "../../shared/types/domain/player";
+import { Channel, MessageType } from "../../shared/types/domain/websocket";
+import type { WebSocketMessage } from "../../shared/types/api/websocket";
 import PastelBackground from "./components/PastelBackground";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
 

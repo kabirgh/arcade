@@ -1,24 +1,25 @@
 import React, { useState, useEffect } from "react";
-import {
-  Channel,
-  MessageType,
-  WebSocketMessageType,
-} from "../../shared/types/websocket";
-import { APIRoute, APIRouteToRequestSchema } from "../../shared/types/routes";
-import PastelBackground from "./components/PastelBackground";
 import { Value } from "@sinclair/typebox/value";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
+import PastelBackground from "./components/PastelBackground";
+import { Channel, MessageType } from "../../shared/types/domain/websocket";
+import { WebSocketMessageType } from "../../shared/types/api/websocket";
+import { APIRoute, APIRouteToSchema } from "../../shared/types/api/schema";
+import { EmptyRequestType } from "../../shared/types/api/schema";
 
 // Function to generate schema templates dynamically based on route
 const generateSchemaTemplate = (route: string): any => {
-  const schema = APIRouteToRequestSchema[route as APIRoute];
+  const routeSchema = APIRouteToSchema[route as APIRoute];
+  if (!routeSchema) return null; // Should not happen if route is a valid APIRoute
 
-  if (schema) {
+  const requestSchema = routeSchema.req;
+
+  if (requestSchema) {
     // For union types like WebSocketMessageType, Value.Create might pick the first type.
     // This is generally fine for initial display if a specific sub-type isn't yet chosen.
-    return Value.Create(schema);
+    return Value.Create(requestSchema);
   }
-  // Return null if no schema is defined (e.g. for GET requests or routes with no body)
+  // Return null if no requestSchema is defined (e.g. for GET requests or routes with no body)
   return null;
 };
 
@@ -74,14 +75,18 @@ const AdminPage: React.FC = () => {
   const { publish } = useWebSocketContext();
 
   const [selectedAPI, setSelectedAPI] = useState<string>(
-    APIRoute.SendWebSocketMessage
+    Object.values(APIRoute)[0] // Default to the first API route
   );
   const [jsonInput, setJsonInput] = useState<string>("");
   const [logs, setLogs] = useState<
     Array<{ request: any; response: any; timestamp: number }>
   >([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [httpMethod, setHttpMethod] = useState<"GET" | "POST">("POST");
+  const [httpMethod, setHttpMethod] = useState<"GET" | "POST">(
+    APIRouteToSchema[Object.values(APIRoute)[0] as APIRoute].method as
+      | "GET"
+      | "POST"
+  );
   const [selectedMessageType, setSelectedMessageType] =
     useState<string>("PLAYER/JOIN");
   const broadcastTemplates = getBroadcastTemplates();
@@ -100,29 +105,37 @@ const AdminPage: React.FC = () => {
 
   // Prefill JSON schema when API endpoint or method changes
   useEffect(() => {
-    if (httpMethod === "POST" && selectedAPI) {
-      if (
-        selectedAPI === APIRoute.SendWebSocketMessage &&
-        selectedMessageType
-      ) {
-        // Use selected message type template for broadcast
-        const template = broadcastTemplates[selectedMessageType];
-        if (template) {
-          setJsonInput(JSON.stringify(template, null, 2));
+    const routeSchema = APIRouteToSchema[selectedAPI as APIRoute];
+    if (routeSchema) {
+      const method = routeSchema.method as "GET" | "POST";
+      setHttpMethod(method);
+
+      if (method === "POST") {
+        if (
+          selectedAPI === APIRoute.SendWebSocketMessage &&
+          selectedMessageType
+        ) {
+          // Use selected message type template for broadcast
+          const template = broadcastTemplates[selectedMessageType];
+          if (template) {
+            setJsonInput(JSON.stringify(template, null, 2));
+          }
+        } else {
+          // Use standard template for other endpoints
+          const template = generateSchemaTemplate(selectedAPI);
+          if (template) {
+            setJsonInput(JSON.stringify(template, null, 2));
+          } else {
+            setJsonInput(""); // Clear if no template (e.g. EmptyRequestType)
+          }
         }
       } else {
-        // Use standard template for other endpoints
-        const template = generateSchemaTemplate(selectedAPI);
-        if (template) {
-          setJsonInput(JSON.stringify(template, null, 2));
-        } else {
-          setJsonInput("");
-        }
+        setJsonInput(""); // Clear JSON input for GET requests
       }
     } else {
-      setJsonInput("");
+      setJsonInput(""); // Clear JSON input if route schema not found
     }
-  }, [selectedAPI, httpMethod, selectedMessageType]);
+  }, [selectedAPI, selectedMessageType, broadcastTemplates]);
 
   // Effect to manage selectedMessageType based on selectedAPI and available templates
   useEffect(() => {
@@ -167,10 +180,6 @@ const AdminPage: React.FC = () => {
 
   const handleJsonChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setJsonInput(e.target.value);
-  };
-
-  const handleMethodChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setHttpMethod(e.target.value as "GET" | "POST");
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -259,31 +268,9 @@ const AdminPage: React.FC = () => {
                 API ENDPOINT
               </p>
               <div className="flex items-center gap-2">
-                <div className="flex items-center space-x-4 mr-2">
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="httpMethod"
-                      value="GET"
-                      checked={httpMethod === "GET"}
-                      onChange={handleMethodChange}
-                      className="mr-1"
-                    />
-                    <span className="text-sm font-medium">GET</span>
-                  </label>
-                  <label className="flex items-center">
-                    <input
-                      type="radio"
-                      name="httpMethod"
-                      value="POST"
-                      checked={httpMethod === "POST"}
-                      onChange={handleMethodChange}
-                      className="mr-1"
-                    />
-                    <span className="text-sm font-medium">POST</span>
-                  </label>
-                </div>
-
+                <span className="text-sm font-medium bg-gray-100 px-2 py-2 rounded w-16">
+                  {httpMethod}
+                </span>
                 <select
                   value={selectedAPI}
                   onChange={handleAPIChange}
@@ -332,11 +319,20 @@ const AdminPage: React.FC = () => {
                     ? selectedAPI === APIRoute.SendWebSocketMessage &&
                       !selectedMessageType
                       ? "Select a message type first"
+                      : APIRouteToSchema[selectedAPI as APIRoute]?.req ===
+                        EmptyRequestType
+                      ? "Request body is empty for this endpoint"
                       : "Enter JSON payload or select an endpoint to auto-fill"
                     : "GET requests don't require a body"
                 }
                 className="w-full p-2 h-[70%] text-sm bg-gray-50 border-2 border-gray-300 rounded-lg
                            focus:outline-none focus:ring-2 focus:ring-sky-200 font-mono"
+                disabled={
+                  httpMethod === "GET" ||
+                  (APIRouteToSchema[selectedAPI as APIRoute]?.req ===
+                    EmptyRequestType &&
+                    httpMethod === "POST")
+                }
               />
             </div>
 

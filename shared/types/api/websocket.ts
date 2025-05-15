@@ -1,21 +1,8 @@
-// WebSocket message types for the game
-import { type Static, t } from "elysia";
-import { PlayerType } from "./player";
+import { t, type Static } from "elysia";
+import { PlayerType } from "../domain/player";
+import { MessageType } from "../domain/websocket";
 
-export enum Channel {
-  PLAYER = "PLAYER",
-  BUZZER = "BUZZER",
-}
-
-export enum MessageType {
-  // Player channel
-  JOIN = "JOIN",
-  LEAVE = "LEAVE",
-  LIST = "LIST",
-  // Buzzer channel
-  BUZZ = "BUZZ",
-  RESET = "RESET",
-}
+import { Channel } from "../domain/websocket";
 
 const PlayerListAllMessageType = t.Object({
   channel: t.Literal(Channel.PLAYER),

@@ -16,11 +16,25 @@ import type { WebSocketMessage } from "../../shared/types/websocket";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
 import { useLocation } from "wouter";
 
+const getPlayersWithDistinctTeams = (players: Player[]): Player[] => {
+  const seenTeamNames: Set<string> = new Set();
+  const playersToReturn: Player[] = [];
+  for (const player of players) {
+    if (!seenTeamNames.has(player.teamName)) {
+      playersToReturn.push(player);
+      seenTeamNames.add(player.teamName);
+    }
+  }
+  return playersToReturn;
+};
+
 const BuzzerHost: React.FC = () => {
   const [, setLocation] = useLocation();
   const { subscribe } = useWebSocketContext();
-  const [teams, setTeams] = useState([] as Team[]);
-  const [played, setPlayed] = useState([] as Team[]);
+  const [players, setPlayers] = useState<Player[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
+  const [playerTeamMap, setPlayerTeamMap] = useState<Record<string, Team>>({});
+  const [played, setPlayed] = useState<Player[]>([]);
   const { volume } = useVolumeControl(0.5);
   const teamRowRef = useRef<HTMLElement>(null);
   // TODO: unlock audio https://chatgpt.com/c/68246cd3-479c-8002-8f17-434e2b9f5844
@@ -30,16 +44,15 @@ const BuzzerHost: React.FC = () => {
   // Update UI and play sound when a team presses the buzzer
   const handlePlayerBuzzerPress = useCallback(
     (player: Player) => {
-      // TODO: match on team name
-      const team = teams.find((team) => team.color === player.color);
+      const team = teams.find((team) => team.name === player.teamName);
       if (!team) {
         return;
       }
       setPlayed((prev) => {
-        if (prev.includes(team)) {
+        if (prev.includes(player)) {
           return prev;
         }
-        const newPlayed = [...prev, team];
+        const newPlayed = [...prev, player];
 
         if (!audioRef.current) {
           return prev;
@@ -56,11 +69,33 @@ const BuzzerHost: React.FC = () => {
     [teams]
   );
 
-  // Get teams from backend
+  // Get players and teams from backend
   useEffect(() => {
-    fetch(APIRoute.Teams)
-      .then((res) => res.json())
-      .then((data) => setTeams(data));
+    const playersPromise: Promise<Player[]> = fetch(APIRoute.Players).then(
+      (res) => res.json()
+    );
+    const teamsPromise: Promise<Team[]> = fetch(APIRoute.Teams).then((res) =>
+      res.json()
+    );
+
+    Promise.all([playersPromise, teamsPromise]).then(([players, teams]) => {
+      // Map players to teams
+      const newPlayerTeamMap = {} as Record<string, Team>;
+      for (const player of players) {
+        const team = teams.find((team) => team.name === player.teamName);
+        if (!team) {
+          console.error(
+            `Team ${player.teamName} for player ${player.name} not found`
+          );
+          continue;
+        }
+        newPlayerTeamMap[player.name] = team;
+      }
+
+      setPlayers(players);
+      setTeams(teams);
+      setPlayerTeamMap(newPlayerTeamMap);
+    });
   }, []);
 
   // Listen to buzzer presses
@@ -94,7 +129,7 @@ const BuzzerHost: React.FC = () => {
           setPlayed([]);
           break;
         case "KeyS":
-          setPlayed(teams);
+          setPlayed(getPlayersWithDistinctTeams(players));
           break;
         case "Backspace":
           setPlayed([]);
@@ -107,7 +142,7 @@ const BuzzerHost: React.FC = () => {
     return () => {
       removeEventListener("keydown", keydownHandler);
     };
-  }, [teams, setLocation]);
+  }, [players, setLocation]);
 
   // Update volume of hidden audio element
   useEffect(() => {
@@ -135,9 +170,10 @@ const BuzzerHost: React.FC = () => {
           .join(" ")}`,
       }}
     >
-      {played.map((team, index) => {
+      {played.map((player, index) => {
         const i = index + 1;
         const id = `row-${i}`;
+        const team = playerTeamMap[player.name];
 
         return (
           <div
@@ -149,12 +185,42 @@ const BuzzerHost: React.FC = () => {
               backgroundColor: `${team.color}`,
               color: "black",
               display: "flex",
-              justifyContent: "center",
+              justifyContent: "space-between",
               alignItems: "center",
               fontSize: rect === null ? 0 : 0.25 * rect.height,
+              paddingLeft: "20px",
+              paddingRight: "20px",
             }}
           >
-            {team.name}
+            <span>{team.name}</span>
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                textAlign: "center",
+                gap: "5px",
+              }}
+            >
+              <img
+                src={`/avatars/${player.avatar}.png`}
+                alt={`${player.name}'s avatar`}
+                style={{
+                  height: rect === null ? 0 : 0.3 * rect.height,
+                  width: rect === null ? 0 : 0.3 * rect.height,
+                  borderRadius: "50%",
+                }}
+              />
+              <span
+                style={{
+                  fontSize: rect === null ? 0 : 0.12 * rect.height,
+                  fontFamily: "sans-serif",
+                  fontWeight: "bold",
+                }}
+              >
+                {player.name}
+              </span>
+            </div>
           </div>
         );
       })}

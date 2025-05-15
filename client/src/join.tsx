@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
-import type { Player } from "../../shared/types/player";
-import { Color, Avatar } from "../../shared/types/player";
+import type { Player, Team } from "../../shared/types/player";
+import { Avatar } from "../../shared/types/player";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
 import { usePlayer } from "./contexts/PlayerContext";
 import {
@@ -12,22 +12,26 @@ import {
 import { avatarToPath } from "../../shared/utils";
 import PastelBackground from "./components/PastelBackground";
 import { ReadyState } from "react-use-websocket";
+import { APIRoute } from "../../shared/types/routes";
 
 const TeamCircle = ({
-  color,
-  teamColor,
+  team,
+  selectedTeamName,
   onClick,
 }: {
-  color: Color;
-  teamColor: Color | null;
+  team: Team;
+  selectedTeamName: string | null;
   onClick: () => void;
 }) => {
   return (
     <div
       className="w-9 h-9 rounded-full cursor-pointer"
       style={{
-        backgroundColor: color,
-        outline: teamColor === color ? "4px solid var(--color-gray-900)" : "",
+        backgroundColor: team.color,
+        outline:
+          team.name === selectedTeamName
+            ? "4px solid var(--color-gray-900)"
+            : "",
       }}
       onClick={onClick}
     ></div>
@@ -38,10 +42,11 @@ export default function JoinScreen() {
   const [, setLocation] = useLocation();
   const [playerName, setPlayerName] = useState("");
   const [nameError, setNameError] = useState<string | null>(null);
-  const [teamColor, setTeamColor] = useState<Color | null>(null);
+  const [selectedTeamName, setSelectedTeamName] = useState<string | null>(null);
   const [selectedAvatar, setSelectedAvatar] = useState<Avatar | null>(null);
   const [isJoinEnabled, setIsJoinEnabled] = useState(false);
   const [existingPlayers, setExistingPlayers] = useState<Player[]>([]);
+  const [teams, setTeams] = useState<Team[]>([]);
   const { subscribe, unsubscribe, readyState } = useWebSocketContext();
   const { setLoggedInPlayer } = usePlayer();
 
@@ -53,7 +58,7 @@ export default function JoinScreen() {
         const joinInfo = JSON.parse(storedJoinInfo);
         // Only set state if the loaded value is not null/undefined
         if (joinInfo.name) setPlayerName(joinInfo.name);
-        if (joinInfo.color) setTeamColor(joinInfo.color);
+        if (joinInfo.color) setSelectedTeamName(joinInfo.color);
         if (joinInfo.avatar) setSelectedAvatar(joinInfo.avatar);
       } catch (error) {
         console.error(
@@ -67,11 +72,19 @@ export default function JoinScreen() {
 
   // Get existing players from server
   useEffect(() => {
-    fetch("/players")
+    fetch(APIRoute.Players)
       .then((res) => res.json())
       .then((data) => {
-        console.log("Initial mount existing players:", data);
         setExistingPlayers(data);
+      });
+  }, []);
+
+  // Get existing teams from server
+  useEffect(() => {
+    fetch(APIRoute.Teams)
+      .then((res) => res.json())
+      .then((data) => {
+        setTeams(data);
       });
   }, []);
 
@@ -79,17 +92,17 @@ export default function JoinScreen() {
   useEffect(() => {
     const currentJoinInfo = {
       name: playerName,
-      color: teamColor,
+      color: selectedTeamName,
       avatar: selectedAvatar,
     };
     // Don't save if all fields are initial/empty to avoid cluttering localStorage
-    if (playerName || teamColor || selectedAvatar) {
+    if (playerName || selectedTeamName || selectedAvatar) {
       localStorage.setItem("playerJoinInfo", JSON.stringify(currentJoinInfo));
     } else {
       // If all fields are empty/null, ensure we remove any stale draft
       localStorage.removeItem("playerJoinInfo");
     }
-  }, [playerName, teamColor, selectedAvatar]);
+  }, [playerName, selectedTeamName, selectedAvatar]);
 
   // Subscribe to taken player updates
   useEffect(() => {
@@ -139,10 +152,10 @@ export default function JoinScreen() {
     setIsJoinEnabled(
       playerName.trim().length > 0 &&
         selectedAvatar !== null &&
-        teamColor !== null &&
+        selectedTeamName !== null &&
         nameError === null
     );
-  }, [playerName, selectedAvatar, teamColor, nameError]);
+  }, [playerName, selectedAvatar, selectedTeamName, nameError]);
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const name = e.target.value.toUpperCase();
@@ -197,10 +210,10 @@ export default function JoinScreen() {
       return;
     }
 
-    if (isJoinEnabled && selectedAvatar && teamColor) {
+    if (isJoinEnabled && selectedAvatar && selectedTeamName) {
       const player: Player = {
         name: playerName,
-        color: teamColor,
+        teamName: selectedTeamName,
         avatar: selectedAvatar,
       };
 
@@ -259,26 +272,14 @@ export default function JoinScreen() {
         <div className="mb-4">
           <p className="text-left text-md font-bold mb-1">TEAM</p>
           <div className="flex flex-row justify-center items-center gap-4">
-            <TeamCircle
-              color={Color.Red}
-              teamColor={teamColor}
-              onClick={() => setTeamColor(Color.Red)}
-            />
-            <TeamCircle
-              color={Color.Blue}
-              teamColor={teamColor}
-              onClick={() => setTeamColor(Color.Blue)}
-            />
-            <TeamCircle
-              color={Color.Green}
-              teamColor={teamColor}
-              onClick={() => setTeamColor(Color.Green)}
-            />
-            <TeamCircle
-              color={Color.Yellow}
-              teamColor={teamColor}
-              onClick={() => setTeamColor(Color.Yellow)}
-            />
+            {teams.map((team) => (
+              <TeamCircle
+                key={team.name}
+                team={team}
+                selectedTeamName={selectedTeamName}
+                onClick={() => setSelectedTeamName(team.name)}
+              />
+            ))}
           </div>
         </div>
 

@@ -35,15 +35,14 @@ export enum Avatar {
 }
 
 export const TeamType = t.Object({
-  name: t.String(),
+  name: t.String(), // must be unique
   color: t.Enum(Color),
 });
 export type Team = Static<typeof TeamType>;
 
 export const PlayerType = t.Object({
   name: t.String(),
-  // TODO change to team name
-  color: t.Enum(Color),
+  teamName: t.String(),
   avatar: t.Enum(Avatar),
 });
 

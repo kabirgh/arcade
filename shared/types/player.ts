@@ -34,6 +34,13 @@ export enum Avatar {
   World = "world",
 }
 
+export enum PlayerScreen {
+  Join = "/join",
+  Buzzer = "/buzzer",
+  Joystick = "/joystick",
+}
+export const PlayerScreenType = t.Enum(PlayerScreen);
+
 export const TeamType = t.Object({
   name: t.String(), // must be unique
   color: t.Enum(Color),

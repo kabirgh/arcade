@@ -30,7 +30,6 @@ const teams = [
   { name: "Team 3", color: Color.Green },
   { name: "Team 4", color: Color.Yellow },
 ];
-
 const clients = new Map<ElysiaWS, Client>();
 const screen: string = "join";
 
@@ -106,11 +105,18 @@ const app = new Elysia()
     },
   })
   .get(
-    APIRoute.Screen,
+    APIRoute.PlayerScreen,
     () => {
       return { screen };
     },
-    { body: APIRouteToRequestSchema[APIRoute.Screen] }
+    { body: APIRouteToRequestSchema[APIRoute.PlayerScreen] }
+  )
+  .post(
+    APIRoute.SetPlayerScreen,
+    ({ body }) => {
+      // TODO
+    },
+    { body: APIRouteToRequestSchema[APIRoute.SetPlayerScreen] }
   )
   .get(
     APIRoute.Teams,

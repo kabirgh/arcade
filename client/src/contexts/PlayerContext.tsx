@@ -13,8 +13,8 @@ import { useWebSocketContext } from "./WebSocketContext";
 
 // Define the shape of the context data
 interface PlayerContextType {
-  player: Player | null;
-  setLoggedInPlayer: (player: Player | null) => void;
+  sessionPlayer: Player | null;
+  setSessionPlayer: (player: Player | null) => void;
 }
 
 // Create the context with a default undefined value
@@ -48,7 +48,7 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({
   }, [publish]);
 
   // Function to update player state and localStorage
-  const setLoggedInPlayer = useCallback(
+  const setSessionPlayer = useCallback(
     (newPlayer: Player | null) => {
       setPlayer(newPlayer);
 
@@ -77,17 +77,17 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({
   );
 
   return (
-    <PlayerContext.Provider value={{ player, setLoggedInPlayer }}>
+    <PlayerContext.Provider value={{ sessionPlayer: player, setSessionPlayer }}>
       {children}
     </PlayerContext.Provider>
   );
 };
 
 // Custom hook to use the PlayerContext
-export const usePlayer = () => {
+export const usePlayerContext = () => {
   const context = useContext(PlayerContext);
   if (context === undefined) {
-    throw new Error("usePlayer must be used within a PlayerProvider");
+    throw new Error("usePlayerContext must be used within a PlayerProvider");
   }
   return context;
 };

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import type { Player, Team } from "../../shared/types/player";
-import { Avatar } from "../../shared/types/player";
+import { Avatar, PlayerScreen } from "../../shared/types/player";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
 import {
   Channel,
@@ -41,7 +41,7 @@ const TeamCircle = ({
 export default function JoinScreen() {
   const [, setLocation] = useLocation();
   const { subscribe, unsubscribe, readyState } = useWebSocketContext();
-  const { setSessionPlayer } = usePlayerContext();
+  const { sessionPlayer, setSessionPlayer } = usePlayerContext();
   const [playerName, setPlayerName] = useState("");
   const [nameError, setNameError] = useState<string | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
@@ -50,8 +50,21 @@ export default function JoinScreen() {
   const [existingPlayers, setExistingPlayers] = useState<Player[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
 
-  // Load draft join info from localStorage on mount
   useEffect(() => {
+    // First check if there is player for this session (from localStorage)
+    if (sessionPlayer) {
+      // We shouldn't be here, because we should have been redirected to another screen.
+      // Check what the server thinks the current screen should be.
+      fetch(APIRoute.PlayerScreen)
+        .then((res) => res.json())
+        .then((data) => {
+          console.log("Server says current screen should be:", data.screen);
+          if (data.screen !== PlayerScreen.Join) {
+            setLocation(data.screen);
+          }
+        });
+    }
+
     const storedJoinInfo = localStorage.getItem("playerJoinInfo");
     if (storedJoinInfo) {
       try {
@@ -68,7 +81,7 @@ export default function JoinScreen() {
         localStorage.removeItem("playerJoinInfo"); // Clear invalid item
       }
     }
-  }, []); // Run only once on mount
+  }, []);
 
   // Get existing players from server
   useEffect(() => {
@@ -224,7 +237,7 @@ export default function JoinScreen() {
       localStorage.removeItem("playerJoinInfo");
 
       // Set confirmed player information in localStorage so page reloads can redirect to the correct screen
-      // localStorage.setItem("playerInfo", JSON.stringify(player));
+      localStorage.setItem("playerInfo", JSON.stringify(player));
       // TODO:
       // - On page load:
       //   - Check if playerInfo is set in localStorage. If not, stay on the

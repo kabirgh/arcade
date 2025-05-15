@@ -12,7 +12,8 @@ export const EmptyRequestType = t.Object({});
 export type EmptyRequest = Static<typeof EmptyRequestType>;
 
 export enum APIRoute {
-  Screen = "/api/screen",
+  PlayerScreen = "/api/player-screen",
+  SetPlayerScreen = "/api/set-player-screen",
   Teams = "/api/teams",
   Players = "/api/players",
   ListWebSocketClientIds = "/api/list-websocket-client-ids",
@@ -28,7 +29,8 @@ export enum APIRoute {
 // Schemas for each API route
 // Does not include "body" since that is added by Elysia
 export const APIRouteToRequestSchema = {
-  [APIRoute.Screen]: EmptyRequestType,
+  [APIRoute.PlayerScreen]: EmptyRequestType,
+  [APIRoute.SetPlayerScreen]: EmptyRequestType,
   [APIRoute.Teams]: EmptyRequestType,
   [APIRoute.Players]: EmptyRequestType,
   [APIRoute.ListWebSocketClientIds]: EmptyRequestType,

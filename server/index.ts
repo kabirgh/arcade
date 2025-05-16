@@ -20,18 +20,14 @@ import {
   WebSocketMessageType,
 } from "../shared/types/api/websocket";
 
-type Client = {
-  player: Player | null;
-};
-
+const clients = new Map<ElysiaWS, { player: Player | null }>();
 const teams = [
   { name: "Team 1", color: Color.Red },
   { name: "Team 2", color: Color.Blue },
   { name: "Team 3", color: Color.Green },
   { name: "Team 4", color: Color.Yellow },
 ];
-const clients = new Map<ElysiaWS, Client>();
-const screen: PlayerScreen = PlayerScreen.Join;
+let screen: PlayerScreen = PlayerScreen.Join;
 
 function getPlayers(): Player[] {
   return Array.from(clients.values())
@@ -64,8 +60,20 @@ const handleWebSocketMessage = (ws: ElysiaWS, message: WebSocketMessage) => {
     case Channel.PLAYER:
       switch (message.messageType) {
         case MessageType.JOIN:
-          // TODO: Check if the player is already in the list, validate no overlapping avatars
-          // Define and send error message type
+          for (const [ws, client] of clients.entries()) {
+            if (
+              client.player !== null &&
+              JSON.stringify(client.player) === JSON.stringify(message.payload)
+            ) {
+              // Websocket id has changed (maybe due to a reconnect)
+              // Remove the old player from the list and add the new one
+              clients.set(ws, { player: null });
+              clients.set(ws, { player: message.payload });
+              // Don't need to broadcast because the player is already in the list, only the websocket id changed
+              return;
+            }
+          }
+          // Player is not in the list, add them
           clients.set(ws, { player: message.payload });
           break;
         case MessageType.LEAVE:
@@ -117,8 +125,8 @@ const app = new Elysia()
   )
   .post(
     APIRoute.SetPlayerScreen,
-    () => {
-      // TODO
+    ({ body }) => {
+      screen = body.screen;
       return { success: true };
     },
     {
@@ -139,7 +147,18 @@ const app = new Elysia()
   .post(
     APIRoute.SetTeamName,
     ({ body }) => {
-      teams[body.teamIndex].name = body.name;
+      const oldTeamName = teams[body.teamIndex].name;
+      const newTeamName = body.name;
+
+      // Update players to use the new team name
+      for (const { player } of clients.values()) {
+        if (player !== null && player.team.name === oldTeamName) {
+          player.team.name = newTeamName;
+        }
+      }
+      // Update the team name
+      teams[body.teamIndex].name = newTeamName;
+
       return { success: true };
     },
     {

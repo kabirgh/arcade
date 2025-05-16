@@ -136,6 +136,17 @@ const app = new Elysia()
       response: APIRouteToSchema[APIRoute.ListTeams].res,
     }
   )
+  .post(
+    APIRoute.SetTeamName,
+    ({ body }) => {
+      teams[body.teamIndex].name = body.name;
+      return { success: true };
+    },
+    {
+      body: APIRouteToSchema[APIRoute.SetTeamName].req,
+      response: APIRouteToSchema[APIRoute.SetTeamName].res,
+    }
+  )
   .get(
     APIRoute.ListPlayers,
     () => {

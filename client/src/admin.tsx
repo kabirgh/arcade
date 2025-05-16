@@ -5,7 +5,7 @@ import PastelBackground from "./components/PastelBackground";
 import { Channel, MessageType } from "../../shared/types/domain/websocket";
 import { WebSocketMessageType } from "../../shared/types/api/websocket";
 import { APIRoute, APIRouteToSchema } from "../../shared/types/api/schema";
-import { EmptyRequestType } from "../../shared/types/api/schema";
+import { EmptyRequestType } from "../../shared/types/api/common";
 
 // Function to generate schema templates dynamically based on route
 const generateSchemaTemplate = (route: string): any => {

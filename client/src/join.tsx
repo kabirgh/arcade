@@ -99,7 +99,7 @@ export default function JoinScreen() {
 
   // Get existing players from server
   useEffect(() => {
-    fetch(APIRoute.Players)
+    fetch(APIRoute.ListPlayers)
       .then((res) => res.json())
       .then((data) => {
         setExistingPlayers(data);
@@ -108,7 +108,7 @@ export default function JoinScreen() {
 
   // Get existing teams from server
   useEffect(() => {
-    fetch(APIRoute.Teams)
+    fetch(APIRoute.ListTeams)
       .then((res) => res.json())
       .then((data) => {
         setTeams(data);

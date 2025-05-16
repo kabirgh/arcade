@@ -16,3 +16,14 @@ export const ListTeamsResponseType = t.Object({
   teams: t.Array(TeamType),
 });
 export type ListTeamsResponse = Static<typeof ListTeamsResponseType>;
+
+export const SetTeamNameRequestType = t.Object({
+  teamIndex: t.Number(),
+  name: t.String(),
+});
+export type SetTeamNameRequest = Static<typeof SetTeamNameRequestType>;
+
+export const SetTeamNameResponseType = t.Object({
+  success: t.Boolean(),
+});
+export type SetTeamNameResponse = Static<typeof SetTeamNameResponseType>;

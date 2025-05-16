@@ -20,12 +20,15 @@ import {
   ListPlayersResponseType,
   ListTeamsRequestType,
   ListTeamsResponseType,
+  SetTeamNameRequestType,
+  SetTeamNameResponseType,
 } from "./player";
 
 export enum APIRoute {
   PlayerScreen = "/api/player-screen",
   SetPlayerScreen = "/api/set-player-screen",
   ListTeams = "/api/teams",
+  SetTeamName = "/api/set-team-name",
   ListPlayers = "/api/players",
   ListWebSocketClientIds = "/api/list-websocket-client-ids",
   SendWebSocketMessage = "/api/send-websocket-message",
@@ -54,6 +57,11 @@ export const APIRouteToSchema = {
     method: "GET",
     req: ListTeamsRequestType,
     res: ListTeamsResponseType,
+  },
+  [APIRoute.SetTeamName]: {
+    method: "POST",
+    req: SetTeamNameRequestType,
+    res: SetTeamNameResponseType,
   },
   [APIRoute.ListPlayers]: {
     method: "GET",

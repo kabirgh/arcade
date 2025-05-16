@@ -18,7 +18,7 @@ export default function PastelBackground({
           `,
         filter: "blur(100px)",
         zIndex: -1,
-        animation: animate ? "gentle-move 30s ease-in-out infinite" : "none",
+        animation: animate ? "gentle-move 20s ease-in-out infinite" : "none",
       }}
     />
   );

@@ -59,3 +59,15 @@ export const SendWebSocketMessageRequestType = t.Object({
 export type SendWebSocketMessageRequest = Static<
   typeof SendWebSocketMessageRequestType
 >;
+
+export const ListWebSocketClientIdsRequestType = t.Object({});
+export type ListWebSocketClientIdsRequest = Static<
+  typeof ListWebSocketClientIdsRequestType
+>;
+
+export const ListWebSocketClientIdsResponseType = t.Object({
+  ids: t.Array(t.String()),
+});
+export type ListWebSocketClientIdsResponse = Static<
+  typeof ListWebSocketClientIdsResponseType
+>;

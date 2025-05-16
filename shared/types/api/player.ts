@@ -1,0 +1,18 @@
+import { t, type Static } from "elysia";
+import { PlayerType, TeamType } from "../domain/player";
+
+export const ListPlayersRequestType = t.Object({});
+export type ListPlayersRequest = Static<typeof ListPlayersRequestType>;
+
+export const ListPlayersResponseType = t.Object({
+  players: t.Array(PlayerType),
+});
+export type ListPlayersResponse = Static<typeof ListPlayersResponseType>;
+
+export const ListTeamsRequestType = t.Object({});
+export type ListTeamsRequest = Static<typeof ListTeamsRequestType>;
+
+export const ListTeamsResponseType = t.Object({
+  teams: t.Array(TeamType),
+});
+export type ListTeamsResponse = Static<typeof ListTeamsResponseType>;

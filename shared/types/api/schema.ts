@@ -8,17 +8,25 @@ import {
   CodenamesStartRequestType,
   CodenamesStartResponseType,
 } from "./codenames";
-import { SendWebSocketMessageRequestType } from "../api/websocket";
+import {
+  ListWebSocketClientIdsRequestType,
+  ListWebSocketClientIdsResponseType,
+  SendWebSocketMessageRequestType,
+} from "../api/websocket";
 import { EmptyRequestType, SuccessResponseType } from "./common";
 import { PlayerScreenResponseType } from "./misc";
-
-export { EmptyRequestType } from "./common";
+import {
+  ListPlayersRequestType,
+  ListPlayersResponseType,
+  ListTeamsRequestType,
+  ListTeamsResponseType,
+} from "./player";
 
 export enum APIRoute {
   PlayerScreen = "/api/player-screen",
   SetPlayerScreen = "/api/set-player-screen",
-  Teams = "/api/teams",
-  Players = "/api/players",
+  ListTeams = "/api/teams",
+  ListPlayers = "/api/players",
   ListWebSocketClientIds = "/api/list-websocket-client-ids",
   SendWebSocketMessage = "/api/send-websocket-message",
   BroadcastAllPlayers = "/api/broadcast-all-players",
@@ -42,20 +50,20 @@ export const APIRouteToSchema = {
     req: EmptyRequestType,
     res: SuccessResponseType,
   },
-  [APIRoute.Teams]: {
+  [APIRoute.ListTeams]: {
     method: "GET",
-    req: EmptyRequestType,
-    res: SuccessResponseType,
+    req: ListTeamsRequestType,
+    res: ListTeamsResponseType,
   },
-  [APIRoute.Players]: {
+  [APIRoute.ListPlayers]: {
     method: "GET",
-    req: EmptyRequestType,
-    res: SuccessResponseType,
+    req: ListPlayersRequestType,
+    res: ListPlayersResponseType,
   },
   [APIRoute.ListWebSocketClientIds]: {
     method: "GET",
-    req: EmptyRequestType,
-    res: SuccessResponseType,
+    req: ListWebSocketClientIdsRequestType,
+    res: ListWebSocketClientIdsResponseType,
   },
   [APIRoute.SendWebSocketMessage]: {
     method: "POST",

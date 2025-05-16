@@ -159,6 +159,8 @@ const app = new Elysia()
       // Update the team name
       teams[body.teamIndex].name = newTeamName;
 
+      broadcastAllPlayers();
+
       return { success: true };
     },
     {

@@ -97,22 +97,15 @@ export default function JoinScreen() {
     });
   }, [sessionPlayer, setLocation, clearSessionPlayer]);
 
-  // Get existing players from server
   useEffect(() => {
-    fetch(APIRoute.ListPlayers)
-      .then((res) => res.json())
-      .then((data) => {
-        setExistingPlayers(data);
-      });
-  }, []);
-
-  // Get existing teams from server
-  useEffect(() => {
-    fetch(APIRoute.ListTeams)
-      .then((res) => res.json())
-      .then((data) => {
-        setTeams(data);
-      });
+    // Get existing players from server
+    fetchApi({ route: APIRoute.ListPlayers }).then((data) => {
+      setExistingPlayers(data.players as Player[]);
+    });
+    // Get existing teams from server
+    fetchApi({ route: APIRoute.ListTeams }).then((data) => {
+      setTeams(data.teams);
+    });
   }, []);
 
   // Save draft join info to localStorage whenever it changes
@@ -149,7 +142,7 @@ export default function JoinScreen() {
     if (selectedAvatar === null) return; // No avatar selected, nothing to do
 
     const avatarIsTakenByOther = existingPlayers.some(
-      (player) => player.avatar === selectedAvatar && player.name !== playerName
+      (player) => player.avatar === selectedAvatar
     );
     console.log("Avatar is taken by other:", avatarIsTakenByOther);
 
@@ -172,7 +165,7 @@ export default function JoinScreen() {
         }
       }
     }
-  }, [existingPlayers, selectedAvatar, playerName]);
+  }, [existingPlayers, selectedAvatar]);
 
   // Enable join button when name, team color, and avatar are selected and there are no errors
   useEffect(() => {
@@ -204,11 +197,11 @@ export default function JoinScreen() {
     if (conflictingPlayerEntry) {
       // Name found in existingPlayers
       // If this name is tied to an avatar, and that avatar is NOT our selectedAvatar, then it's a name conflict.
-      if (conflictingPlayerEntry.avatar !== selectedAvatar) {
+      if (
+        conflictingPlayerEntry.avatar &&
+        conflictingPlayerEntry.avatar !== selectedAvatar
+      ) {
         setNameError("This name has been taken by another player");
-      } else {
-        // Name matches, avatar matches. This is "our" spot (or someone identical). No error for name input.
-        setNameError(null);
       }
     } else {
       // Name not found in existingPlayers
@@ -239,8 +232,9 @@ export default function JoinScreen() {
 
     if (isJoinEnabled && selectedAvatar && selectedTeam) {
       const player: Player = {
+        id: crypto.randomUUID(),
         name: playerName,
-        team: selectedTeam,
+        teamId: selectedTeam.id,
         avatar: selectedAvatar,
       };
 

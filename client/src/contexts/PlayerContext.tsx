@@ -15,7 +15,7 @@ import { ReadyState } from "react-use-websocket";
 // Define the shape of the context data
 interface PlayerContextType {
   sessionPlayer: Player | null;
-  setSessionPlayer: (player: Player | null) => void;
+  setSessionPlayer: (player: Player) => void;
   clearSessionPlayer: () => void;
 }
 
@@ -33,16 +33,18 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({
   useEffect(() => {
     try {
       const storedPlayer = localStorage.getItem("player");
-      if (storedPlayer && readyState === ReadyState.OPEN) {
-        setPlayer(JSON.parse(storedPlayer));
-        // When the client disconnects, the server will remove the player from the list
-        // so we need to send a JOIN message to the server to re-add the player to the list
-        publish({
-          channel: Channel.PLAYER,
-          messageType: MessageType.JOIN,
-          payload: JSON.parse(storedPlayer),
-        });
+      if (!(storedPlayer && readyState === ReadyState.OPEN)) {
+        return;
       }
+
+      setPlayer(JSON.parse(storedPlayer));
+      // When the client disconnects, the server will remove the player from the list
+      // so we need to send a JOIN message to the server to re-add the player to the list
+      publish({
+        channel: Channel.PLAYER,
+        messageType: MessageType.JOIN,
+        payload: JSON.parse(storedPlayer),
+      });
     } catch (error) {
       console.error("Failed to parse player data from localStorage", error);
       localStorage.removeItem("player"); // Clear corrupted data
@@ -50,35 +52,31 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({
   }, [publish, readyState]);
 
   // Function to update player state and localStorage
+  // Assumes ReadyState is OPEN
   const setSessionPlayer = useCallback(
-    (newPlayer: Player | null) => {
+    (newPlayer: Player) => {
       setPlayer(newPlayer);
-
-      if (newPlayer) {
-        try {
-          localStorage.setItem("player", JSON.stringify(newPlayer));
-          // Notify the server that the player has joined
-          publish({
-            channel: Channel.PLAYER,
-            messageType: MessageType.JOIN,
-            payload: newPlayer,
-          });
-        } catch (error) {
-          console.error("Failed to save player data to localStorage", error);
-        }
-      } else {
-        localStorage.removeItem("player");
-        // Notify the server that the player has left
+      try {
+        localStorage.setItem("player", JSON.stringify(newPlayer));
+        // Notify the server that the player has joined
         publish({
           channel: Channel.PLAYER,
-          messageType: MessageType.LEAVE,
+          messageType: MessageType.JOIN,
+          payload: newPlayer,
         });
+      } catch (error) {
+        console.error("Failed to save player data to localStorage", error);
       }
     },
     [publish]
   );
 
   const clearSessionPlayer = useCallback(() => {
+    const storedPlayer = localStorage.getItem("player");
+    if (!storedPlayer) {
+      return;
+    }
+
     localStorage.removeItem("player");
     publish({
       channel: Channel.PLAYER,

@@ -18,7 +18,7 @@ export const ListTeamsResponseType = t.Object({
 export type ListTeamsResponse = Static<typeof ListTeamsResponseType>;
 
 export const SetTeamNameRequestType = t.Object({
-  teamIndex: t.Number(),
+  teamId: t.String(),
   name: t.String(),
 });
 export type SetTeamNameRequest = Static<typeof SetTeamNameRequestType>;

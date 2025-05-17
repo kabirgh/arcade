@@ -3,10 +3,8 @@ import { Elysia } from "elysia";
 import { ElysiaWS } from "elysia/dist/ws";
 import { staticPlugin } from "@elysiajs/static";
 import { html } from "@elysiajs/html";
-import { Color, type Player } from "../shared/types/domain/player";
 import { Channel, MessageType } from "../shared/types/domain/websocket";
 import { APIRoute, APIRouteToSchema } from "../shared/types/api/schema";
-import { PlayerScreen } from "../shared/types/domain/misc";
 import {
   handleCodenamesState,
   handleCodenamesStart,
@@ -19,26 +17,14 @@ import {
   type WebSocketMessage,
   WebSocketMessageType,
 } from "../shared/types/api/websocket";
+import DB from "./db";
 
-const clients = new Map<ElysiaWS, { player: Player | null }>();
-const teams = [
-  { name: "Team 1", color: Color.Red },
-  { name: "Team 2", color: Color.Blue },
-  { name: "Team 3", color: Color.Green },
-  { name: "Team 4", color: Color.Yellow },
-];
-let screen: PlayerScreen = PlayerScreen.Join;
-
-function getPlayers(): Player[] {
-  return Array.from(clients.values())
-    .filter((client) => client.player !== null)
-    .map((client) => client.player!);
-}
+const db = new DB();
 
 function broadcast(message: WebSocketMessage): void {
   console.log("Broadcasting message:", message);
 
-  for (const ws of clients.keys()) {
+  for (const ws of db.wsPlayerMap.keys()) {
     ws.send(JSON.stringify(message));
   }
 }
@@ -47,7 +33,7 @@ function broadcastAllPlayers(): PlayerListAllMessage {
   const message: PlayerListAllMessage = {
     channel: Channel.PLAYER,
     messageType: MessageType.LIST,
-    payload: getPlayers(),
+    payload: db.players,
   };
   broadcast(message);
   return message;
@@ -60,39 +46,47 @@ const handleWebSocketMessage = (ws: ElysiaWS, message: WebSocketMessage) => {
     case Channel.PLAYER:
       switch (message.messageType) {
         case MessageType.JOIN:
-          for (const [ws, client] of clients.entries()) {
-            if (
-              client.player !== null &&
-              JSON.stringify(client.player) === JSON.stringify(message.payload)
-            ) {
-              // Websocket id has changed (maybe due to a reconnect)
+          for (const [otherWs, player] of db.wsPlayerMap.entries()) {
+            if (otherWs === ws) {
+              continue;
+            }
+            if (player !== null && player.id === message.payload.id) {
+              // We found a player with the same id in the list.
+              // This means the websocket id has changed (usually due to a reconnect).
               // Remove the old player from the list and add the new one
-              clients.set(ws, { player: null });
-              clients.set(ws, { player: message.payload });
-              // Don't need to broadcast because the player is already in the list, only the websocket id changed
+              db.wsPlayerMap.set(otherWs, null);
+              db.wsPlayerMap.set(ws, message.payload);
+              // Don't need to broadcast player list because only the websocket
+              // id changed, which the client doesn't need to know
               return;
             }
           }
-          // Player is not in the list, add them
-          clients.set(ws, { player: message.payload });
+          // Didn't find a player with the same id, so add this player to the list
+          db.wsPlayerMap.set(ws, message.payload);
           break;
+
         case MessageType.LEAVE:
-          clients.set(ws, { player: null });
+          db.wsPlayerMap.set(ws, null);
           break;
+
         case MessageType.LIST:
           break;
       }
+      // Broadcast the player list to all clients
       broadcastAllPlayers();
       break;
+
     case Channel.BUZZER:
       switch (message.messageType) {
         case MessageType.BUZZ:
           broadcast(message);
           break;
+
         case MessageType.RESET:
           broadcast(message);
           break;
       }
+
       break;
   }
 };
@@ -105,18 +99,17 @@ const app = new Elysia()
     },
     open(ws) {
       console.log("Client connected:", ws.id);
-      clients.set(ws, { player: null });
     },
     close(ws) {
       console.log("Client disconnected:", ws.id);
-      clients.delete(ws);
-      broadcastAllPlayers();
+      // Don't remove player from db.wsPlayerMap because they may reconnect.
+      // Handle reconnections in the JOIN message handler.
     },
   })
   .get(
     APIRoute.PlayerScreen,
     () => {
-      return { screen };
+      return { screen: db.screen };
     },
     {
       body: APIRouteToSchema[APIRoute.PlayerScreen].req,
@@ -126,7 +119,7 @@ const app = new Elysia()
   .post(
     APIRoute.SetPlayerScreen,
     ({ body }) => {
-      screen = body.screen;
+      db.screen = body.screen;
       return { success: true };
     },
     {
@@ -137,7 +130,7 @@ const app = new Elysia()
   .get(
     APIRoute.ListTeams,
     () => {
-      return { teams };
+      return { teams: db.teams };
     },
     {
       body: APIRouteToSchema[APIRoute.ListTeams].req,
@@ -147,19 +140,11 @@ const app = new Elysia()
   .post(
     APIRoute.SetTeamName,
     ({ body }) => {
-      const oldTeamName = teams[body.teamIndex].name;
-      const newTeamName = body.name;
-
-      // Update players to use the new team name
-      for (const { player } of clients.values()) {
-        if (player !== null && player.team.name === oldTeamName) {
-          player.team.name = newTeamName;
-        }
+      const team = db.teams.find((team) => team.id === body.teamId);
+      if (!team) {
+        return { success: false, error: "Team not found" };
       }
-      // Update the team name
-      teams[body.teamIndex].name = newTeamName;
-
-      broadcastAllPlayers();
+      team.name = body.name;
 
       return { success: true };
     },
@@ -171,7 +156,7 @@ const app = new Elysia()
   .get(
     APIRoute.ListPlayers,
     () => {
-      return { players: getPlayers() };
+      return { players: db.players };
     },
     {
       body: APIRouteToSchema[APIRoute.ListPlayers].req,
@@ -182,7 +167,7 @@ const app = new Elysia()
   .get(
     APIRoute.ListWebSocketClientIds,
     () => {
-      return { ids: [...clients.keys()].map((ws) => ws.id) };
+      return { ids: [...db.wsPlayerMap.keys()].map((ws) => ws.id) };
     },
     {
       body: APIRouteToSchema[APIRoute.ListWebSocketClientIds].req,
@@ -192,7 +177,7 @@ const app = new Elysia()
   .post(
     APIRoute.SendWebSocketMessage,
     ({ body }) => {
-      const ws = [...clients.keys()].find((ws) => ws.id === body.id);
+      const ws = [...db.wsPlayerMap.keys()].find((ws) => ws.id === body.id);
       if (!ws) {
         return { success: false, error: "Client not found" };
       }
@@ -267,7 +252,7 @@ const app = new Elysia()
     }
   );
 
-// Add catch-all route last so API routes above are matched before the SPA catch-all
+// Add catch-all route last so API routes above are matched before frontend routes
 if (process.env.NODE_ENV === "production") {
   // Path to index.html relative to the executable's directory
   const pathToIndexHTML = path.join(

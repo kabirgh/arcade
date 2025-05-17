@@ -35,15 +35,16 @@ export enum Avatar {
 }
 
 export const TeamType = t.Object({
-  name: t.String(), // must be unique
+  id: t.String(),
+  name: t.String(),
   color: t.Enum(Color),
 });
 export type Team = Static<typeof TeamType>;
 
-// Denormalized
 export const PlayerType = t.Object({
+  id: t.String(),
   name: t.String(),
-  team: TeamType, // If team is updated, player also needs to be updated
   avatar: t.Enum(Avatar),
+  teamId: t.String(),
 });
 export type Player = Static<typeof PlayerType>;

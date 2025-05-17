@@ -10,19 +10,25 @@ import {
 import useClientRect from "./hooks/useClientRect";
 import { useVolumeControl } from "./hooks/useVolumeControl";
 import { APIRoute } from "../../shared/types/api/schema";
-import type { Player, Team } from "../../shared/types/domain/player";
+import type { Team, Player } from "../../shared/types/domain/player";
 import { Channel, MessageType } from "../../shared/types/domain/websocket";
 import type { WebSocketMessage } from "../../shared/types/api/websocket";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
 import { useLocation } from "wouter";
+import { fetchApi } from "./util/fetchApi";
+import { avatarToPath } from "../../shared/utils";
+
+type ExpandedPlayer = Player & {
+  team: Team;
+};
 
 const getPlayersWithDistinctTeams = (players: Player[]): Player[] => {
   const seenTeamNames: Set<string> = new Set();
   const playersToReturn: Player[] = [];
   for (const player of players) {
-    if (!seenTeamNames.has(player.team.name)) {
+    if (!seenTeamNames.has(player.teamId)) {
       playersToReturn.push(player);
-      seenTeamNames.add(player.team.name);
+      seenTeamNames.add(player.teamId);
     }
   }
   return playersToReturn;
@@ -30,10 +36,13 @@ const getPlayersWithDistinctTeams = (players: Player[]): Player[] => {
 
 const BuzzerHost: React.FC = () => {
   const [, setLocation] = useLocation();
-  const { subscribe } = useWebSocketContext();
+  const { subscribe, unsubscribe } = useWebSocketContext();
   const [players, setPlayers] = useState<Player[]>([]);
+  const [expandedPlayers, setExpandedPlayers] = useState<
+    Record<string, ExpandedPlayer>
+  >({}); // id -> player
   const [teams, setTeams] = useState<Team[]>([]);
-  const [played, setPlayed] = useState<Player[]>([]);
+  const [playedIds, setPlayedIds] = useState<string[]>([]);
   const { volume } = useVolumeControl(0.5);
   const teamRowRef = useRef<HTMLElement>(null);
   // TODO: unlock audio https://chatgpt.com/c/68246cd3-479c-8002-8f17-434e2b9f5844
@@ -43,15 +52,15 @@ const BuzzerHost: React.FC = () => {
   // Update UI and play sound when a team presses the buzzer
   const handlePlayerBuzzerPress = useCallback(
     (player: Player) => {
-      const team = teams.find((team) => team.name === player.team.name);
+      const team = teams.find((team) => team.id === player.teamId);
       if (!team) {
         return;
       }
-      setPlayed((prev) => {
-        if (prev.includes(player)) {
+      setPlayedIds((prev) => {
+        if (prev.includes(player.id)) {
           return prev;
         }
-        const newPlayed = [...prev, player];
+        const newPlayed = [...prev, player.id];
 
         if (!audioRef.current) {
           return prev;
@@ -70,17 +79,30 @@ const BuzzerHost: React.FC = () => {
 
   // Get players and teams from backend
   useEffect(() => {
-    fetch(APIRoute.Players)
-      .then((res) => res.json())
-      .then((players) => {
-        setPlayers(players);
-      });
-    fetch(APIRoute.Teams)
-      .then((res) => res.json())
-      .then((teams) => {
-        setTeams(teams);
-      });
+    fetchApi({ route: APIRoute.ListPlayers }).then(({ players }) => {
+      console.log("players", players);
+      setPlayers(players);
+    });
+    fetchApi({ route: APIRoute.ListTeams }).then(({ teams }) => {
+      setTeams(teams);
+    });
   }, []);
+
+  // Subscribe to player list updates
+  useEffect(() => {
+    subscribe(Channel.PLAYER, (message: WebSocketMessage) => {
+      console.log("Received message on player channel:", message);
+      if (message.messageType === MessageType.LIST) {
+        setPlayers(message.payload as Player[]);
+      }
+    });
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe(Channel.PLAYER);
+      }
+    };
+  }, [subscribe, unsubscribe]);
 
   // Listen to buzzer presses
   useEffect(() => {
@@ -89,13 +111,31 @@ const BuzzerHost: React.FC = () => {
         handlePlayerBuzzerPress(message.payload.player);
       }
     });
-  }, [handlePlayerBuzzerPress, subscribe]);
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe(Channel.BUZZER);
+      }
+    };
+  }, [handlePlayerBuzzerPress, subscribe, unsubscribe]);
+
+  useEffect(() => {
+    const expPlayers: Record<string, ExpandedPlayer> = {};
+    for (const player of players) {
+      const team = teams.find((t) => t.id === player.teamId);
+      if (!team) {
+        throw new Error(`Team with id ${player.teamId} not found`);
+      }
+      expPlayers[player.id] = { ...player, team };
+    }
+    setExpandedPlayers(expPlayers);
+  }, [teams, players]);
 
   // Reset played teams on right click
   useEffect(() => {
     const handleMouseDown = (event: MouseEvent) => {
       event.preventDefault(); // Prevents the default context menu
-      setPlayed([]);
+      setPlayedIds([]);
     };
 
     document.addEventListener("contextmenu", handleMouseDown);
@@ -110,13 +150,15 @@ const BuzzerHost: React.FC = () => {
     const keydownHandler = (event: KeyboardEvent) => {
       switch (event.code) {
         case "KeyR":
-          setPlayed([]);
+          setPlayedIds([]);
           break;
-        case "KeyS":
-          setPlayed(getPlayersWithDistinctTeams(players));
+        case "KeyS": {
+          const distinctPlayers = getPlayersWithDistinctTeams(players);
+          setPlayedIds(distinctPlayers.map((p) => p.id));
           break;
+        }
         case "Backspace":
-          setPlayed([]);
+          setPlayedIds([]);
           setLocation("/");
           break;
       }
@@ -126,7 +168,7 @@ const BuzzerHost: React.FC = () => {
     return () => {
       removeEventListener("keydown", keydownHandler);
     };
-  }, [players, setLocation]);
+  }, [players, setLocation, teams]);
 
   // Update volume of hidden audio element
   useEffect(() => {
@@ -154,7 +196,13 @@ const BuzzerHost: React.FC = () => {
           .join(" ")}`,
       }}
     >
-      {played.map((player, index) => {
+      {playedIds.map((playerId, index) => {
+        const player = expandedPlayers[playerId];
+        if (!player) return null;
+
+        const team = teams.find((t) => t.id === player.teamId);
+        if (!team) return null;
+
         const i = index + 1;
         const id = `row-${i}`;
 
@@ -165,7 +213,7 @@ const BuzzerHost: React.FC = () => {
             className="team-row"
             style={{
               gridArea: `${2 * i} / 2 / ${2 * i + 1} / 3`,
-              backgroundColor: `${player.team.color}`,
+              backgroundColor: `${team.color}`,
               color: "black",
               display: "flex",
               justifyContent: "space-between",
@@ -175,7 +223,7 @@ const BuzzerHost: React.FC = () => {
               paddingRight: "20px",
             }}
           >
-            <span>{player.team.name}</span>
+            <span>{team.name}</span>
             <div
               style={{
                 display: "flex",
@@ -186,7 +234,7 @@ const BuzzerHost: React.FC = () => {
               }}
             >
               <img
-                src={`/avatars/${player.avatar}.png`}
+                src={avatarToPath(player.avatar)}
                 alt={`${player.name}'s avatar`}
                 style={{
                   height: rect === null ? 0 : 0.3 * rect.height,

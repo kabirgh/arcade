@@ -79,6 +79,8 @@ const handleWebSocketMessage = (ws: ElysiaWS, message: WebSocketMessage) => {
     case Channel.BUZZER:
       switch (message.messageType) {
         case MessageType.BUZZ:
+          // Use server time to ensure consistent ordering of buzzes
+          message.payload.timestamp = Date.now();
           broadcast(message);
           break;
 

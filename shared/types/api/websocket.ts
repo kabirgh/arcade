@@ -32,6 +32,7 @@ const BuzzerPressMessageType = t.Object({
   messageType: t.Literal(MessageType.BUZZ),
   payload: t.Object({
     player: PlayerType,
+    timestamp: t.Number(),
   }),
 });
 export type BuzzerPressMessage = Static<typeof BuzzerPressMessageType>;

@@ -22,6 +22,12 @@ type ExpandedPlayer = Player & {
   team: Team;
 };
 
+type Buzz = {
+  playerId: string;
+  teamId: string;
+  timestamp: number;
+};
+
 const getPlayersWithDistinctTeams = (players: Player[]): Player[] => {
   const seenTeamNames: Set<string> = new Set();
   const playersToReturn: Player[] = [];
@@ -42,7 +48,7 @@ const BuzzerHost: React.FC = () => {
     Record<string, ExpandedPlayer>
   >({}); // id -> player
   const [teams, setTeams] = useState<Team[]>([]);
-  const [playedIds, setPlayedIds] = useState<string[]>([]);
+  const [buzzes, setBuzzes] = useState<Buzz[]>([]);
   const { volume } = useVolumeControl(0.5);
   const teamRowRef = useRef<HTMLElement>(null);
   // TODO: unlock audio https://chatgpt.com/c/68246cd3-479c-8002-8f17-434e2b9f5844
@@ -51,16 +57,25 @@ const BuzzerHost: React.FC = () => {
 
   // Update UI and play sound when a team presses the buzzer
   const handlePlayerBuzzerPress = useCallback(
-    (player: Player) => {
+    (player: Player, timestamp: number) => {
       const team = teams.find((team) => team.id === player.teamId);
       if (!team) {
+        console.error(`Team with id ${player.teamId} not found`);
         return;
       }
-      setPlayedIds((prev) => {
-        if (prev.includes(player.id)) {
+
+      setBuzzes((prev) => {
+        // If the player's team has already buzzed, don't add a new buzz
+        if (prev.some((b) => b.teamId === team.id)) {
           return prev;
         }
-        const newPlayed = [...prev, player.id];
+        const newBuzzes = [
+          ...prev,
+          { playerId: player.id, teamId: team.id, timestamp },
+        ].sort((a, b) => {
+          // Sort by timestamp, oldest first
+          return a.timestamp - b.timestamp;
+        });
 
         if (!audioRef.current) {
           return prev;
@@ -69,7 +84,7 @@ const BuzzerHost: React.FC = () => {
         audioRef.current.currentTime = 0; // Reset playback to the start
         audioRef.current.play(); // Play the sound again
 
-        return newPlayed;
+        return newBuzzes;
       });
 
       // TODO: show player avatar next to team name
@@ -108,9 +123,12 @@ const BuzzerHost: React.FC = () => {
   useEffect(() => {
     subscribe(Channel.BUZZER, (message: WebSocketMessage) => {
       if (message.messageType === MessageType.BUZZ) {
-        handlePlayerBuzzerPress(message.payload.player);
+        handlePlayerBuzzerPress(
+          message.payload.player,
+          message.payload.timestamp
+        );
       } else if (message.messageType === MessageType.RESET) {
-        setPlayedIds([]);
+        setBuzzes([]);
       }
     });
 
@@ -137,7 +155,7 @@ const BuzzerHost: React.FC = () => {
   useEffect(() => {
     const handleMouseDown = (event: MouseEvent) => {
       event.preventDefault(); // Prevents the default context menu
-      setPlayedIds([]);
+      setBuzzes([]);
     };
 
     document.addEventListener("contextmenu", handleMouseDown);
@@ -152,15 +170,21 @@ const BuzzerHost: React.FC = () => {
     const keydownHandler = (event: KeyboardEvent) => {
       switch (event.code) {
         case "KeyR":
-          setPlayedIds([]);
+          setBuzzes([]);
           break;
         case "KeyS": {
           const distinctPlayers = getPlayersWithDistinctTeams(players);
-          setPlayedIds(distinctPlayers.map((p) => p.id));
+          setBuzzes(
+            distinctPlayers.map((p, idx) => ({
+              playerId: p.id,
+              teamId: p.teamId,
+              timestamp: performance.now() + idx,
+            }))
+          );
           break;
         }
         case "Backspace":
-          setPlayedIds([]);
+          setBuzzes([]);
           setLocation("/");
           break;
       }
@@ -198,11 +222,11 @@ const BuzzerHost: React.FC = () => {
           .join(" ")}`,
       }}
     >
-      {playedIds.map((playerId, index) => {
-        const player = expandedPlayers[playerId];
+      {buzzes.map((buzz, index) => {
+        const player = expandedPlayers[buzz.playerId];
         if (!player) return null;
 
-        const team = teams.find((t) => t.id === player.teamId);
+        const team = teams.find((t) => t.id === buzz.teamId);
         if (!team) return null;
 
         const i = index + 1;

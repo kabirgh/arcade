@@ -2,26 +2,25 @@ import "./buzzer.css";
 import PastelBackground from "./components/PastelBackground";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
 import { Channel, MessageType } from "../../shared/types/domain/websocket";
-import { Avatar, Color } from "../../shared/types/domain/player";
 import ConnectionStatusPill from "./components/ConnectionStatusPill";
+import { usePlayerContext } from "./contexts/PlayerContext";
 
 export default function Buzzer() {
   const { publish } = useWebSocketContext();
+  const { sessionPlayer } = usePlayerContext();
 
   const handlePress = () => {
-    console.log("pressed");
+    if (!sessionPlayer) {
+      console.error("No session player found");
+      return;
+    }
+
     publish({
       channel: Channel.BUZZER,
       messageType: MessageType.BUZZ,
       payload: {
-        player: {
-          name: "TEST",
-          team: {
-            name: "Team 1",
-            color: Color.Red,
-          },
-          avatar: Avatar.Icecream,
-        },
+        player: sessionPlayer,
+        timestamp: Date.now(),
       },
     });
   };

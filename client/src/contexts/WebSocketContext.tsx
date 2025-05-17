@@ -6,7 +6,7 @@ import React, {
   useCallback,
 } from "react";
 import useWebSocket, { ReadyState } from "react-use-websocket";
-import type { WebSocketMessage } from "../../../shared/types/domain/websocket";
+import type { WebSocketMessage } from "../../../shared/types/api/websocket";
 import { Channel } from "../../../shared/types/domain/websocket";
 
 // Use relative URL for WebSocket connection

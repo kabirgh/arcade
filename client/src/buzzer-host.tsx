@@ -104,11 +104,13 @@ const BuzzerHost: React.FC = () => {
     };
   }, [subscribe, unsubscribe]);
 
-  // Listen to buzzer presses
+  // Listen to buzzer presses & reset commands
   useEffect(() => {
     subscribe(Channel.BUZZER, (message: WebSocketMessage) => {
       if (message.messageType === MessageType.BUZZ) {
         handlePlayerBuzzerPress(message.payload.player);
+      } else if (message.messageType === MessageType.RESET) {
+        setPlayedIds([]);
       }
     });
 

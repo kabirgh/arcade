@@ -58,6 +58,8 @@ const BuzzerHost: React.FC = () => {
   // Update UI and play sound when a team presses the buzzer
   const handlePlayerBuzzerPress = useCallback(
     (player: Player, timestamp: number) => {
+      console.log("handlePlayerBuzzerPress", player, timestamp);
+
       const team = teams.find((team) => team.id === player.teamId);
       if (!team) {
         console.error(`Team with id ${player.teamId} not found`);
@@ -86,8 +88,6 @@ const BuzzerHost: React.FC = () => {
 
         return newBuzzes;
       });
-
-      // TODO: show player avatar next to team name
     },
     [teams]
   );

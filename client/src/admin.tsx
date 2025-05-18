@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Value } from "@sinclair/typebox/value";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
 import PastelBackground from "./components/PastelBackground";
@@ -89,7 +89,7 @@ const AdminPage: React.FC = () => {
   );
   const [selectedMessageType, setSelectedMessageType] =
     useState<string>("PLAYER/JOIN");
-  const broadcastTemplates = getBroadcastTemplates();
+  const broadcastTemplates = useMemo(() => getBroadcastTemplates(), []);
 
   // Password protection using browser prompt
   // useEffect(() => {
@@ -196,7 +196,7 @@ const AdminPage: React.FC = () => {
       try {
         parsedJson = JSON.parse(jsonInput);
       } catch (error) {
-        alert("Invalid JSON input");
+        alert(`Invalid JSON input: ${error}`);
         return;
       }
     }
@@ -368,7 +368,7 @@ const AdminPage: React.FC = () => {
           {logs.length === 0 ? (
             <p className="text-gray-500 text-left">No requests yet</p>
           ) : (
-            logs.map((log, index) => (
+            logs.map((log) => (
               <div
                 key={log.timestamp}
                 className="mb-3 p-2 bg-white rounded-lg shadow text-left"

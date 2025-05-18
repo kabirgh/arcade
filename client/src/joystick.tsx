@@ -1,25 +1,64 @@
 import "./buzzer.css";
 
 import nipplejs from "nipplejs";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Channel, MessageType } from "../../shared/types/domain/websocket";
 import ConnectionStatusPill from "./components/ConnectionStatusPill";
 import PastelBackground from "./components/PastelBackground";
 import { usePlayerContext } from "./contexts/PlayerContext";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
-// Define the type based on the return type of nipplejs.create
+
 type NippleManagerType = ReturnType<typeof nipplejs.create>;
+
+type JoystickMoveData = {
+  playerId: string;
+  angle: number;
+  force: number;
+};
 
 export default function Joystick() {
   const { publish } = useWebSocketContext();
   const { sessionPlayer } = usePlayerContext();
   const joystickContainerRef = useRef<HTMLDivElement>(null);
   const joystickInstanceRef = useRef<NippleManagerType | null>(null);
-  const lastMoveTimeRef = useRef<number>(Date.now());
+  const joystickMoveDataRef = useRef<JoystickMoveData | null>(null);
+  const [joystickSize, setJoystickSize] = useState<number>(0);
+
+  // Calculate 50vmin in pixels
+  useEffect(() => {
+    const calculateSize = () => {
+      const vmin = Math.min(window.innerWidth, window.innerHeight) * 0.5;
+      setJoystickSize(vmin);
+    };
+
+    calculateSize();
+    window.addEventListener("resize", calculateSize);
+
+    return () => window.removeEventListener("resize", calculateSize);
+  }, []);
 
   useEffect(() => {
-    if (joystickContainerRef.current) {
+    const interval = setInterval(() => {
+      if (joystickMoveDataRef.current) {
+        publish({
+          channel: Channel.JOYSTICK,
+          messageType: MessageType.MOVE,
+          payload: joystickMoveDataRef.current,
+        });
+      }
+    }, 33); // 30 fps
+
+    return () => clearInterval(interval);
+  }, [publish]);
+
+  useEffect(() => {
+    if (joystickContainerRef.current && joystickSize > 0) {
+      // Destroy previous instance if it exists
+      if (joystickInstanceRef.current) {
+        joystickInstanceRef.current.destroy();
+      }
+
       const manager = nipplejs.create({
         zone: joystickContainerRef.current,
         mode: "static" as const,
@@ -27,25 +66,20 @@ export default function Joystick() {
         color: "black",
         fadeTime: 50,
         restOpacity: 0.75,
-        size: 150, // size of the joystick base
+        size: joystickSize, // 50vmin converted to pixels
       });
       joystickInstanceRef.current = manager;
 
       manager.on("move", (evt, data) => {
-        console.log("Joystick move:", data, Date.now());
-        if (Date.now() - lastMoveTimeRef.current < 20) {
-          return;
-        }
-        lastMoveTimeRef.current = Date.now();
-        publish({
-          channel: Channel.JOYSTICK,
-          messageType: MessageType.MOVE,
-          payload: {
-            playerId: sessionPlayer!.id,
-            angle: data.angle.degree,
-            force: data.force,
-          },
-        });
+        joystickMoveDataRef.current = {
+          playerId: sessionPlayer!.id,
+          angle: data.angle.degree,
+          force: data.force,
+        };
+      });
+
+      manager.on("end", () => {
+        joystickMoveDataRef.current = null;
       });
 
       return () => {
@@ -53,9 +87,10 @@ export default function Joystick() {
           joystickInstanceRef.current.destroy();
           joystickInstanceRef.current = null;
         }
+        joystickMoveDataRef.current = null;
       };
     }
-  }, [publish, sessionPlayer]);
+  }, [publish, sessionPlayer, joystickSize]);
 
   return (
     <div className="flex flex-col items-center justify-center h-screen relative overflow-hidden">

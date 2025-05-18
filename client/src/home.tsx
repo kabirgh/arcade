@@ -72,7 +72,7 @@ const TeamSection = ({ team, onTeamNameConfirm }: TeamSectionProps) => {
 };
 
 export default function Home() {
-  const { subscribe, unsubscribe, publish } = useWebSocketContext();
+  const { subscribe, unsubscribe } = useWebSocketContext();
   const [players, setPlayers] = useState<Player[]>([]);
   const [teams, setTeams] = useState<Team[]>([
     // Default teams while we wait for the server to return the actual teams

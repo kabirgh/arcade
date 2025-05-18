@@ -14,6 +14,16 @@ import { usePlayerContext } from "./contexts/PlayerContext";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
 import { apiFetch } from "./util/apiFetch";
 
+// Helper function for cross-browser player ID generation
+function generatePlayerId() {
+  const characters = "abcdefghijklmnopqrstuvwxyz0123456789";
+  let result = "";
+  for (let i = 0; i < 6; i++) {
+    result += characters.charAt(Math.floor(Math.random() * characters.length));
+  }
+  return result;
+}
+
 const TeamCircle = ({
   team,
   selectedTeam,
@@ -116,12 +126,10 @@ export default function JoinScreen() {
       team: selectedTeam,
       avatar: selectedAvatar,
     };
+
     // Don't save if all fields are initial/empty to avoid cluttering localStorage
     if (playerName || selectedTeam || selectedAvatar) {
       localStorage.setItem("playerJoinInfo", JSON.stringify(currentJoinInfo));
-    } else {
-      // If all fields are empty/null, ensure we remove any stale draft
-      localStorage.removeItem("playerJoinInfo");
     }
   }, [playerName, selectedTeam, selectedAvatar]);
 
@@ -179,8 +187,7 @@ export default function JoinScreen() {
   }, [playerName, selectedAvatar, selectedTeam, nameError]);
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const name = e.target.value.toUpperCase();
-    setPlayerName(name);
+    setPlayerName(e.target.value.toUpperCase());
     // nameError will be updated by the useEffect below
   };
 
@@ -233,7 +240,7 @@ export default function JoinScreen() {
 
     if (isJoinEnabled && selectedAvatar && selectedTeam) {
       const player: Player = {
-        id: crypto.randomUUID(),
+        id: generatePlayerId(),
         name: playerName,
         teamId: selectedTeam.id,
         avatar: selectedAvatar,
@@ -244,7 +251,7 @@ export default function JoinScreen() {
       // Use context to set the player state and persist it. Also sends a JOIN message to the server.
       setSessionPlayer(player);
 
-      // Navigate to lobby screen
+      // Navigate to buzzer screen
       setLocation("/buzzer");
     }
   };

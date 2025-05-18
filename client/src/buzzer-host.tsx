@@ -14,6 +14,7 @@ import type { Player, Team } from "../../shared/types/domain/player";
 import { Channel, MessageType } from "../../shared/types/domain/websocket";
 import { avatarToPath } from "../../shared/utils";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
+import { useAdminAuth } from "./hooks/useAdminAuth";
 import useClientRect from "./hooks/useClientRect";
 import { useVolumeControl } from "./hooks/useVolumeControl";
 import { apiFetch } from "./util/apiFetch";
@@ -54,6 +55,7 @@ const BuzzerHost: React.FC = () => {
   // TODO: unlock audio https://chatgpt.com/c/68246cd3-479c-8002-8f17-434e2b9f5844
   const audioRef = useRef<HTMLAudioElement>(null);
   const rect = useClientRect(teamRowRef);
+  const { isAuthenticated } = useAdminAuth({ claimHost: true });
 
   // Update UI and play sound when a team presses the buzzer
   const handlePlayerBuzzerPress = useCallback(
@@ -216,91 +218,102 @@ const BuzzerHost: React.FC = () => {
   const spacerSize = useMemo(() => 0.1 * rowSize, [rowSize]);
 
   return (
-    <div
-      style={{
-        fontFamily: "Arvo",
-        backgroundColor: "#323232",
-        height: "100vh",
-        width: "100vw",
-        display: "grid",
-        gridTemplateColumns: "1fr 8fr 1fr",
-        gridTemplateRows: `${spacerSize}fr ${teams
-          .map(() => `${cardSize}fr ${spacerSize}fr`)
-          .join(" ")}`,
-      }}
-    >
-      {buzzes.map((buzz, index) => {
-        const player = expandedPlayers[buzz.playerId];
-        if (!player) return null;
+    <>
+      {!isAuthenticated && (
+        <div className="absolute top-0 left-0 w-full h-full bg-black/50 flex items-center justify-center">
+          <div className="text-white text-2xl">
+            <p>Access denied</p>
+          </div>
+        </div>
+      )}
+      {isAuthenticated && (
+        <div
+          style={{
+            fontFamily: "Arvo",
+            backgroundColor: "#323232",
+            height: "100vh",
+            width: "100vw",
+            display: "grid",
+            gridTemplateColumns: "1fr 8fr 1fr",
+            gridTemplateRows: `${spacerSize}fr ${teams
+              .map(() => `${cardSize}fr ${spacerSize}fr`)
+              .join(" ")}`,
+          }}
+        >
+          {buzzes.map((buzz, index) => {
+            const player = expandedPlayers[buzz.playerId];
+            if (!player) return null;
 
-        const team = teams.find((t) => t.id === buzz.teamId);
-        if (!team) return null;
+            const team = teams.find((t) => t.id === buzz.teamId);
+            if (!team) return null;
 
-        const i = index + 1;
-        const id = `row-${i}`;
+            const i = index + 1;
+            const id = `row-${i}`;
 
-        return (
-          <div
-            id={id}
-            key={id}
-            className="team-row"
-            style={{
-              gridArea: `${2 * i} / 2 / ${2 * i + 1} / 3`,
-              backgroundColor: `${team.color}`,
-              color: "black",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              fontSize: rect === null ? 0 : 0.25 * rect.height,
-              paddingLeft: "20px",
-              paddingRight: "20px",
-            }}
-          >
-            <span>{team.name}</span>
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                textAlign: "center",
-                gap: "5px",
-              }}
-            >
-              <img
-                src={avatarToPath(player.avatar)}
-                alt={`${player.name}'s avatar`}
+            return (
+              <div
+                id={id}
+                key={id}
+                className="team-row"
                 style={{
-                  height: rect === null ? 0 : 0.3 * rect.height,
-                  width: rect === null ? 0 : 0.3 * rect.height,
-                  borderRadius: "50%",
-                }}
-              />
-              <span
-                style={{
-                  fontSize: rect === null ? 0 : 0.12 * rect.height,
-                  fontFamily: "sans-serif",
-                  fontWeight: "bold",
+                  gridArea: `${2 * i} / 2 / ${2 * i + 1} / 3`,
+                  backgroundColor: `${team.color}`,
+                  color: "black",
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  fontSize: rect === null ? 0 : 0.25 * rect.height,
+                  paddingLeft: "20px",
+                  paddingRight: "20px",
                 }}
               >
-                {player.name}
-              </span>
-            </div>
-          </div>
-        );
-      })}
+                <span>{team.name}</span>
+                <div
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    textAlign: "center",
+                    gap: "5px",
+                  }}
+                >
+                  <img
+                    src={avatarToPath(player.avatar)}
+                    alt={`${player.name}'s avatar`}
+                    style={{
+                      height: rect === null ? 0 : 0.3 * rect.height,
+                      width: rect === null ? 0 : 0.3 * rect.height,
+                      borderRadius: "50%",
+                    }}
+                  />
+                  <span
+                    style={{
+                      fontSize: rect === null ? 0 : 0.12 * rect.height,
+                      fontFamily: "sans-serif",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    {player.name}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
 
-      <div
-        id="div-only-for-ref"
-        ref={teamRowRef as RefObject<HTMLDivElement>}
-        style={{ gridArea: `2/3/3/4`, height: "100%" }}
-      ></div>
-      <audio
-        ref={audioRef}
-        src="/audio/bell.mp3"
-        style={{ display: "none" }}
-        preload="auto"
-      ></audio>
-    </div>
+          <div
+            id="div-only-for-ref"
+            ref={teamRowRef as RefObject<HTMLDivElement>}
+            style={{ gridArea: `2/3/3/4`, height: "100%" }}
+          ></div>
+          <audio
+            ref={audioRef}
+            src="/audio/bell.mp3"
+            style={{ display: "none" }}
+            preload="auto"
+          ></audio>
+        </div>
+      )}
+    </>
   );
 };
 

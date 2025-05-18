@@ -34,7 +34,7 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({
   useEffect(() => {
     try {
       const storedPlayer = localStorage.getItem("player");
-      if (!(storedPlayer && readyState === ReadyState.OPEN)) {
+      if (!storedPlayer || readyState !== ReadyState.OPEN) {
         return;
       }
 

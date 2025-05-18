@@ -6,6 +6,7 @@ import { WebSocketMessageType } from "../../shared/types/api/websocket";
 import { Channel, MessageType } from "../../shared/types/domain/websocket";
 import PastelBackground from "./components/PastelBackground";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
+import { useAdminAuth } from "./hooks/useAdminAuth";
 
 // Function to generate schema templates dynamically based on route
 const generateSchemaTemplate = (route: string): any => {
@@ -73,7 +74,6 @@ const getBroadcastTemplates = (): Record<string, any> => {
 
 const AdminPage: React.FC = () => {
   const { publish } = useWebSocketContext();
-
   const [selectedAPI, setSelectedAPI] = useState<string>(
     Object.values(APIRoute)[0] // Default to the first API route
   );
@@ -90,18 +90,7 @@ const AdminPage: React.FC = () => {
   const [selectedMessageType, setSelectedMessageType] =
     useState<string>("PLAYER/JOIN");
   const broadcastTemplates = useMemo(() => getBroadcastTemplates(), []);
-
-  // Password protection using browser prompt
-  // useEffect(() => {
-  //   const checkPassword = () => {
-  //     const password = window.prompt("Enter admin password:");
-  //     if (password !== "bonk123") {
-  //       alert("Incorrect password!");
-  //     }
-  //   };
-
-  //   checkPassword();
-  // }, []);
+  const { isAuthenticated } = useAdminAuth();
 
   // Prefill JSON schema when API endpoint or method changes
   useEffect(() => {
@@ -251,93 +240,99 @@ const AdminPage: React.FC = () => {
   return (
     <div className="h-screen relative overflow-hidden">
       <PastelBackground />
-      <div className="grid grid-cols-7 h-full gap-4">
-        <div className="col-span-1 flex items-center justify-center">
-          <button
-            className="bg-red-600 text-white p-2 w-32 rounded-md cursor-pointer hover:bg-red-500
-                       transition duration-100 ease-in-out active:bg-red-700"
-            onClick={handleResetBuzzers}
-          >
-            Reset buzzers
-          </button>
+      {!isAuthenticated && (
+        <div className="flex flex-col items-center justify-center w-full h-full">
+          <h1 className="text-4xl font-bold">Access denied</h1>
         </div>
-        <div className="col-span-3 text-gray-900 flex flex-col h-full p-6">
-          <form onSubmit={handleSubmit} className="flex flex-col h-full">
-            <div className="mb-4">
-              <p className="text-md text-left font-bold min-w-[150px] mb-1">
-                API ENDPOINT
-              </p>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium bg-gray-100 px-2 py-2 rounded w-16">
-                  {httpMethod}
-                </span>
-                <select
-                  value={selectedAPI}
-                  onChange={handleAPIChange}
-                  className="flex-1 w-full p-2 text-md bg-gray-50 border-2 border-gray-300 rounded-lg
-                             focus:outline-none focus:ring-2 focus:ring-sky-200"
-                >
-                  {Object.values(APIRoute).map((route) => (
-                    <option key={route} value={route}>
-                      {route}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {selectedAPI === APIRoute.SendWebSocketMessage &&
-              httpMethod === "POST" && (
-                <div className="mb-4">
-                  <p className="text-md text-left font-bold mb-1">
-                    MESSAGE TYPE
-                  </p>
-                  <div className="flex items-center gap-2">
-                    <select
-                      value={selectedMessageType}
-                      onChange={handleMessageTypeChange}
-                      className="w-full p-2 text-md bg-gray-50 border-2 border-gray-300 rounded-lg
-                                 focus:outline-none focus:ring-2 focus:ring-sky-200"
-                    >
-                      {Object.keys(broadcastTemplates).map((key) => (
-                        <option key={key} value={key}>
-                          {key}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              )}
-
-            <div className="mb-4 flex-grow">
-              <p className="text-left text-md font-bold mb-1">JSON BODY</p>
-              <textarea
-                value={jsonInput}
-                onChange={handleJsonChange}
-                placeholder={
-                  httpMethod === "POST"
-                    ? selectedAPI === APIRoute.SendWebSocketMessage &&
-                      !selectedMessageType
-                      ? "Select a message type first"
-                      : "Enter JSON payload or select an endpoint to auto-fill"
-                    : "GET requests don't require a body"
-                }
-                className="w-full p-2 h-[70%] text-sm bg-gray-50 border-2 border-gray-300 rounded-lg
-                           focus:outline-none focus:ring-2 focus:ring-sky-200 font-mono"
-                disabled={httpMethod === "GET"}
-              />
-            </div>
-
+      )}
+      {isAuthenticated && (
+        <div className="grid grid-cols-7 h-full gap-4">
+          <div className="col-span-1 flex items-center justify-center">
             <button
-              type="submit"
-              disabled={
-                isLoading ||
-                !selectedAPI ||
-                (selectedAPI === APIRoute.SendWebSocketMessage &&
-                  httpMethod === "POST" &&
-                  !selectedMessageType)
-              }
-              className={`mt-3 mb-10 w-full py-2 text-xl font-bold rounded-lg transition-all
+              className="bg-red-600 text-white p-2 w-32 rounded-md cursor-pointer hover:bg-red-500
+                       transition duration-100 ease-in-out active:bg-red-700"
+              onClick={handleResetBuzzers}
+            >
+              Reset buzzers
+            </button>
+          </div>
+          <div className="col-span-3 text-gray-900 flex flex-col h-full p-6">
+            <form onSubmit={handleSubmit} className="flex flex-col h-full">
+              <div className="mb-4">
+                <p className="text-md text-left font-bold min-w-[150px] mb-1">
+                  API ENDPOINT
+                </p>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-medium bg-gray-100 px-2 py-2 rounded w-16">
+                    {httpMethod}
+                  </span>
+                  <select
+                    value={selectedAPI}
+                    onChange={handleAPIChange}
+                    className="flex-1 w-full p-2 text-md bg-gray-50 border-2 border-gray-300 rounded-lg
+                             focus:outline-none focus:ring-2 focus:ring-sky-200"
+                  >
+                    {Object.values(APIRoute).map((route) => (
+                      <option key={route} value={route}>
+                        {route}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {selectedAPI === APIRoute.SendWebSocketMessage &&
+                httpMethod === "POST" && (
+                  <div className="mb-4">
+                    <p className="text-md text-left font-bold mb-1">
+                      MESSAGE TYPE
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={selectedMessageType}
+                        onChange={handleMessageTypeChange}
+                        className="w-full p-2 text-md bg-gray-50 border-2 border-gray-300 rounded-lg
+                                 focus:outline-none focus:ring-2 focus:ring-sky-200"
+                      >
+                        {Object.keys(broadcastTemplates).map((key) => (
+                          <option key={key} value={key}>
+                            {key}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+
+              <div className="mb-4 flex-grow">
+                <p className="text-left text-md font-bold mb-1">JSON BODY</p>
+                <textarea
+                  value={jsonInput}
+                  onChange={handleJsonChange}
+                  placeholder={
+                    httpMethod === "POST"
+                      ? selectedAPI === APIRoute.SendWebSocketMessage &&
+                        !selectedMessageType
+                        ? "Select a message type first"
+                        : "Enter JSON payload or select an endpoint to auto-fill"
+                      : "GET requests don't require a body"
+                  }
+                  className="w-full p-2 h-[70%] text-sm bg-gray-50 border-2 border-gray-300 rounded-lg
+                           focus:outline-none focus:ring-2 focus:ring-sky-200 font-mono"
+                  disabled={httpMethod === "GET"}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={
+                  isLoading ||
+                  !selectedAPI ||
+                  (selectedAPI === APIRoute.SendWebSocketMessage &&
+                    httpMethod === "POST" &&
+                    !selectedMessageType)
+                }
+                className={`mt-3 mb-10 w-full py-2 text-xl font-bold rounded-lg transition-all
                 ${
                   !isLoading &&
                   selectedAPI &&
@@ -349,47 +344,48 @@ const AdminPage: React.FC = () => {
                     ? "bg-[#238551] text-white hover:bg-[#32A467] cursor-pointer"
                     : "bg-stone-300 text-stone-500 cursor-not-allowed"
                 }`}
-            >
-              {isLoading ? "Sending..." : "Send Request"}
-            </button>
-          </form>
-        </div>
-
-        <div className="col-span-3 h-full p-4 overflow-auto bg-opacity-80">
-          <h2 className="text-xl font-bold mb-3 text-left">Response Log</h2>
-          {logs.length === 0 ? (
-            <p className="text-gray-500 text-left">No requests yet</p>
-          ) : (
-            logs.map((log) => (
-              <div
-                key={log.timestamp}
-                className="mb-3 p-2 bg-white rounded-lg shadow text-left"
               >
-                <div className="text-xs text-gray-500 mb-1">
-                  {new Date(log.timestamp).toLocaleString()}
+                {isLoading ? "Sending..." : "Send Request"}
+              </button>
+            </form>
+          </div>
+
+          <div className="col-span-3 h-full p-4 overflow-auto bg-opacity-80">
+            <h2 className="text-xl font-bold mb-3 text-left">Response Log</h2>
+            {logs.length === 0 ? (
+              <p className="text-gray-500 text-left">No requests yet</p>
+            ) : (
+              logs.map((log) => (
+                <div
+                  key={log.timestamp}
+                  className="mb-3 p-2 bg-white rounded-lg shadow text-left"
+                >
+                  <div className="text-xs text-gray-500 mb-1">
+                    {new Date(log.timestamp).toLocaleString()}
+                  </div>
+                  <div className="mb-1">
+                    <span className="font-bold">Request&nbsp;&nbsp;</span>
+                    <span className="font-mono text-sm">
+                      {log.request.method} {log.request.endpoint}
+                    </span>
+                  </div>
+                  <div className="mb-1">
+                    <pre className="font-mono text-sm bg-gray-100 p-1 rounded overflow-auto text-left">
+                      {JSON.stringify(log.request.body, null, 2)}
+                    </pre>
+                  </div>
+                  <div>
+                    <span className="font-bold">Response</span>
+                    <pre className="font-mono text-sm bg-gray-100 p-1 rounded overflow-auto text-left">
+                      {JSON.stringify(log.response, null, 2)}
+                    </pre>
+                  </div>
                 </div>
-                <div className="mb-1">
-                  <span className="font-bold">Request&nbsp;&nbsp;</span>
-                  <span className="font-mono text-sm">
-                    {log.request.method} {log.request.endpoint}
-                  </span>
-                </div>
-                <div className="mb-1">
-                  <pre className="font-mono text-sm bg-gray-100 p-1 rounded overflow-auto text-left">
-                    {JSON.stringify(log.request.body, null, 2)}
-                  </pre>
-                </div>
-                <div>
-                  <span className="font-bold">Response</span>
-                  <pre className="font-mono text-sm bg-gray-100 p-1 rounded overflow-auto text-left">
-                    {JSON.stringify(log.response, null, 2)}
-                  </pre>
-                </div>
-              </div>
-            ))
-          )}
+              ))
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

@@ -10,6 +10,7 @@ import {
 import { Channel, MessageType } from "../../shared/types/domain/websocket";
 import PastelBackground from "./components/PastelBackground";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
+import { useAdminAuth } from "./hooks/useAdminAuth";
 import { apiFetch } from "./util/apiFetch";
 
 type TeamSectionProps = {
@@ -71,6 +72,7 @@ const TeamSection = ({ team, onTeamNameConfirm }: TeamSectionProps) => {
 };
 
 export default function Home() {
+  const { subscribe, unsubscribe, publish } = useWebSocketContext();
   const [players, setPlayers] = useState<Player[]>([]);
   const [teams, setTeams] = useState<Team[]>([
     // Default teams while we wait for the server to return the actual teams
@@ -79,7 +81,7 @@ export default function Home() {
     { id: "3", name: "", color: Color.Green },
     { id: "4", name: "", color: Color.Yellow },
   ]);
-  const { subscribe, unsubscribe } = useWebSocketContext();
+  const { isAuthenticated } = useAdminAuth({ claimHost: true });
 
   useEffect(() => {
     apiFetch(APIRoute.ListTeams).then(({ teams }) => {
@@ -117,82 +119,89 @@ export default function Home() {
     <div className="w-full h-full relative overflow-hidden">
       {/* Parent needs to be relative to keep the pastel background in view */}
       <PastelBackground animate />
-      <div
-        className="grid w-full h-full"
-        style={{
-          gridTemplateAreas: `
+      {!isAuthenticated && (
+        <div className="flex flex-col items-center justify-center w-full h-full">
+          <h1 className="text-4xl font-bold">Access denied</h1>
+        </div>
+      )}
+      {isAuthenticated && (
+        <div
+          className="grid w-full h-full"
+          style={{
+            gridTemplateAreas: `
           "left center right last"
           "left center right last"
       `,
-          gridTemplateColumns: "40% auto auto 5%",
-          gridTemplateRows: "50% auto",
-        }}
-      >
-        {/* QR codes */}
-        <div
-          className="flex flex-col items-center justify-evenly w-full h-full"
-          style={{ gridArea: "left" }}
+            gridTemplateColumns: "40% auto auto 5%",
+            gridTemplateRows: "50% auto",
+          }}
         >
-          <div className="flex flex-col items-center justify-center w-[300px]">
-            <img src="/qr-wifi.png" width="200px" height="auto" />
-            <p className="text-lg mt-3 text-center">
-              1. Connect to the wifi network
-            </p>
+          {/* QR codes */}
+          <div
+            className="flex flex-col items-center justify-evenly w-full h-full"
+            style={{ gridArea: "left" }}
+          >
+            <div className="flex flex-col items-center justify-center w-[300px]">
+              <img src="/qr-wifi.png" width="200px" height="auto" />
+              <p className="text-lg mt-3 text-center">
+                1. Connect to the wifi network
+              </p>
+            </div>
+            <div className="flex flex-col items-center justify-center w-[300px]">
+              <img src="/qr-joinurl.png" width="200px" height="auto" />
+              <p className="text-lg mt-3 text-center">2. Join the game</p>
+            </div>
           </div>
-          <div className="flex flex-col items-center justify-center w-[300px]">
-            <img src="/qr-joinurl.png" width="200px" height="auto" />
-            <p className="text-lg mt-3 text-center">2. Join the game</p>
-          </div>
-        </div>
 
-        {/* Team sections */}
-        <div
-          className="flex flex-col justify-evenly items-center"
-          style={{ gridArea: "center" }}
-        >
-          {teams[0] && (
-            <TeamSection
-              team={teams[0]}
-              onTeamNameConfirm={(name) => {
-                handleTeamNameChange(teams[0].id, name);
-              }}
-              players={players}
-            />
-          )}
-          {teams[1] && (
-            <TeamSection
-              team={teams[1]}
-              onTeamNameConfirm={(name) => {
-                handleTeamNameChange(teams[1].id, name);
-              }}
-              players={players}
-            />
-          )}
+          {/* Team sections */}
+          <div
+            className="flex flex-col justify-evenly items-center"
+            style={{ gridArea: "center" }}
+          >
+            {teams[0] && (
+              <TeamSection
+                team={teams[0]}
+                onTeamNameConfirm={(name) => {
+                  handleTeamNameChange(teams[0].id, name);
+                }}
+                players={players}
+              />
+            )}
+            {teams[1] && (
+              <TeamSection
+                team={teams[1]}
+                onTeamNameConfirm={(name) => {
+                  handleTeamNameChange(teams[1].id, name);
+                }}
+                players={players}
+              />
+            )}
+          </div>
+          <div
+            className="flex flex-col justify-around items-center"
+            style={{ gridArea: "right" }}
+          >
+            {teams[2] && (
+              <TeamSection
+                team={teams[2]}
+                onTeamNameConfirm={(name) => {
+                  handleTeamNameChange(teams[2].id, name);
+                }}
+                players={players}
+              />
+            )}
+            {teams[3] && (
+              <TeamSection
+                team={teams[3]}
+                onTeamNameConfirm={(name) => {
+                  handleTeamNameChange(teams[3].id, name);
+                }}
+                players={players}
+              />
+            )}
+          </div>
         </div>
-        <div
-          className="flex flex-col justify-around items-center"
-          style={{ gridArea: "right" }}
-        >
-          {teams[2] && (
-            <TeamSection
-              team={teams[2]}
-              onTeamNameConfirm={(name) => {
-                handleTeamNameChange(teams[2].id, name);
-              }}
-              players={players}
-            />
-          )}
-          {teams[3] && (
-            <TeamSection
-              team={teams[3]}
-              onTeamNameConfirm={(name) => {
-                handleTeamNameChange(teams[3].id, name);
-              }}
-              players={players}
-            />
-          )}
-        </div>
-      </div>
+      )}
     </div>
   );
 }

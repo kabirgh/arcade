@@ -1,4 +1,5 @@
-import { t, type Static } from "elysia";
+import { type Static, t } from "elysia";
+
 import { PlayerType, TeamType } from "../domain/player";
 
 export const ListPlayersRequestType = t.Object({});

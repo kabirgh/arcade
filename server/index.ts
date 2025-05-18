@@ -1,22 +1,23 @@
-import path from "path";
+import { html } from "@elysiajs/html";
+import { staticPlugin } from "@elysiajs/static";
 import { Elysia } from "elysia";
 import { ElysiaWS } from "elysia/dist/ws";
-import { staticPlugin } from "@elysiajs/static";
-import { html } from "@elysiajs/html";
-import { Channel, MessageType } from "../shared/types/domain/websocket";
+import path from "path";
+
 import { APIRoute, APIRouteToSchema } from "../shared/types/api/schema";
-import {
-  handleCodenamesState,
-  handleCodenamesStart,
-  handleCodenamesClue,
-  handleCodenamesGuess,
-  handleCodenamesEndTurn,
-} from "./codenames";
 import {
   type PlayerListAllMessage,
   type WebSocketMessage,
   WebSocketMessageType,
 } from "../shared/types/api/websocket";
+import { Channel, MessageType } from "../shared/types/domain/websocket";
+import {
+  handleCodenamesClue,
+  handleCodenamesEndTurn,
+  handleCodenamesGuess,
+  handleCodenamesStart,
+  handleCodenamesState,
+} from "./codenames";
 import DB from "./db";
 
 const db = new DB();
@@ -181,10 +182,14 @@ const app = new Elysia()
     ({ body }) => {
       const ws = [...db.wsPlayerMap.keys()].find((ws) => ws.id === body.id);
       if (!ws) {
-        return { success: false, error: "Client not found" };
+        // TODO: figure out how to return typechecked 400
+        return {
+          success: false,
+          errorMessage: "Client not found",
+        };
       }
       handleWebSocketMessage(ws, body.message);
-      return { success: true };
+      return { success: true, errorMessage: "" };
     },
     {
       body: APIRouteToSchema[APIRoute.SendWebSocketMessage].req,

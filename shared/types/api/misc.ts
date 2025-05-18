@@ -1,4 +1,5 @@
 import { type Static, t } from "elysia";
+
 import { PlayerScreenType } from "../domain/misc";
 
 export const PlayerScreenResponseType = t.Object({

@@ -1,4 +1,10 @@
 import {
+  ListWebSocketClientIdsRequestType,
+  ListWebSocketClientIdsResponseType,
+  SendWebSocketMessageRequestType,
+  SendWebSocketMessageResponseType,
+} from "../api/websocket";
+import {
   CodenamesClueRequestType,
   CodenamesClueResponseType,
   CodenamesEndTurnRequestType,
@@ -8,11 +14,6 @@ import {
   CodenamesStartRequestType,
   CodenamesStartResponseType,
 } from "./codenames";
-import {
-  ListWebSocketClientIdsRequestType,
-  ListWebSocketClientIdsResponseType,
-  SendWebSocketMessageRequestType,
-} from "../api/websocket";
 import { EmptyRequestType, SuccessResponseType } from "./common";
 import { PlayerScreenResponseType, SetPlayerScreenRequestType } from "./misc";
 import {
@@ -76,7 +77,7 @@ export const APIRouteToSchema = {
   [APIRoute.SendWebSocketMessage]: {
     method: "POST",
     req: SendWebSocketMessageRequestType,
-    res: SuccessResponseType,
+    res: SendWebSocketMessageResponseType,
   },
   [APIRoute.BroadcastAllPlayers]: {
     method: "POST",

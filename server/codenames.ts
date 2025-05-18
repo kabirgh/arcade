@@ -1,14 +1,16 @@
 import {
-  CardClass,
-  type Card,
   type CodenamesClueRequest,
   type CodenamesClueResponse,
   type CodenamesGuessRequest,
   type CodenamesGuessResponse,
   type CodenamesStartResponse,
   type CodenamesStateResponse,
-  type GameState,
+} from "../shared/types/api/codenames";
+import {
+  type Card,
+  CardClass,
   type CodenamesTeam,
+  type GameState,
 } from "../shared/types/domain/codenames";
 import { shuffle } from "../shared/utils";
 

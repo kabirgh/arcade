@@ -1,5 +1,6 @@
 // Simple in-memory database
 import { ElysiaWS } from "elysia/dist/ws";
+
 import { PlayerScreen } from "../shared/types/domain/misc";
 import { Color, type Player, type Team } from "../shared/types/domain/player";
 

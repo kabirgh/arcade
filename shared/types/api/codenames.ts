@@ -1,4 +1,5 @@
-import { t, type Static } from "elysia";
+import { type Static, t } from "elysia";
+
 import { GameStateType } from "../domain/codenames";
 import { ErrorResponseType } from "./common";
 

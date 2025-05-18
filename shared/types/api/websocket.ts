@@ -1,8 +1,8 @@
-import { t, type Static } from "elysia";
-import { PlayerType } from "../domain/player";
-import { MessageType } from "../domain/websocket";
+import { type Static, t } from "elysia";
 
+import { PlayerType } from "../domain/player";
 import { Channel } from "../domain/websocket";
+import { MessageType } from "../domain/websocket";
 
 const PlayerListAllMessageType = t.Object({
   channel: t.Literal(Channel.PLAYER),
@@ -59,6 +59,14 @@ export const SendWebSocketMessageRequestType = t.Object({
 });
 export type SendWebSocketMessageRequest = Static<
   typeof SendWebSocketMessageRequestType
+>;
+
+export const SendWebSocketMessageResponseType = t.Object({
+  success: t.Boolean(),
+  errorMessage: t.String(),
+});
+export type SendWebSocketMessageResponse = Static<
+  typeof SendWebSocketMessageResponseType
 >;
 
 export const ListWebSocketClientIdsRequestType = t.Object({});

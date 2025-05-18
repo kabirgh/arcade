@@ -1,4 +1,5 @@
 import { type Static, t } from "elysia";
+
 import { Nullable } from "../core";
 
 // Types for the engine

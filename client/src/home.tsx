@@ -82,8 +82,8 @@ export default function Home() {
   const { subscribe, unsubscribe } = useWebSocketContext();
 
   useEffect(() => {
-    fetchApi({ route: APIRoute.ListTeams }).then((data) => {
-      setTeams(data.teams);
+    fetchApi(APIRoute.ListTeams).then(({ teams }) => {
+      setTeams(teams);
     });
   }, []);
 
@@ -101,20 +101,16 @@ export default function Home() {
   }, [subscribe, unsubscribe]);
 
   const handleTeamNameChange = (teamId: string, name: string) => {
-    fetchApi({ route: APIRoute.SetTeamName, body: { teamId, name } }).then(
-      (data) => {
-        if (data.success) {
-          setTeams((prevTeams) => {
-            const newTeams = [...prevTeams];
-            const team = newTeams.find((t) => t.id === teamId);
-            if (team) {
-              team.name = name;
-            }
-            return newTeams;
-          });
+    fetchApi(APIRoute.SetTeamName, { teamId, name }).then(() => {
+      setTeams((prevTeams) => {
+        const newTeams = [...prevTeams];
+        const team = newTeams.find((t) => t.id === teamId);
+        if (team) {
+          team.name = name;
         }
-      }
-    );
+        return newTeams;
+      });
+    });
   };
 
   return (

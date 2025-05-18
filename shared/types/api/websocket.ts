@@ -9,7 +9,6 @@ const PlayerListAllMessageType = t.Object({
   messageType: t.Literal(MessageType.LIST),
   payload: t.Array(PlayerType),
 });
-
 export type PlayerListAllMessage = Static<typeof PlayerListAllMessageType>;
 
 const PlayerJoinMessageType = t.Object({
@@ -61,10 +60,7 @@ export type SendWebSocketMessageRequest = Static<
   typeof SendWebSocketMessageRequestType
 >;
 
-export const SendWebSocketMessageResponseType = t.Object({
-  success: t.Boolean(),
-  errorMessage: t.String(),
-});
+export const SendWebSocketMessageResponseType = t.Object({});
 export type SendWebSocketMessageResponse = Static<
   typeof SendWebSocketMessageResponseType
 >;

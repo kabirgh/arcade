@@ -1,11 +1,13 @@
 import {
   type CodenamesClueRequest,
   type CodenamesClueResponse,
+  type CodenamesEndTurnResponse,
   type CodenamesGuessRequest,
   type CodenamesGuessResponse,
   type CodenamesStartResponse,
   type CodenamesStateResponse,
 } from "../shared/types/api/codenames";
+import { type ResponseEnvelope } from "../shared/types/api/common";
 import {
   type Card,
   CardClass,
@@ -220,60 +222,88 @@ class CodenamesGame {
 // Create and export a singleton instance
 export const codenamesGame = new CodenamesGame();
 
-export const handleCodenamesState = (): CodenamesStateResponse => {
-  return {
-    state: codenamesGame.getGameState(),
+export const handleCodenamesState =
+  (): ResponseEnvelope<CodenamesStateResponse> => {
+    return {
+      ok: true,
+      data: {
+        state: codenamesGame.getGameState(),
+      },
+    };
   };
-};
 
-export const handleCodenamesStart = (): CodenamesStartResponse => {
-  codenamesGame.startGame();
-  return {
-    state: codenamesGame.getGameState(),
+export const handleCodenamesStart =
+  (): ResponseEnvelope<CodenamesStartResponse> => {
+    codenamesGame.startGame();
+    return {
+      ok: true,
+      data: {
+        state: codenamesGame.getGameState(),
+      },
+    };
   };
-};
 
 export const handleCodenamesClue = (
   req: CodenamesClueRequest
-): CodenamesClueResponse => {
+): ResponseEnvelope<CodenamesClueResponse> => {
   try {
     const state = codenamesGame.submitClue(req.clueWord, req.clueNumber);
     return {
-      state,
+      ok: true,
+      data: {
+        state,
+      },
     };
   } catch (error: any) {
     return {
-      state: codenamesGame.getGameState(),
-      error: error.message,
+      ok: false,
+      error: {
+        status: 500,
+        message: error.message,
+      },
     };
   }
 };
 
 export const handleCodenamesGuess = (
   req: CodenamesGuessRequest
-): CodenamesGuessResponse => {
+): ResponseEnvelope<CodenamesGuessResponse> => {
   try {
     const state = codenamesGame.submitGuess(req.word);
     return {
-      state,
+      ok: true,
+      data: {
+        state,
+      },
     };
   } catch (error: any) {
     return {
-      error: error.message,
-      state: codenamesGame.getGameState(),
+      ok: false,
+      error: {
+        status: 500,
+        message: error.message,
+      },
     };
   }
 };
 
-export const handleCodenamesEndTurn = (): CodenamesGuessResponse => {
-  try {
-    const state = codenamesGame.endTurn();
-    return {
-      state,
-    };
-  } catch (error: any) {
-    return {
-      error: error.message,
-    };
-  }
-};
+export const handleCodenamesEndTurn =
+  (): ResponseEnvelope<CodenamesEndTurnResponse> => {
+    try {
+      const state = codenamesGame.endTurn();
+      return {
+        ok: true,
+        data: {
+          state,
+        },
+      };
+    } catch (error: any) {
+      return {
+        ok: false,
+        error: {
+          status: 500,
+          message: error.message,
+        },
+      };
+    }
+  };

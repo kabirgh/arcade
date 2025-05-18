@@ -13,9 +13,18 @@ import {
   CodenamesGuessResponseType,
   CodenamesStartRequestType,
   CodenamesStartResponseType,
+  CodenamesStateRequestType,
+  CodenamesStateResponseType,
 } from "./codenames";
-import { EmptyRequestType, SuccessResponseType } from "./common";
-import { PlayerScreenResponseType, SetPlayerScreenRequestType } from "./misc";
+import { ResponseEnvelopeType } from "./common";
+import {
+  BroadcastAllPlayersRequestType,
+  BroadcastAllPlayersResponseType,
+  PlayerScreenRequestType,
+  PlayerScreenResponseType,
+  SetPlayerScreenRequestType,
+  SetPlayerScreenResponseType,
+} from "./misc";
 import {
   ListPlayersRequestType,
   ListPlayersResponseType,
@@ -42,71 +51,70 @@ export enum APIRoute {
 }
 
 // Schemas for each API route
-// Requests do not include "body" since that is added by Elysia
 export const APIRouteToSchema = {
   [APIRoute.PlayerScreen]: {
     method: "GET",
-    req: EmptyRequestType,
-    res: PlayerScreenResponseType,
+    req: PlayerScreenRequestType,
+    res: ResponseEnvelopeType(PlayerScreenResponseType),
   },
   [APIRoute.SetPlayerScreen]: {
     method: "POST",
     req: SetPlayerScreenRequestType,
-    res: SuccessResponseType,
+    res: ResponseEnvelopeType(SetPlayerScreenResponseType),
   },
   [APIRoute.ListTeams]: {
     method: "GET",
     req: ListTeamsRequestType,
-    res: ListTeamsResponseType,
+    res: ResponseEnvelopeType(ListTeamsResponseType),
   },
   [APIRoute.SetTeamName]: {
     method: "POST",
     req: SetTeamNameRequestType,
-    res: SetTeamNameResponseType,
+    res: ResponseEnvelopeType(SetTeamNameResponseType),
   },
   [APIRoute.ListPlayers]: {
     method: "GET",
     req: ListPlayersRequestType,
-    res: ListPlayersResponseType,
+    res: ResponseEnvelopeType(ListPlayersResponseType),
   },
   [APIRoute.ListWebSocketClientIds]: {
     method: "GET",
     req: ListWebSocketClientIdsRequestType,
-    res: ListWebSocketClientIdsResponseType,
+    res: ResponseEnvelopeType(ListWebSocketClientIdsResponseType),
   },
   [APIRoute.SendWebSocketMessage]: {
     method: "POST",
     req: SendWebSocketMessageRequestType,
-    res: SendWebSocketMessageResponseType,
+    res: ResponseEnvelopeType(SendWebSocketMessageResponseType),
   },
   [APIRoute.BroadcastAllPlayers]: {
     method: "POST",
-    req: EmptyRequestType,
-    res: SuccessResponseType,
+    req: BroadcastAllPlayersRequestType,
+    res: ResponseEnvelopeType(BroadcastAllPlayersResponseType),
   },
   [APIRoute.CodenamesState]: {
-    method: "POST",
-    req: CodenamesClueRequestType,
-    res: CodenamesClueResponseType,
+    method: "GET",
+    req: CodenamesStateRequestType,
+    res: ResponseEnvelopeType(CodenamesStateResponseType),
   },
   [APIRoute.CodenamesStart]: {
     method: "POST",
     req: CodenamesStartRequestType,
-    res: CodenamesStartResponseType,
+    res: ResponseEnvelopeType(CodenamesStartResponseType),
   },
   [APIRoute.CodenamesClue]: {
     method: "POST",
     req: CodenamesClueRequestType,
-    res: CodenamesClueResponseType,
+    res: ResponseEnvelopeType(CodenamesClueResponseType),
   },
   [APIRoute.CodenamesGuess]: {
     method: "POST",
     req: CodenamesGuessRequestType,
-    res: CodenamesGuessResponseType,
+    res: ResponseEnvelopeType(CodenamesGuessResponseType),
   },
   [APIRoute.CodenamesEndTurn]: {
     method: "POST",
     req: CodenamesEndTurnRequestType,
-    res: CodenamesEndTurnResponseType,
+    res: ResponseEnvelopeType(CodenamesEndTurnResponseType),
   },
 } as const;

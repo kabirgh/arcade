@@ -1,119 +1,75 @@
-import type { Static } from "@sinclair/typebox";
+import { type Static } from "elysia";
 
+import type {
+  ErrorPayload,
+  SuccessResponse,
+} from "../../../shared/types/api/common";
 import { APIRoute, APIRouteToSchema } from "../../../shared/types/api/schema";
 
-// Define a helper type to extract the request body type from the schema
-// Uses Static to get the actual TypeScript type from the TypeBox schema
-type RequestBodyType<Route extends APIRoute> = Static<
-  (typeof APIRouteToSchema)[Route]["req"]
->;
+type ApiSchema = typeof APIRouteToSchema;
 
-// Define a helper type to extract the response body type from the schema
-// Uses Static to get the actual TypeScript type from the TypeBox schema
-type ResponseBodyType<Route extends APIRoute> = Static<
-  (typeof APIRouteToSchema)[Route]["res"]
->;
+// Request Body Type: Extracts the static type from the request schema.
+type RequestZodSchema<R extends APIRoute> = ApiSchema[R]["req"];
+type RequestBody<R extends APIRoute> = Static<RequestZodSchema<R>>;
 
-// Conditional type for options: if req is EmptyRequestType, body is not allowed.
-// Otherwise, body is required and must match the schema's request type.
-type FetchApiOptions<Route extends APIRoute> =
-  RequestBodyType<Route> extends Record<string, never> // Check if req is essentially EmptyRequestType after Static<> transformation
-    ? { route: Route; body?: never }
-    : { route: Route; body: RequestBodyType<Route> };
+// Success Data Type: Extracts the 'data' part from a successful response envelope.
+type ResponseZodSchema<R extends APIRoute> = ApiSchema[R]["res"];
+type FullResponseType<R extends APIRoute> = Static<ResponseZodSchema<R>>;
 
-export async function fetchApi<Route extends APIRoute>(
-  options: FetchApiOptions<Route>
-): Promise<ResponseBodyType<Route>> {
-  const { route, body } = options;
-  const routeSchema = APIRouteToSchema[route];
+type SuccessData<R extends APIRoute> = Extract<
+  FullResponseType<R>,
+  SuccessResponse<any>
+> extends SuccessResponse<infer T>
+  ? T
+  : never;
 
-  const fetchOptions: RequestInit = {
-    method: routeSchema.method,
+export async function fetchApi<R extends APIRoute>(
+  route: R,
+  // Conditionally include 'body' argument only for non-GET requests.
+  ...args: ApiSchema[R]["method"] extends "GET" ? [] : [body: RequestBody<R>]
+): Promise<SuccessData<R>> {
+  const schema = APIRouteToSchema[route];
+  // Extract body from args if present (only for non-GET requests).
+  const bodyArg = args.length > 0 ? (args[0] as RequestBody<R>) : undefined;
+
+  const options: RequestInit = {
+    method: schema.method,
     headers: {
       "Content-Type": "application/json",
     },
   };
 
-  if (body && routeSchema.method !== "GET") {
-    fetchOptions.body = JSON.stringify(body);
-  }
-
-  const response = await fetch(route, fetchOptions);
-
-  if (!response.ok) {
-    let errorData: any = { message: "Unknown error during response parsing" };
-    try {
-      errorData = await response.json();
-    } catch (e) {
-      // If parsing errorData itself fails, retain the original status text or a generic message
-      errorData = {
-        message: response.statusText || "Failed to parse error response JSON",
-      };
-    }
-    throw new Error(
-      `API Error: ${response.status} ${response.statusText} - ${
-        errorData.message || JSON.stringify(errorData)
-      }`
-    );
-  }
-
-  // Handle 204 No Content: The body will be empty.
-  // The expected response type (ResponseBodyType<Route>) should accommodate this.
-  if (response.status === 204) {
-    return undefined as unknown as ResponseBodyType<Route>;
+  if (schema.method !== "GET" && bodyArg !== undefined) {
+    options.body = JSON.stringify(bodyArg);
   }
 
   try {
-    const responseData = await response.json();
-    return responseData as ResponseBodyType<Route>;
-  } catch (error) {
-    // This catch block handles errors during response.json() parsing for non-204 successful responses.
-    // This could happen if the server sends a 200 OK with an empty or malformed JSON body.
-    console.error(
-      "API Success (non-204), but failed to parse JSON response:",
-      error,
-      "Route:",
-      route
-    );
+    const response = await fetch(route, options);
+    const jsonResponse = await response.json();
 
-    // If parsing failed, but the status was OK, it implies an empty or non-JSON body.
-    // Return undefined, cast appropriately. The caller must handle this based on the expected ResponseBodyType.
-    return undefined as unknown as ResponseBodyType<Route>;
+    if (jsonResponse.ok === true) {
+      // Type assertion is safe due to the 'ok' check and schema structure.
+      return (jsonResponse as SuccessResponse<SuccessData<R>>).data;
+    } else if (jsonResponse.ok === false) {
+      const errorPayload = (jsonResponse as { ok: false; error: ErrorPayload })
+        .error;
+      throw new Error(
+        `API Error: ${errorPayload.message} (Status: ${errorPayload.status})`
+      );
+    } else {
+      throw new Error(
+        `Invalid API response structure for route ${route}. Expected 'ok' property.`
+      );
+    }
+  } catch (e) {
+    if (e instanceof Error) {
+      throw e;
+    }
+    throw new Error(`Request failed for route ${route}: ${String(e)}`);
   }
 }
 
-// Example Usage (assuming you have these types defined elsewhere):
-/*
-import { SuccessResponseType } from "../../../shared/types/api/common";
-
-// Example GET request (Teams returns SuccessResponseType)
-fetchApi({ route: APIRoute.Teams })
-  .then((data) => { // data is Static<typeof SuccessResponseType> or equivalent
-    if (data && data.success) {
-      console.log("Teams fetched successfully (generic success response)");
-    } else {
-      console.log("Teams fetch: response might be empty (e.g. from 204 or parse error on empty body)", data);
-    }
-  })
-  .catch(console.error);
-
-// Example POST request with a specific body and response type (CodenamesStart)
-fetchApi({ route: APIRoute.CodenamesStart, body: { userId: "test-user" } })
-  .then((data) => { // data is Static<typeof CodenamesStartResponseType>
-    console.log("Codenames game started:", data.state); // Accessing data.state assumes it's part of the response type
-  })
-  .catch(console.error);
-
-// Example POST request with EmptyRequestType (no body expected)
-// APIRoute.SetPlayerScreen has req: EmptyRequestType, res: SuccessResponseType
-fetchApi({ route: APIRoute.SetPlayerScreen })
- .then((data) => { // data is Static<typeof SuccessResponseType>
-    if (data && data.success) {
-      console.log("SetPlayerScreen successful.");
-    } else { // Handle data being undefined
-      console.log("SetPlayerScreen: operation successful, no content or undefined response.");
-    }
- })
- .catch(console.error);
-
-*/
+const example = async () => {
+  const response = await fetchApi(APIRoute.CodenamesStart, {});
+  console.log(response);
+};

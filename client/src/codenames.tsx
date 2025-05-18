@@ -6,6 +6,7 @@ import {
   CardClass,
   type GameState,
 } from "../../shared/types/domain/codenames";
+import { fetchApi } from "./util/fetchApi";
 
 const UNSELECTED_CARD_STYLES = {
   [CardClass.Red]: "bg-white text-black box-border border-6 border-[#D13030]",
@@ -73,12 +74,8 @@ export const Codenames = () => {
   // Fetch game state from server
   const fetchGameState = async () => {
     try {
-      const response = await fetch(APIRoute.CodenamesState);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      setGameState(data.state);
+      const response = await fetchApi(APIRoute.CodenamesState);
+      setGameState(response.state);
     } catch (error) {
       console.error("Failed to fetch game state:", error);
       setError("Failed to fetch game state");
@@ -91,12 +88,8 @@ export const Codenames = () => {
   const startGame = async () => {
     try {
       setLoading(true);
-      const response = await fetch(APIRoute.CodenamesStart);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      setGameState(data.state);
+      const response = await fetchApi(APIRoute.CodenamesStart, {});
+      setGameState(response.state);
     } catch (error) {
       console.error("Failed to start game:", error);
       setError("Failed to start game");
@@ -112,34 +105,21 @@ export const Codenames = () => {
       return;
     }
 
-    try {
-      const response = await fetch(APIRoute.CodenamesClue, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          clueWord: clueWord.trim(),
-          clueNumber: clueNumber,
-        }),
+    fetchApi(APIRoute.CodenamesClue, {
+      clueWord: clueWord.trim(),
+      clueNumber: clueNumber,
+    })
+      .then((data) => {
+        setGameState(data.state);
+        setClueWord("");
+        if (clueInputRef.current) {
+          clueInputRef.current.value = "";
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to submit clue:", error);
+        setError(error.message || "Failed to submit clue");
       });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to submit clue");
-      }
-
-      const data = await response.json();
-      setGameState(data.state);
-
-      setClueWord("");
-      if (clueInputRef.current) {
-        clueInputRef.current.value = "";
-      }
-    } catch (error: any) {
-      console.error("Failed to submit clue:", error);
-      setError(error.message || "Failed to submit clue");
-    }
   };
 
   // Handle card click (make a guess)
@@ -157,28 +137,14 @@ export const Codenames = () => {
       return;
     }
 
-    try {
-      const response = await fetch(APIRoute.CodenamesGuess, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          word,
-        }),
+    fetchApi(APIRoute.CodenamesGuess, { word })
+      .then((data) => {
+        setGameState(data.state);
+      })
+      .catch((error) => {
+        console.error("Failed to make guess:", error);
+        setError(error.message || "Failed to make guess");
       });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || "Failed to make guess");
-      }
-
-      setGameState(data.state);
-    } catch (error: any) {
-      console.error("Failed to make guess:", error);
-      setError(error.message || "Failed to make guess");
-    }
   };
 
   useEffect(() => {
@@ -345,17 +311,9 @@ export const Codenames = () => {
             <button
               className="h-full text-white bg-blue-700 hover:bg-blue-800 cursor-pointer px-3 py-1.5 rounded-sm"
               onClick={() => {
-                fetch("/api/codenames/end-turn", {
-                  method: "POST",
-                  headers: {
-                    "Content-Type": "application/json",
-                  },
-                })
-                  .then((response) => response.json())
+                fetchApi(APIRoute.CodenamesEndTurn, {})
                   .then((data) => {
-                    if (data.state) {
-                      setGameState(data.state);
-                    }
+                    setGameState(data.state);
                   })
                   .catch((error) => {
                     console.error("Failed to end turn:", error);

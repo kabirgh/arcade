@@ -24,7 +24,5 @@ export const SetTeamNameRequestType = t.Object({
 });
 export type SetTeamNameRequest = Static<typeof SetTeamNameRequestType>;
 
-export const SetTeamNameResponseType = t.Object({
-  success: t.Boolean(),
-});
+export const SetTeamNameResponseType = t.Object({});
 export type SetTeamNameResponse = Static<typeof SetTeamNameResponseType>;

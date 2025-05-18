@@ -1,10 +1,12 @@
 import { type Static, t } from "elysia";
 
 import { GameStateType } from "../domain/codenames";
-import { ErrorResponseType } from "./common";
 
 // Request and response types for the Codenames API
 // State
+export const CodenamesStateRequestType = t.Object({});
+export type CodenamesStateRequest = Static<typeof CodenamesStateRequestType>;
+
 export const CodenamesStateResponseType = t.Object({
   state: GameStateType,
 });
@@ -26,10 +28,7 @@ export const CodenamesClueRequestType = t.Object({
 });
 export type CodenamesClueRequest = Static<typeof CodenamesClueRequestType>;
 
-export const CodenamesClueResponseType = t.Union([
-  t.Object({ state: GameStateType }),
-  ErrorResponseType,
-]);
+export const CodenamesClueResponseType = t.Object({ state: GameStateType });
 export type CodenamesClueResponse = Static<typeof CodenamesClueResponseType>;
 
 // Guess
@@ -38,10 +37,7 @@ export const CodenamesGuessRequestType = t.Object({
 });
 export type CodenamesGuessRequest = Static<typeof CodenamesGuessRequestType>;
 
-export const CodenamesGuessResponseType = t.Union([
-  t.Object({ state: GameStateType }),
-  ErrorResponseType,
-]);
+export const CodenamesGuessResponseType = t.Object({ state: GameStateType });
 export type CodenamesGuessResponse = Static<typeof CodenamesGuessResponseType>;
 
 // End turn
@@ -50,10 +46,7 @@ export type CodenamesEndTurnRequest = Static<
   typeof CodenamesEndTurnRequestType
 >;
 
-export const CodenamesEndTurnResponseType = t.Union([
-  t.Object({ state: GameStateType }),
-  ErrorResponseType,
-]);
+export const CodenamesEndTurnResponseType = t.Object({ state: GameStateType });
 export type CodenamesEndTurnResponse = Static<
   typeof CodenamesEndTurnResponseType
 >;

@@ -112,7 +112,7 @@ const app = new Elysia()
   .get(
     APIRoute.PlayerScreen,
     () => {
-      return { screen: db.screen };
+      return { ok: true as const, data: { screen: db.screen } };
     },
     {
       body: APIRouteToSchema[APIRoute.PlayerScreen].req,
@@ -123,7 +123,7 @@ const app = new Elysia()
     APIRoute.SetPlayerScreen,
     ({ body }) => {
       db.screen = body.screen;
-      return { success: true };
+      return { ok: true as const, data: {} };
     },
     {
       body: APIRouteToSchema[APIRoute.SetPlayerScreen].req,
@@ -133,7 +133,7 @@ const app = new Elysia()
   .get(
     APIRoute.ListTeams,
     () => {
-      return { teams: db.teams };
+      return { ok: true as const, data: { teams: db.teams } };
     },
     {
       body: APIRouteToSchema[APIRoute.ListTeams].req,
@@ -145,11 +145,17 @@ const app = new Elysia()
     ({ body }) => {
       const team = db.teams.find((team) => team.id === body.teamId);
       if (!team) {
-        return { success: false, error: "Team not found" };
+        return {
+          ok: false as const,
+          error: {
+            status: 404,
+            message: "Team not found",
+          },
+        };
       }
       team.name = body.name;
 
-      return { success: true };
+      return { ok: true as const, data: {} };
     },
     {
       body: APIRouteToSchema[APIRoute.SetTeamName].req,
@@ -159,7 +165,7 @@ const app = new Elysia()
   .get(
     APIRoute.ListPlayers,
     () => {
-      return { players: db.players };
+      return { ok: true as const, data: { players: db.players } };
     },
     {
       body: APIRouteToSchema[APIRoute.ListPlayers].req,
@@ -170,7 +176,10 @@ const app = new Elysia()
   .get(
     APIRoute.ListWebSocketClientIds,
     () => {
-      return { ids: [...db.wsPlayerMap.keys()].map((ws) => ws.id) };
+      return {
+        ok: true as const,
+        data: { ids: [...db.wsPlayerMap.keys()].map((ws) => ws.id) },
+      };
     },
     {
       body: APIRouteToSchema[APIRoute.ListWebSocketClientIds].req,
@@ -182,14 +191,16 @@ const app = new Elysia()
     ({ body }) => {
       const ws = [...db.wsPlayerMap.keys()].find((ws) => ws.id === body.id);
       if (!ws) {
-        // TODO: figure out how to return typechecked 400
         return {
-          success: false,
-          errorMessage: "Client not found",
+          ok: false as const,
+          error: {
+            status: 404,
+            message: "Client not found",
+          },
         };
       }
       handleWebSocketMessage(ws, body.message);
-      return { success: true, errorMessage: "" };
+      return { ok: true as const, data: {} };
     },
     {
       body: APIRouteToSchema[APIRoute.SendWebSocketMessage].req,
@@ -200,7 +211,7 @@ const app = new Elysia()
     APIRoute.BroadcastAllPlayers,
     () => {
       broadcastAllPlayers();
-      return { success: true };
+      return { ok: true as const, data: {} };
     },
     {
       body: APIRouteToSchema[APIRoute.BroadcastAllPlayers].req,

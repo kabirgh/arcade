@@ -53,7 +53,7 @@ export default function JoinScreen() {
 
   useEffect(() => {
     // First check what the server thinks the current screen should be.
-    fetchApi({ route: APIRoute.PlayerScreen }).then((data) => {
+    fetchApi(APIRoute.PlayerScreen).then((data) => {
       console.log("Server says current screen should be:", data.screen);
 
       if (data.screen === PlayerScreen.Join) {
@@ -100,11 +100,11 @@ export default function JoinScreen() {
 
   useEffect(() => {
     // Get existing players from server
-    fetchApi({ route: APIRoute.ListPlayers }).then((data) => {
+    fetchApi(APIRoute.ListPlayers).then((data) => {
       setExistingPlayers(data.players as Player[]);
     });
     // Get existing teams from server
-    fetchApi({ route: APIRoute.ListTeams }).then((data) => {
+    fetchApi(APIRoute.ListTeams).then((data) => {
       setTeams(data.teams);
     });
   }, []);
@@ -239,13 +239,10 @@ export default function JoinScreen() {
         avatar: selectedAvatar,
       };
 
-      // Use context to set the player state and persist it. Also sends a JOIN message to the server.
-      setSessionPlayer(player);
-
       // Clear the draft join info from localStorage
       localStorage.removeItem("playerJoinInfo");
-      // Set confirmed player information in localStorage so page reloads can redirect to the correct screen
-      localStorage.setItem("playerInfo", JSON.stringify(player));
+      // Use context to set the player state and persist it. Also sends a JOIN message to the server.
+      setSessionPlayer(player);
 
       // Navigate to lobby screen
       setLocation("/buzzer");

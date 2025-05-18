@@ -94,13 +94,20 @@ const BuzzerHost: React.FC = () => {
 
   // Get players and teams from backend
   useEffect(() => {
-    fetchApi({ route: APIRoute.ListPlayers }).then(({ players }) => {
-      console.log("players", players);
-      setPlayers(players);
-    });
-    fetchApi({ route: APIRoute.ListTeams }).then(({ teams }) => {
-      setTeams(teams);
-    });
+    fetchApi(APIRoute.ListPlayers)
+      .then(({ players }) => {
+        setPlayers(players);
+      })
+      .catch((error) => {
+        console.error("Failed to fetch players:", error);
+      });
+    fetchApi(APIRoute.ListTeams)
+      .then(({ teams }) => {
+        setTeams(teams);
+      })
+      .catch((error) => {
+        console.error("Failed to fetch teams:", error);
+      });
   }, []);
 
   // Subscribe to player list updates

@@ -1,7 +1,6 @@
 import { Value } from "@sinclair/typebox/value";
 import React, { useEffect, useMemo, useState } from "react";
 
-import { EmptyRequestType } from "../../shared/types/api/common";
 import { APIRoute, APIRouteToSchema } from "../../shared/types/api/schema";
 import { WebSocketMessageType } from "../../shared/types/api/websocket";
 import { Channel, MessageType } from "../../shared/types/domain/websocket";
@@ -127,7 +126,7 @@ const AdminPage: React.FC = () => {
           if (template) {
             setJsonInput(JSON.stringify(template, null, 2));
           } else {
-            setJsonInput(""); // Clear if no template (e.g. EmptyRequestType)
+            setJsonInput("");
           }
         }
       } else {
@@ -320,20 +319,12 @@ const AdminPage: React.FC = () => {
                     ? selectedAPI === APIRoute.SendWebSocketMessage &&
                       !selectedMessageType
                       ? "Select a message type first"
-                      : APIRouteToSchema[selectedAPI as APIRoute]?.req ===
-                        EmptyRequestType
-                      ? "Request body is empty for this endpoint"
                       : "Enter JSON payload or select an endpoint to auto-fill"
                     : "GET requests don't require a body"
                 }
                 className="w-full p-2 h-[70%] text-sm bg-gray-50 border-2 border-gray-300 rounded-lg
                            focus:outline-none focus:ring-2 focus:ring-sky-200 font-mono"
-                disabled={
-                  httpMethod === "GET" ||
-                  (APIRouteToSchema[selectedAPI as APIRoute]?.req ===
-                    EmptyRequestType &&
-                    httpMethod === "POST")
-                }
+                disabled={httpMethod === "GET"}
               />
             </div>
 

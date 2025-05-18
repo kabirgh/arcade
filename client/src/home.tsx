@@ -1,14 +1,15 @@
 import { useEffect, useState } from "react";
+
+import { APIRoute } from "../../shared/types/api/schema";
+import type { WebSocketMessage } from "../../shared/types/api/websocket";
 import {
   Color,
   type Player,
   type Team,
 } from "../../shared/types/domain/player";
 import { Channel, MessageType } from "../../shared/types/domain/websocket";
-import type { WebSocketMessage } from "../../shared/types/api/websocket";
 import PastelBackground from "./components/PastelBackground";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
-import { APIRoute } from "../../shared/types/api/schema";
 import { fetchApi } from "./util/fetchApi";
 
 type TeamSectionProps = {
@@ -73,10 +74,10 @@ export default function Home() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [teams, setTeams] = useState<Team[]>([
     // Default teams while we wait for the server to return the actual teams
-    { name: "", color: Color.Red },
-    { name: "", color: Color.Blue },
-    { name: "", color: Color.Green },
-    { name: "", color: Color.Yellow },
+    { id: "1", name: "", color: Color.Red },
+    { id: "2", name: "", color: Color.Blue },
+    { id: "3", name: "", color: Color.Green },
+    { id: "4", name: "", color: Color.Yellow },
   ]);
   const { subscribe, unsubscribe } = useWebSocketContext();
 
@@ -99,13 +100,16 @@ export default function Home() {
     return () => unsubscribe(Channel.PLAYER);
   }, [subscribe, unsubscribe]);
 
-  const handleTeamNameChange = (teamIndex: number, name: string) => {
-    fetchApi({ route: APIRoute.SetTeamName, body: { teamIndex, name } }).then(
+  const handleTeamNameChange = (teamId: string, name: string) => {
+    fetchApi({ route: APIRoute.SetTeamName, body: { teamId, name } }).then(
       (data) => {
         if (data.success) {
           setTeams((prevTeams) => {
             const newTeams = [...prevTeams];
-            newTeams[teamIndex].name = name;
+            const team = newTeams.find((t) => t.id === teamId);
+            if (team) {
+              team.name = name;
+            }
             return newTeams;
           });
         }
@@ -154,7 +158,7 @@ export default function Home() {
             <TeamSection
               team={teams[0]}
               onTeamNameConfirm={(name) => {
-                handleTeamNameChange(0, name);
+                handleTeamNameChange(teams[0].id, name);
               }}
               players={players}
             />
@@ -163,7 +167,7 @@ export default function Home() {
             <TeamSection
               team={teams[1]}
               onTeamNameConfirm={(name) => {
-                handleTeamNameChange(1, name);
+                handleTeamNameChange(teams[1].id, name);
               }}
               players={players}
             />
@@ -177,7 +181,7 @@ export default function Home() {
             <TeamSection
               team={teams[2]}
               onTeamNameConfirm={(name) => {
-                handleTeamNameChange(2, name);
+                handleTeamNameChange(teams[2].id, name);
               }}
               players={players}
             />
@@ -186,7 +190,7 @@ export default function Home() {
             <TeamSection
               team={teams[3]}
               onTeamNameConfirm={(name) => {
-                handleTeamNameChange(3, name);
+                handleTeamNameChange(teams[3].id, name);
               }}
               players={players}
             />

@@ -1,5 +1,6 @@
-import { APIRoute, APIRouteToSchema } from "../../../shared/types/api/schema";
 import type { Static } from "@sinclair/typebox";
+
+import { APIRoute, APIRouteToSchema } from "../../../shared/types/api/schema";
 
 // Define a helper type to extract the request body type from the schema
 // Uses Static to get the actual TypeScript type from the TypeBox schema

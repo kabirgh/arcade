@@ -1,9 +1,10 @@
 import "./buzzer.css";
-import PastelBackground from "./components/PastelBackground";
-import { useWebSocketContext } from "./contexts/WebSocketContext";
+
 import { Channel, MessageType } from "../../shared/types/domain/websocket";
 import ConnectionStatusPill from "./components/ConnectionStatusPill";
+import PastelBackground from "./components/PastelBackground";
 import { usePlayerContext } from "./contexts/PlayerContext";
+import { useWebSocketContext } from "./contexts/WebSocketContext";
 
 export default function Buzzer() {
   const { publish } = useWebSocketContext();

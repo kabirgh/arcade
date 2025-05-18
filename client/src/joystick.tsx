@@ -1,10 +1,12 @@
 import "./buzzer.css";
-import PastelBackground from "./components/PastelBackground";
-import { useWebSocketContext } from "./contexts/WebSocketContext";
-import { Channel, MessageType } from "../../shared/types/domain/websocket";
-import ConnectionStatusPill from "./components/ConnectionStatusPill";
+
 import nipplejs from "nipplejs";
 import { useEffect, useRef } from "react";
+
+import { Channel, MessageType } from "../../shared/types/domain/websocket";
+import ConnectionStatusPill from "./components/ConnectionStatusPill";
+import PastelBackground from "./components/PastelBackground";
+import { useWebSocketContext } from "./contexts/WebSocketContext";
 // Define the type based on the return type of nipplejs.create
 type NippleManagerType = ReturnType<typeof nipplejs.create>;
 

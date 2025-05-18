@@ -1,13 +1,15 @@
 import "./index.css";
+
 import { Route, Switch } from "wouter";
-import Codenames from "./codenames";
-import Home from "./home";
-import Join from "./join";
+
+import Admin from "./admin";
 import Buzzer from "./buzzer";
 import BuzzerHost from "./buzzer-host";
-import { WebSocketProvider } from "./contexts/WebSocketContext";
+import Codenames from "./codenames";
 import { PlayerProvider } from "./contexts/PlayerContext";
-import Admin from "./admin";
+import { WebSocketProvider } from "./contexts/WebSocketContext";
+import Home from "./home";
+import Join from "./join";
 import Joystick from "./joystick";
 
 export function App() {

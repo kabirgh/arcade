@@ -1,16 +1,17 @@
 import React, {
   createContext,
-  useState,
-  useEffect,
-  useContext,
-  useCallback,
   type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
 } from "react";
+import { ReadyState } from "react-use-websocket";
+
 import type { Player } from "../../../shared/types/domain/player";
 import { MessageType } from "../../../shared/types/domain/websocket";
 import { Channel } from "../../../shared/types/domain/websocket";
 import { useWebSocketContext } from "./WebSocketContext";
-import { ReadyState } from "react-use-websocket";
 
 // Define the shape of the context data
 interface PlayerContextType {

@@ -1,16 +1,17 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
+import { ReadyState } from "react-use-websocket";
 import { useLocation } from "wouter";
+
+import { APIRoute } from "../../shared/types/api/schema";
+import type { WebSocketMessage } from "../../shared/types/api/websocket";
+import { PlayerScreen } from "../../shared/types/domain/misc";
 import type { Player, Team } from "../../shared/types/domain/player";
 import { Avatar } from "../../shared/types/domain/player";
-import { PlayerScreen } from "../../shared/types/domain/misc";
-import { useWebSocketContext } from "./contexts/WebSocketContext";
 import { Channel, MessageType } from "../../shared/types/domain/websocket";
-import type { WebSocketMessage } from "../../shared/types/api/websocket";
 import { avatarToPath } from "../../shared/utils";
 import PastelBackground from "./components/PastelBackground";
-import { ReadyState } from "react-use-websocket";
-import { APIRoute } from "../../shared/types/api/schema";
 import { usePlayerContext } from "./contexts/PlayerContext";
+import { useWebSocketContext } from "./contexts/WebSocketContext";
 import { fetchApi } from "./util/fetchApi";
 
 const TeamCircle = ({

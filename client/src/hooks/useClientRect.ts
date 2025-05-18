@@ -1,4 +1,4 @@
-import { useState, useLayoutEffect, useCallback, type RefObject } from "react";
+import { type RefObject, useCallback, useLayoutEffect, useState } from "react";
 
 function useClientRect(ref: RefObject<HTMLElement | null>): DOMRect | null {
   const [rect, setRect] = useState<DOMRect | null>(null);

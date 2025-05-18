@@ -1,22 +1,22 @@
 import {
+  type RefObject,
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
-  type RefObject,
 } from "react";
+import { useLocation } from "wouter";
 
+import { APIRoute } from "../../shared/types/api/schema";
+import type { WebSocketMessage } from "../../shared/types/api/websocket";
+import type { Player, Team } from "../../shared/types/domain/player";
+import { Channel, MessageType } from "../../shared/types/domain/websocket";
+import { avatarToPath } from "../../shared/utils";
+import { useWebSocketContext } from "./contexts/WebSocketContext";
 import useClientRect from "./hooks/useClientRect";
 import { useVolumeControl } from "./hooks/useVolumeControl";
-import { APIRoute } from "../../shared/types/api/schema";
-import type { Team, Player } from "../../shared/types/domain/player";
-import { Channel, MessageType } from "../../shared/types/domain/websocket";
-import type { WebSocketMessage } from "../../shared/types/api/websocket";
-import { useWebSocketContext } from "./contexts/WebSocketContext";
-import { useLocation } from "wouter";
 import { fetchApi } from "./util/fetchApi";
-import { avatarToPath } from "../../shared/utils";
 
 type ExpandedPlayer = Player & {
   team: Team;

@@ -1,11 +1,12 @@
-import React, { useState, useEffect, useMemo } from "react";
 import { Value } from "@sinclair/typebox/value";
-import { useWebSocketContext } from "./contexts/WebSocketContext";
-import PastelBackground from "./components/PastelBackground";
-import { Channel, MessageType } from "../../shared/types/domain/websocket";
-import { WebSocketMessageType } from "../../shared/types/api/websocket";
-import { APIRoute, APIRouteToSchema } from "../../shared/types/api/schema";
+import React, { useEffect, useMemo, useState } from "react";
+
 import { EmptyRequestType } from "../../shared/types/api/common";
+import { APIRoute, APIRouteToSchema } from "../../shared/types/api/schema";
+import { WebSocketMessageType } from "../../shared/types/api/websocket";
+import { Channel, MessageType } from "../../shared/types/domain/websocket";
+import PastelBackground from "./components/PastelBackground";
+import { useWebSocketContext } from "./contexts/WebSocketContext";
 
 // Function to generate schema templates dynamically based on route
 const generateSchemaTemplate = (route: string): any => {

@@ -7,7 +7,12 @@ import tseslint from "typescript-eslint";
 export default tseslint.config(
   { ignores: ["dist"] },
   {
-    extends: [js.configs.recommended, ...tseslint.configs.recommended],
+    extends: [
+      js.configs.recommended,
+      ...tseslint.configs.recommended,
+      "plugin:import/recommended",
+      "plugin:import/typescript",
+    ],
     files: ["**/*.{ts,tsx}"],
     languageOptions: {
       ecmaVersion: 2020,
@@ -29,6 +34,7 @@ export default tseslint.config(
         "error",
         { considerDefaultExhaustiveForUnions: true },
       ],
+      "import/order": "error",
     },
   }
 );

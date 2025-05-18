@@ -1,6 +1,8 @@
 export enum Channel {
   PLAYER = "PLAYER",
   BUZZER = "BUZZER",
+  JOYSTICK = "JOYSTICK",
+  ADMIN = "ADMIN",
 }
 
 export enum MessageType {
@@ -11,4 +13,8 @@ export enum MessageType {
   // Buzzer channel
   BUZZ = "BUZZ",
   RESET = "RESET",
+  // Joystick channel
+  MOVE = "MOVE",
+  // Admin channel
+  CLAIM_HOST = "CLAIM_HOST",
 }

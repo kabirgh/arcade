@@ -6,18 +6,21 @@ import { useEffect, useRef } from "react";
 import { Channel, MessageType } from "../../shared/types/domain/websocket";
 import ConnectionStatusPill from "./components/ConnectionStatusPill";
 import PastelBackground from "./components/PastelBackground";
+import { usePlayerContext } from "./contexts/PlayerContext";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
 // Define the type based on the return type of nipplejs.create
 type NippleManagerType = ReturnType<typeof nipplejs.create>;
 
 export default function Joystick() {
-  const { publish, readyState } = useWebSocketContext();
+  const { publish } = useWebSocketContext();
+  const { sessionPlayer } = usePlayerContext();
   const joystickContainerRef = useRef<HTMLDivElement>(null);
   const joystickInstanceRef = useRef<NippleManagerType | null>(null);
+  const lastMoveTimeRef = useRef<number>(Date.now());
 
   useEffect(() => {
     if (joystickContainerRef.current) {
-      const options = {
+      const manager = nipplejs.create({
         zone: joystickContainerRef.current,
         mode: "static" as const,
         position: { left: "50%", top: "50%" },
@@ -25,46 +28,24 @@ export default function Joystick() {
         fadeTime: 50,
         restOpacity: 0.75,
         size: 150, // size of the joystick base
-      };
-
-      const manager = nipplejs.create(options);
+      });
       joystickInstanceRef.current = manager;
 
-      manager.on("start", (evt, nipple) => {
-        console.log("Joystick started:", nipple);
-        // Example: Send a message when joystick interaction starts
-        // publish({
-        //   channel: Channel.MOVEMENT, // Assuming you have a MOVEMENT channel
-        //   messageType: MessageType.START_MOVE,
-        //   payload: { playerId: "TEST" }
-        // });
-      });
-
       manager.on("move", (evt, data) => {
-        console.log("Joystick move:", data);
-        // Example: Send movement data
-        // publish({
-        //   channel: Channel.MOVEMENT,
-        //   messageType: MessageType.MOVE,
-        //   payload: {
-        //     playerId: "TEST",
-        //     direction: data.direction, // if available from 'dir' event
-        //     angle: data.angle,
-        //     force: data.force,
-        //     position: data.position,
-        //     vector: data.vector,
-        //   }
-        // });
-      });
-
-      manager.on("end", (evt, nipple) => {
-        console.log("Joystick ended:", nipple);
-        // Example: Send a message when joystick interaction ends
-        // publish({
-        //   channel: Channel.MOVEMENT,
-        //   messageType: MessageType.END_MOVE,
-        //   payload: { playerId: "TEST" }
-        // });
+        console.log("Joystick move:", data, Date.now());
+        if (Date.now() - lastMoveTimeRef.current < 20) {
+          return;
+        }
+        lastMoveTimeRef.current = Date.now();
+        publish({
+          channel: Channel.JOYSTICK,
+          messageType: MessageType.MOVE,
+          payload: {
+            playerId: sessionPlayer!.id,
+            angle: data.angle.degree,
+            force: data.force,
+          },
+        });
       });
 
       return () => {
@@ -74,7 +55,7 @@ export default function Joystick() {
         }
       };
     }
-  }, [publish]);
+  }, [publish, sessionPlayer]);
 
   return (
     <div className="flex flex-col items-center justify-center h-screen relative overflow-hidden">

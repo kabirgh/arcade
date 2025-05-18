@@ -43,12 +43,32 @@ const BuzzerResetMessageType = t.Object({
 });
 export type BuzzerResetMessage = Static<typeof BuzzerResetMessageType>;
 
+export const JoystickMoveMessageType = t.Object({
+  channel: t.Literal(Channel.JOYSTICK),
+  messageType: t.Literal(MessageType.MOVE),
+  payload: t.Object({
+    playerId: t.String(),
+    angle: t.Number(),
+    force: t.Number(),
+  }),
+});
+export type JoystickMoveMessage = Static<typeof JoystickMoveMessageType>;
+
+const ClaimHostMessageType = t.Object({
+  channel: t.Literal(Channel.ADMIN),
+  messageType: t.Literal(MessageType.CLAIM_HOST),
+  // No payload, server looks at websocket id to set host
+});
+
+export type ClaimHostMessage = Static<typeof ClaimHostMessageType>;
 export const WebSocketMessageType = t.Union([
   PlayerListAllMessageType,
   PlayerJoinMessageType,
   PlayerLeaveMessageType,
   BuzzerPressMessageType,
   BuzzerResetMessageType,
+  JoystickMoveMessageType,
+  ClaimHostMessageType,
 ]);
 export type WebSocketMessage = Static<typeof WebSocketMessageType>;
 

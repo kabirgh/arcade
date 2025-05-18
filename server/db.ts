@@ -15,6 +15,7 @@ class DB {
   ];
   public screen: PlayerScreen = PlayerScreen.Join;
   public wsPlayerMap: Map<ElysiaWS, Player | null> = new Map();
+  public hostWs: ElysiaWS | null = null;
 
   public get players(): Player[] {
     return Array.from(this.wsPlayerMap.values()).filter(

@@ -22,9 +22,15 @@ import DB from "./db";
 
 const db = new DB();
 
-function broadcast(message: WebSocketMessage): void {
-  console.log("Broadcasting message:", message);
+function sendHostMessage(message: WebSocketMessage): void {
+  if (!db.hostWs) {
+    console.error("No host ws found");
+    return;
+  }
+  db.hostWs.send(JSON.stringify(message));
+}
 
+function broadcast(message: WebSocketMessage): void {
   for (const ws of db.wsPlayerMap.keys()) {
     ws.send(JSON.stringify(message));
   }
@@ -44,6 +50,15 @@ const handleWebSocketMessage = (ws: ElysiaWS, message: WebSocketMessage) => {
   console.log("Received message:", message);
 
   switch (message.channel) {
+    case Channel.ADMIN:
+      switch (message.messageType) {
+        case MessageType.CLAIM_HOST:
+          console.log("Claiming host:", ws.id);
+          db.hostWs = ws;
+          break;
+      }
+      break;
+
     case Channel.PLAYER:
       switch (message.messageType) {
         case MessageType.JOIN:
@@ -82,14 +97,21 @@ const handleWebSocketMessage = (ws: ElysiaWS, message: WebSocketMessage) => {
         case MessageType.BUZZ:
           // Use server time to ensure consistent ordering of buzzes
           message.payload.timestamp = Date.now();
-          broadcast(message);
+          sendHostMessage(message);
           break;
 
         case MessageType.RESET:
-          broadcast(message);
+          sendHostMessage(message);
           break;
       }
+      break;
 
+    case Channel.JOYSTICK:
+      switch (message.messageType) {
+        case MessageType.MOVE:
+          sendHostMessage(message);
+          break;
+      }
       break;
   }
 };

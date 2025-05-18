@@ -16,7 +16,7 @@ import { avatarToPath } from "../../shared/utils";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
 import useClientRect from "./hooks/useClientRect";
 import { useVolumeControl } from "./hooks/useVolumeControl";
-import { fetchApi } from "./util/fetchApi";
+import { apiFetch } from "./util/apiFetch";
 
 type ExpandedPlayer = Player & {
   team: Team;
@@ -94,14 +94,14 @@ const BuzzerHost: React.FC = () => {
 
   // Get players and teams from backend
   useEffect(() => {
-    fetchApi(APIRoute.ListPlayers)
+    apiFetch(APIRoute.ListPlayers)
       .then(({ players }) => {
         setPlayers(players);
       })
       .catch((error) => {
         console.error("Failed to fetch players:", error);
       });
-    fetchApi(APIRoute.ListTeams)
+    apiFetch(APIRoute.ListTeams)
       .then(({ teams }) => {
         setTeams(teams);
       })

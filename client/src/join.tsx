@@ -12,7 +12,7 @@ import { avatarToPath } from "../../shared/utils";
 import PastelBackground from "./components/PastelBackground";
 import { usePlayerContext } from "./contexts/PlayerContext";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
-import { fetchApi } from "./util/fetchApi";
+import { apiFetch } from "./util/apiFetch";
 
 const TeamCircle = ({
   team,
@@ -53,7 +53,7 @@ export default function JoinScreen() {
 
   useEffect(() => {
     // First check what the server thinks the current screen should be.
-    fetchApi(APIRoute.PlayerScreen).then((data) => {
+    apiFetch(APIRoute.PlayerScreen).then((data) => {
       console.log("Server says current screen should be:", data.screen);
 
       if (data.screen === PlayerScreen.Join) {
@@ -100,11 +100,11 @@ export default function JoinScreen() {
 
   useEffect(() => {
     // Get existing players from server
-    fetchApi(APIRoute.ListPlayers).then((data) => {
+    apiFetch(APIRoute.ListPlayers).then((data) => {
       setExistingPlayers(data.players as Player[]);
     });
     // Get existing teams from server
-    fetchApi(APIRoute.ListTeams).then((data) => {
+    apiFetch(APIRoute.ListTeams).then((data) => {
       setTeams(data.teams);
     });
   }, []);

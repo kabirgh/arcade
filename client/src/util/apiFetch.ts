@@ -23,7 +23,7 @@ type SuccessData<R extends APIRoute> = Extract<
   ? T
   : never;
 
-export async function fetchApi<R extends APIRoute>(
+export async function apiFetch<R extends APIRoute>(
   route: R,
   // Conditionally include 'body' argument only for non-GET requests.
   ...args: ApiSchema[R]["method"] extends "GET" ? [] : [body: RequestBody<R>]
@@ -70,6 +70,6 @@ export async function fetchApi<R extends APIRoute>(
 }
 
 const example = async () => {
-  const response = await fetchApi(APIRoute.CodenamesStart, {});
+  const response = await apiFetch(APIRoute.CodenamesStart, {});
   console.log(response);
 };

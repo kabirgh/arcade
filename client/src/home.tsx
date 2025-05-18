@@ -10,7 +10,7 @@ import {
 import { Channel, MessageType } from "../../shared/types/domain/websocket";
 import PastelBackground from "./components/PastelBackground";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
-import { fetchApi } from "./util/fetchApi";
+import { apiFetch } from "./util/apiFetch";
 
 type TeamSectionProps = {
   team: Team;
@@ -82,7 +82,7 @@ export default function Home() {
   const { subscribe, unsubscribe } = useWebSocketContext();
 
   useEffect(() => {
-    fetchApi(APIRoute.ListTeams).then(({ teams }) => {
+    apiFetch(APIRoute.ListTeams).then(({ teams }) => {
       setTeams(teams);
     });
   }, []);
@@ -101,7 +101,7 @@ export default function Home() {
   }, [subscribe, unsubscribe]);
 
   const handleTeamNameChange = (teamId: string, name: string) => {
-    fetchApi(APIRoute.SetTeamName, { teamId, name }).then(() => {
+    apiFetch(APIRoute.SetTeamName, { teamId, name }).then(() => {
       setTeams((prevTeams) => {
         const newTeams = [...prevTeams];
         const team = newTeams.find((t) => t.id === teamId);

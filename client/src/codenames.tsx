@@ -6,7 +6,7 @@ import {
   CardClass,
   type GameState,
 } from "../../shared/types/domain/codenames";
-import { fetchApi } from "./util/fetchApi";
+import { apiFetch } from "./util/apiFetch";
 
 const UNSELECTED_CARD_STYLES = {
   [CardClass.Red]: "bg-white text-black box-border border-6 border-[#D13030]",
@@ -74,7 +74,7 @@ export const Codenames = () => {
   // Fetch game state from server
   const fetchGameState = async () => {
     try {
-      const response = await fetchApi(APIRoute.CodenamesState);
+      const response = await apiFetch(APIRoute.CodenamesState);
       setGameState(response.state);
     } catch (error) {
       console.error("Failed to fetch game state:", error);
@@ -88,7 +88,7 @@ export const Codenames = () => {
   const startGame = async () => {
     try {
       setLoading(true);
-      const response = await fetchApi(APIRoute.CodenamesStart, {});
+      const response = await apiFetch(APIRoute.CodenamesStart, {});
       setGameState(response.state);
     } catch (error) {
       console.error("Failed to start game:", error);
@@ -105,7 +105,7 @@ export const Codenames = () => {
       return;
     }
 
-    fetchApi(APIRoute.CodenamesClue, {
+    apiFetch(APIRoute.CodenamesClue, {
       clueWord: clueWord.trim(),
       clueNumber: clueNumber,
     })
@@ -137,7 +137,7 @@ export const Codenames = () => {
       return;
     }
 
-    fetchApi(APIRoute.CodenamesGuess, { word })
+    apiFetch(APIRoute.CodenamesGuess, { word })
       .then((data) => {
         setGameState(data.state);
       })
@@ -311,7 +311,7 @@ export const Codenames = () => {
             <button
               className="h-full text-white bg-blue-700 hover:bg-blue-800 cursor-pointer px-3 py-1.5 rounded-sm"
               onClick={() => {
-                fetchApi(APIRoute.CodenamesEndTurn, {})
+                apiFetch(APIRoute.CodenamesEndTurn, {})
                   .then((data) => {
                     setGameState(data.state);
                   })

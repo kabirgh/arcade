@@ -17,10 +17,10 @@ export const RoleType = t.Union([
 export type Role = Static<typeof RoleType>;
 
 export enum CardClass {
-  Red,
-  Blue,
-  Neutral,
-  Assassin,
+  Red = "red",
+  Blue = "blue",
+  Neutral = "neutral",
+  Assassin = "assassin",
 }
 export const CardClassType = t.Enum(CardClass);
 
@@ -31,19 +31,29 @@ export const CardType = t.Object({
 });
 export type Card = Static<typeof CardType>;
 
+export const ClueType = t.Object({
+  word: t.String(),
+  number: t.Number(),
+});
+export type Clue = Static<typeof ClueType>;
+
 export const GameStateType = t.Object({
   board: t.Array(CardType),
   turn: CodenamesTeamType,
   phase: PhaseType,
-  clue: Nullable(t.Object({ word: t.String(), number: t.Number() })),
+  clue: Nullable(ClueType),
+  guess: Nullable(t.String()),
   remainingGuesses: t.Number(),
   score: t.Object({
     red: t.Number(),
     blue: t.Number(),
   }),
-  chat: t.Object({
-    red: t.Array(t.Object({ role: RoleType, content: t.String() })),
-    blue: t.Array(t.Object({ role: RoleType, content: t.String() })),
-  }),
+  history: t.Array(
+    t.Object({
+      team: CodenamesTeamType,
+      phase: PhaseType,
+      message: t.String(),
+    })
+  ),
 });
 export type GameState = Static<typeof GameStateType>;

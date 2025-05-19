@@ -1,3 +1,5 @@
+import "dotenv/config";
+
 import { html } from "@elysiajs/html";
 import { staticPlugin } from "@elysiajs/static";
 import { Elysia } from "elysia";
@@ -263,8 +265,8 @@ const app = new Elysia()
   )
   .post(
     APIRoute.CodenamesClue,
-    ({ body }) => {
-      return handleCodenamesClue(body);
+    async ({ body }) => {
+      return await handleCodenamesClue(body);
     },
     {
       body: APIRouteToSchema[APIRoute.CodenamesClue].req,
@@ -273,8 +275,8 @@ const app = new Elysia()
   )
   .post(
     APIRoute.CodenamesGuess,
-    ({ body }) => {
-      return handleCodenamesGuess(body);
+    async ({ body }) => {
+      return await handleCodenamesGuess(body);
     },
     {
       body: APIRouteToSchema[APIRoute.CodenamesGuess].req,

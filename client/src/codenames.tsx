@@ -63,12 +63,14 @@ const TeamWordsList: React.FC<TeamWordsListProps> = ({
   );
 };
 
+// TODO: game over screen
 export const Codenames = () => {
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [clueWord, setClueWord] = useState("");
   const [clueNumber, setClueNumber] = useState<number>(1);
+  const [actionInProgress, setActionInProgress] = useState(false);
   const clueInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch game state from server
@@ -105,6 +107,7 @@ export const Codenames = () => {
       return;
     }
 
+    setActionInProgress(true);
     apiFetch(APIRoute.CodenamesClue, {
       clueWord: clueWord.trim(),
       clueNumber: clueNumber,
@@ -119,6 +122,9 @@ export const Codenames = () => {
       .catch((error) => {
         console.error("Failed to submit clue:", error);
         setError(error.message || "Failed to submit clue");
+      })
+      .finally(() => {
+        setActionInProgress(false);
       });
   };
 
@@ -132,11 +138,13 @@ export const Codenames = () => {
       !clickedCard ||
       clickedCard.isRevealed ||
       gameState.phase !== "GUESS" ||
-      gameState.remainingGuesses <= 0
+      gameState.remainingGuesses <= 0 ||
+      actionInProgress
     ) {
       return;
     }
 
+    setActionInProgress(true);
     apiFetch(APIRoute.CodenamesGuess, { word })
       .then((data) => {
         setGameState(data.state);
@@ -144,6 +152,9 @@ export const Codenames = () => {
       .catch((error) => {
         console.error("Failed to make guess:", error);
         setError(error.message || "Failed to make guess");
+      })
+      .finally(() => {
+        setActionInProgress(false);
       });
   };
 
@@ -183,7 +194,7 @@ export const Codenames = () => {
       className="grid items-center min-h-screen min-w-full"
       style={{
         gridTemplateColumns: "2fr 6fr 2fr",
-        gridTemplateRows: "1.2fr 7fr 1.8fr",
+        gridTemplateRows: "1.5fr 7fr 1.5fr",
         gridTemplateAreas: `
           "header header header"
           "left center right"
@@ -220,7 +231,10 @@ export const Codenames = () => {
               key={index}
               className={`p-4 h-22 w-34 rounded-sm flex items-center justify-center text-center font-bold ${style}`}
               style={{
-                cursor: gameState.phase === "CLUE" ? "default" : "pointer",
+                cursor:
+                  gameState.phase === "CLUE" || actionInProgress
+                    ? "default"
+                    : "pointer",
               }}
               onClick={() => handleCardClick(card.word)}
             >
@@ -275,12 +289,12 @@ export const Codenames = () => {
       </div>
 
       <div
-        className="justify-self-center w-full flex justify-center"
+        className="flex justify-center w-full"
         style={{
           gridArea: "footer",
         }}
       >
-        <div className="text-md flex items-center h-[40px]">
+        <div className="text-md flex items-center">
           {gameState.phase === "CLUE" && (
             <div>
               <input
@@ -290,6 +304,7 @@ export const Codenames = () => {
                 placeholder="Clue"
                 className="h-full mx-2 px-2 border-1 border-black bg-white py-1"
                 onChange={(e) => setClueWord(e.target.value)}
+                disabled={actionInProgress}
               />
               <input
                 type="number"
@@ -298,31 +313,47 @@ export const Codenames = () => {
                 value={clueNumber}
                 onChange={(e) => setClueNumber(parseInt(e.target.value))}
                 className="h-full w-12 mx-2 px-2 border-1 border-black bg-white py-1"
+                disabled={actionInProgress}
               />
               <button
                 className="h-full text-white bg-green-700 hover:bg-green-800 cursor-pointer px-3 py-1.5 rounded-sm"
                 onClick={submitClue}
+                disabled={actionInProgress}
               >
-                Submit
+                {actionInProgress ? "Thinking..." : "Submit"}
               </button>
             </div>
           )}
           {gameState.phase === "GUESS" && (
-            <button
-              className="h-full text-white bg-blue-700 hover:bg-blue-800 cursor-pointer px-3 py-1.5 rounded-sm"
-              onClick={() => {
-                apiFetch(APIRoute.CodenamesEndTurn, {})
-                  .then((data) => {
-                    setGameState(data.state);
-                  })
-                  .catch((error) => {
-                    console.error("Failed to end turn:", error);
-                    setError("Failed to end turn");
-                  });
-              }}
-            >
-              End Turn
-            </button>
+            <div className="flex flex-col items-center">
+              {gameState.clue && (
+                <div className="mb-2 font-semibold">
+                  {gameState.turn === "red" ? "Redzo" : "Bluey"}
+                  {" guessed "}
+                  {gameState.guess}
+                </div>
+              )}
+              <button
+                className="h-full text-white bg-blue-700 hover:bg-blue-800 cursor-pointer px-3 py-1.5 rounded-sm"
+                onClick={() => {
+                  setActionInProgress(true);
+                  apiFetch(APIRoute.CodenamesEndTurn, {})
+                    .then((data) => {
+                      setGameState(data.state);
+                    })
+                    .catch((error) => {
+                      console.error("Failed to end turn:", error);
+                      setError("Failed to end turn");
+                    })
+                    .finally(() => {
+                      setActionInProgress(false);
+                    });
+                }}
+                disabled={actionInProgress}
+              >
+                {actionInProgress ? "Thinking..." : "End turn"}
+              </button>
+            </div>
           )}
         </div>
       </div>

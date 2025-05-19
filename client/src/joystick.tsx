@@ -25,10 +25,10 @@ export default function Joystick() {
   const joystickMoveDataRef = useRef<JoystickMoveData | null>(null);
   const [joystickSize, setJoystickSize] = useState<number>(0);
 
-  // Calculate 50vmin in pixels
+  // Calculate 40vmin in pixels
   useEffect(() => {
     const calculateSize = () => {
-      const vmin = Math.min(window.innerWidth, window.innerHeight) * 0.5;
+      const vmin = Math.min(window.innerWidth, window.innerHeight) * 0.4;
       setJoystickSize(vmin);
     };
 
@@ -62,10 +62,10 @@ export default function Joystick() {
       const manager = nipplejs.create({
         zone: joystickContainerRef.current,
         mode: "static" as const,
-        position: { left: "50%", top: "50%" },
+        position: { left: "50%", top: "67%" },
         color: "black",
         fadeTime: 50,
-        restOpacity: 0.75,
+        restOpacity: 0.8,
         size: joystickSize, // 50vmin converted to pixels
       });
       joystickInstanceRef.current = manager;
@@ -73,7 +73,7 @@ export default function Joystick() {
       manager.on("move", (evt, data) => {
         joystickMoveDataRef.current = {
           playerId: sessionPlayer!.id,
-          angle: data.angle.degree,
+          angle: data.angle.degree, // 0 is right
           force: data.force,
         };
       });

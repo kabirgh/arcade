@@ -366,8 +366,8 @@ export const Codenames = () => {
                       setGameState(data.state);
                     })
                     .catch((error) => {
-                      console.error("Failed to end turn:", error);
-                      setError("Failed to end turn");
+                      console.error("Failed to pass:", error);
+                      setError("Failed to pass");
                     })
                     .finally(() => {
                       setActionInProgress(false);
@@ -375,7 +375,7 @@ export const Codenames = () => {
                 }}
                 disabled={actionInProgress}
               >
-                {actionInProgress ? "Thinking..." : "End turn"}
+                {actionInProgress ? "Thinking..." : "Pass"}
               </button>
             </div>
           )}

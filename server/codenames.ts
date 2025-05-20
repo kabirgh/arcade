@@ -31,21 +31,39 @@ const makePrompt = (gameState: GameState) => {
     color: c.isRevealed ? c.class : "unknown",
   }));
 
+  const previousGuessesThisRound = [];
+  for (const h of history.reverse()) {
+    if (h.phase === "GUESS" && h.team === turn) {
+      previousGuessesThisRound.push(h.message);
+    } else {
+      break;
+    }
+  }
+
   return `
-  You are guessing the words in a codenames game. You are the ${turn} team.
+  You are guessing the words in a codenames game. You are on the ${turn} team.
 
   This is the current board state:
   <board>
   ${JSON.stringify(boardForGuessing)}
   </board>
 
-  This is the history of the game so far:
+  This is the history of the game so far. Look at the history to see the clues and guesses.
   <history>
   ${JSON.stringify(history)}
   </history>
 
   Your clue is: "${clue!.word} ${clue!.number}".
-  You have ${remainingGuesses} guess(es) left this turn.
+  ${
+    previousGuessesThisRound.length > 0
+      ? `In this round, you have already guessed: ${previousGuessesThisRound.join(
+          ", "
+        )}.`
+      : ""
+  }
+
+  STRATEGY NOTE:
+  Bear in mind that the number of guesses in a round is 1 more than the clue number. Often the clue-giver expects you to use the number in the clue for this round, and use the "extra" guess to catch up on a clue for which you guessed incorrectly or passed on previously. You should examine the history to judge when it is wise to use the extra guess.
 
   Output instructions:
   - List the word you want to guess on a new line. You can only guess one word per turn.
@@ -54,6 +72,7 @@ const makePrompt = (gameState: GameState) => {
   - For example, if you want to guess "APPLE" your response should be:
   APPLE
   - To pass your turn, respond with the word PASS on a new line.
+  - Recall the strategy note above before making your guess.
   `;
 };
 
@@ -77,6 +96,8 @@ class CodenamesGame {
   }
 
   public async *askLlm(): AsyncGenerator<CodenamesAskLlmResponse> {
+    console.log("prompt", makePrompt(this.gameState));
+
     const stream = await client.responses.create({
       model: "o4-mini-2025-04-16",
       reasoning: { effort: "low", summary: "auto" },

@@ -62,6 +62,27 @@ export default function JoinScreen() {
   const [teams, setTeams] = useState<Team[]>([]);
 
   useEffect(() => {
+    // Check if the user was interrupted in the middle of filling out the join form.
+    // If so, fill in the form with the player's last-used values. If not, the form will be blank.
+    const storedJoinInfo = localStorage.getItem("playerJoinInfo");
+    if (storedJoinInfo) {
+      try {
+        const joinInfo = JSON.parse(storedJoinInfo);
+        // Only set state if the loaded value is not null/undefined
+        if (joinInfo.name) setPlayerName(joinInfo.name);
+        if (joinInfo.team) setSelectedTeam(joinInfo.team);
+        if (joinInfo.avatar) setSelectedAvatar(joinInfo.avatar);
+      } catch (error) {
+        console.error(
+          "Failed to parse player join info from localStorage",
+          error
+        );
+        localStorage.removeItem("playerJoinInfo"); // Clear invalid item
+      }
+    }
+  }, []);
+
+  useEffect(() => {
     // First check what the server thinks the current screen should be.
     apiFetch(APIRoute.PlayerScreen).then((data) => {
       console.log("Server says current screen should be:", data.screen);
@@ -84,25 +105,6 @@ export default function JoinScreen() {
           // Redirect to the correct screen immediately.
           setLocation(data.screen);
           return;
-        }
-      }
-
-      // Check if the user was interrupted in the middle of filling out the join form.
-      // If so, fill in the form with the player's last-used values. If not, the form will be blank.
-      const storedJoinInfo = localStorage.getItem("playerJoinInfo");
-      if (storedJoinInfo) {
-        try {
-          const joinInfo = JSON.parse(storedJoinInfo);
-          // Only set state if the loaded value is not null/undefined
-          if (joinInfo.name) setPlayerName(joinInfo.name);
-          if (joinInfo.team) setSelectedTeam(joinInfo.team);
-          if (joinInfo.avatar) setSelectedAvatar(joinInfo.avatar);
-        } catch (error) {
-          console.error(
-            "Failed to parse player join info from localStorage",
-            error
-          );
-          localStorage.removeItem("playerJoinInfo"); // Clear invalid item
         }
       }
     });

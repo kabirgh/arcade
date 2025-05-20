@@ -6,6 +6,7 @@ import {
   CardClass,
   type GameState,
 } from "../../shared/types/domain/codenames";
+import { Markdown } from "./components/Markdown";
 import { apiFetch } from "./util/apiFetch";
 
 const UNSELECTED_CARD_STYLES = {
@@ -25,24 +26,21 @@ const SELECTED_CARD_STYLES = {
 };
 
 type TeamWordsListProps = {
-  teamName: string;
   teamColor: string;
   cards: Card[];
   cardClass: CardClass;
 };
 
 const TeamWordsList: React.FC<TeamWordsListProps> = ({
-  teamName,
   teamColor,
   cards,
   cardClass,
 }) => {
   return (
     <div
-      className="p-4 rounded-md text-white w-[200px] h-[300px]"
+      className="p-4 rounded-md text-white w-[200px] h-[250px]"
       style={{ backgroundColor: teamColor }}
     >
-      <h3 className="text-lg font-bold mb-2 text-left">{teamName}</h3>
       <ul className="list-none">
         {cards
           .filter((card) => card.class === cardClass)
@@ -72,6 +70,8 @@ export const Codenames = () => {
   const [clueNumber, setClueNumber] = useState<number>(1);
   const [actionInProgress, setActionInProgress] = useState(false);
   const clueInputRef = useRef<HTMLInputElement>(null);
+  const [llmThinking, setLlmThinking] = useState("");
+  const [llmOutput, setLlmOutput] = useState("");
 
   // Fetch game state from server
   const fetchGameState = async () => {
@@ -100,6 +100,46 @@ export const Codenames = () => {
     }
   };
 
+  // Ask LLM to guess
+  const askLlm = async () => {
+    const llmResponse = await fetch("/api/codenames/ask-llm");
+    const reader = llmResponse.body?.getReader();
+    if (!reader) {
+      throw new Error("Failed to get stream reader");
+    }
+
+    setLlmThinking("");
+    setLlmOutput("");
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      // Convert the Uint8Array to text
+      const text = new TextDecoder().decode(value);
+      console.log(text);
+
+      // Process complete lines (JSON objects)
+      const lines = text.split("\n");
+
+      // Process complete lines
+      for (const line of lines) {
+        if (!line.trim()) continue; // Skip empty lines
+
+        try {
+          const json = JSON.parse(line);
+          console.log(json);
+          if (json.thinking) {
+            setLlmThinking((prev) => prev + json.thinking);
+          } else if (json.output) {
+            setLlmOutput((prev) => prev + json.output);
+          }
+        } catch {
+          console.error("Failed to parse JSON line:", line);
+        }
+      }
+    }
+  };
+
   // Submit a clue
   const submitClue = async () => {
     if (!clueWord.trim()) {
@@ -107,25 +147,27 @@ export const Codenames = () => {
       return;
     }
 
-    setActionInProgress(true);
-    apiFetch(APIRoute.CodenamesClue, {
-      clueWord: clueWord.trim(),
-      clueNumber: clueNumber,
-    })
-      .then((data) => {
-        setGameState(data.state);
-        setClueWord("");
-        if (clueInputRef.current) {
-          clueInputRef.current.value = "";
-        }
-      })
-      .catch((error) => {
-        console.error("Failed to submit clue:", error);
-        setError(error.message || "Failed to submit clue");
-      })
-      .finally(() => {
-        setActionInProgress(false);
+    try {
+      setActionInProgress(true);
+      const data = await apiFetch(APIRoute.CodenamesClue, {
+        clueWord: clueWord.trim(),
+        clueNumber: clueNumber,
       });
+
+      await askLlm();
+
+      setGameState(data.state);
+      setClueWord("");
+      if (clueInputRef.current) {
+        clueInputRef.current.value = "";
+      }
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    } catch (error: any) {
+      console.error("Failed to submit clue:", error);
+      setError(error.message || "Failed to submit clue");
+    } finally {
+      setActionInProgress(false);
+    }
   };
 
   // Handle card click (make a guess)
@@ -145,17 +187,22 @@ export const Codenames = () => {
     }
 
     setActionInProgress(true);
-    apiFetch(APIRoute.CodenamesGuess, { word })
-      .then((data) => {
-        setGameState(data.state);
-      })
-      .catch((error) => {
-        console.error("Failed to make guess:", error);
-        setError(error.message || "Failed to make guess");
-      })
-      .finally(() => {
-        setActionInProgress(false);
-      });
+    try {
+      const data = await apiFetch(APIRoute.CodenamesGuess, { word });
+      setGameState(data.state);
+
+      // If there are remaining guesses, ask LLM to guess again
+      if (gameState.phase === "GUESS" && gameState.remainingGuesses > 0) {
+        await askLlm();
+      }
+
+      // TODO handle game over
+    } catch (error: any) {
+      console.error("Failed to make guess:", error);
+      setError(error.message || "Failed to make guess");
+    } finally {
+      setActionInProgress(false);
+    }
   };
 
   useEffect(() => {
@@ -193,35 +240,24 @@ export const Codenames = () => {
       id="codenames-body"
       className="grid items-center min-h-screen min-w-full"
       style={{
-        gridTemplateColumns: "2fr 6fr 2fr",
+        gridTemplateColumns: "2.5fr 6fr 2.5fr",
         gridTemplateRows: "1.5fr 7fr 1.5fr",
-        gridTemplateAreas: `
-          "header header header"
-          "left center right"
-          "footer footer footer"
-        `,
       }}
     >
-      <div
-        className="flex flex-col items-center space-y-4 justify-self-center"
-        style={{
-          gridArea: "left",
-        }}
-      >
+      <div className="flex flex-col items-center space-y-4 justify-self-center col-start-1 col-span-1 row-start-1 row-span-full">
         <TeamWordsList
-          teamName="Red team"
           teamColor="#D13030"
           cards={gameState.board}
           cardClass={CardClass.Red}
         />
+        <TeamWordsList
+          teamColor="#4183CC"
+          cards={gameState.board}
+          cardClass={CardClass.Blue}
+        />
       </div>
 
-      <div
-        className="grid grid-cols-5 gap-2 justify-self-center"
-        style={{
-          gridArea: "center",
-        }}
-      >
+      <div className="grid grid-cols-5 gap-2 justify-self-center col-start-2 col-span-1 row-start-2 row-span-1">
         {gameState.board.map((card, index) => {
           const style = card.isRevealed
             ? SELECTED_CARD_STYLES[card.class]
@@ -244,26 +280,19 @@ export const Codenames = () => {
         })}
       </div>
 
-      <div
-        className="flex flex-col items-center space-y-4 justify-self-center"
-        style={{
-          gridArea: "right",
-        }}
-      >
-        <TeamWordsList
-          teamName="Blue team"
-          teamColor="#4183CC"
-          cards={gameState.board}
-          cardClass={CardClass.Blue}
-        />
+      <div className="flex flex-col justify-self-center col-start-3 col-span-1 row-start-1 row-span-3 mr-10">
+        {llmThinking && (
+          <div className="text-left text-sm p-4 bg-gray-100 rounded-md w-full max-h-[600px] overflow-y-auto">
+            <Markdown>{llmThinking}</Markdown>
+            <br />
+            <div className="text-center text-lg font-bold">
+              <Markdown>{llmOutput}</Markdown>
+            </div>
+          </div>
+        )}
       </div>
 
-      <div
-        className="justify-self-center"
-        style={{
-          gridArea: "header",
-        }}
-      >
+      <div className="justify-self-center col-start-2 col-span-1 row-start-1 row-span-1">
         <div className="flex flex-col items-center font-bold">
           <div
             style={{
@@ -288,12 +317,7 @@ export const Codenames = () => {
         </div>
       </div>
 
-      <div
-        className="flex justify-center w-full"
-        style={{
-          gridArea: "footer",
-        }}
-      >
+      <div className="justify-self-center col-start-2 col-span-1 row-start-3 row-span-1">
         <div className="text-md flex items-center">
           {gameState.phase === "CLUE" && (
             <div>
@@ -326,11 +350,11 @@ export const Codenames = () => {
           )}
           {gameState.phase === "GUESS" && (
             <div className="flex flex-col items-center">
-              {gameState.clue && (
+              {gameState.clue && llmOutput !== "" && (
                 <div className="mb-2 font-semibold">
                   {gameState.turn === "red" ? "Redzo" : "Bluey"}
                   {" guessed "}
-                  {gameState.guess}
+                  {llmOutput}
                 </div>
               )}
               <button

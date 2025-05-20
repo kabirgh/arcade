@@ -1,7 +1,7 @@
-import { openai } from "@ai-sdk/openai";
-import { generateText } from "ai";
+import OpenAI from "openai";
 
 import {
+  type CodenamesAskLlmResponse,
   type CodenamesClueRequest,
   type CodenamesClueResponse,
   type CodenamesEndTurnResponse,
@@ -18,6 +18,8 @@ import {
   type GameState,
 } from "../shared/types/domain/codenames";
 import { shuffle } from "../shared/utils";
+
+const client = new OpenAI({ apiKey: process.env["OPENAI_API_KEY"] });
 
 const words = await Bun.file("./server/words.txt").text();
 
@@ -61,7 +63,6 @@ class CodenamesGame {
     turn: "red",
     phase: "CLUE",
     clue: null,
-    guess: null,
     remainingGuesses: 0,
     score: { red: 0, blue: 0 },
     history: [],
@@ -75,13 +76,23 @@ class CodenamesGame {
     return this.gameState;
   }
 
-  private async askLlm(): Promise<string> {
-    const { text } = await generateText({
-      model: openai("o4-mini-2025-04-16"),
-      prompt: makePrompt(this.gameState),
+  public async *askLlm(): AsyncGenerator<CodenamesAskLlmResponse> {
+    const stream = await client.responses.create({
+      model: "o4-mini-2025-04-16",
+      reasoning: { effort: "low", summary: "auto" },
+      input: makePrompt(this.gameState),
+      stream: true,
     });
-    console.log("llm guess:", text);
-    return text;
+
+    for await (const event of stream) {
+      if (event.type === "response.reasoning_summary_text.delta") {
+        yield { thinking: event.delta, output: "" };
+      }
+      if (event.type === "response.output_text.done") {
+        console.log("completed", event.text);
+        yield { thinking: "", output: event.text };
+      }
+    }
   }
 
   public startGame(): void {
@@ -118,7 +129,6 @@ class CodenamesGame {
       turn: "red",
       phase: "CLUE",
       clue: null,
-      guess: null,
       remainingGuesses: 0,
       score: { red: 0, blue: 0 },
       history: [],
@@ -143,7 +153,7 @@ class CodenamesGame {
       message: `${clueWord} ${clueNum}`,
     });
 
-    this.gameState.guess = await this.askLlm();
+    // this.gameState.guess = await this.askLlm();
 
     return this.gameState;
   }
@@ -185,6 +195,7 @@ class CodenamesGame {
       const winner: CodenamesTeam =
         this.gameState.turn === "red" ? "blue" : "red";
       this.gameState.score[winner]++;
+      this.gameState.phase = "GAME_OVER";
     } else if (
       (card.class === CardClass.Red && this.gameState.turn === "red") ||
       (card.class === CardClass.Blue && this.gameState.turn === "blue")
@@ -204,11 +215,10 @@ class CodenamesGame {
       if (allTeamCardsRevealed) {
         // Game over - this team wins
         this.gameState.score[this.gameState.turn]++;
+        this.gameState.remainingGuesses = 0;
+        this.gameState.phase = "GAME_OVER";
         return this.gameState;
       }
-
-      // Get a new guess
-      this.gameState.guess = await this.askLlm();
     } else if (
       (card.class === CardClass.Red && this.gameState.turn === "blue") ||
       (card.class === CardClass.Blue && this.gameState.turn === "red")
@@ -286,6 +296,7 @@ export const handleCodenamesClue = async (
         state,
       },
     };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     return {
       ok: false,
@@ -296,6 +307,12 @@ export const handleCodenamesClue = async (
     };
   }
 };
+
+export async function* handleCodenamesAskLlm(): AsyncGenerator<CodenamesAskLlmResponse> {
+  for await (const event of codenamesGame.askLlm()) {
+    yield event;
+  }
+}
 
 export const handleCodenamesGuess = async (
   req: CodenamesGuessRequest
@@ -308,6 +325,7 @@ export const handleCodenamesGuess = async (
         state,
       },
     };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } catch (error: any) {
     return {
       ok: false,
@@ -329,6 +347,7 @@ export const handleCodenamesEndTurn =
           state,
         },
       };
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       return {
         ok: false,

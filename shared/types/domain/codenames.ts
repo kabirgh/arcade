@@ -6,7 +6,11 @@ import { Nullable } from "../core";
 export const CodenamesTeamType = t.Union([t.Literal("red"), t.Literal("blue")]);
 export type CodenamesTeam = Static<typeof CodenamesTeamType>;
 
-export const PhaseType = t.Union([t.Literal("CLUE"), t.Literal("GUESS")]);
+export const PhaseType = t.Union([
+  t.Literal("CLUE"),
+  t.Literal("GUESS"),
+  t.Literal("GAME_OVER"),
+]);
 export type Phase = Static<typeof PhaseType>;
 
 export const RoleType = t.Union([
@@ -42,7 +46,6 @@ export const GameStateType = t.Object({
   turn: CodenamesTeamType,
   phase: PhaseType,
   clue: Nullable(ClueType),
-  guess: Nullable(t.String()),
   remainingGuesses: t.Number(),
   score: t.Object({
     red: t.Number(),

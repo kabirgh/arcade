@@ -14,6 +14,7 @@ import {
 } from "../shared/types/api/websocket";
 import { Channel, MessageType } from "../shared/types/domain/websocket";
 import {
+  handleCodenamesAskLlm,
   handleCodenamesClue,
   handleCodenamesEndTurn,
   handleCodenamesGuess,
@@ -292,7 +293,13 @@ const app = new Elysia()
       body: APIRouteToSchema[APIRoute.CodenamesEndTurn].req,
       response: APIRouteToSchema[APIRoute.CodenamesEndTurn].res,
     }
-  );
+  )
+  // Hard to typecheck since its an async generator
+  .get("/api/codenames/ask-llm", async function* () {
+    for await (const event of handleCodenamesAskLlm()) {
+      yield JSON.stringify(event) + "\n";
+    }
+  });
 
 // Add catch-all route last so API routes above are matched before frontend routes
 if (process.env.NODE_ENV === "production") {

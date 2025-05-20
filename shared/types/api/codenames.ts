@@ -40,6 +40,18 @@ export type CodenamesGuessRequest = Static<typeof CodenamesGuessRequestType>;
 export const CodenamesGuessResponseType = t.Object({ state: GameStateType });
 export type CodenamesGuessResponse = Static<typeof CodenamesGuessResponseType>;
 
+// Ask LLM
+export const CodenamesAskLlmRequestType = t.Object({});
+export type CodenamesAskLlmRequest = Static<typeof CodenamesAskLlmRequestType>;
+
+export const CodenamesAskLlmResponseType = t.Object({
+  thinking: t.String(),
+  output: t.String(),
+});
+export type CodenamesAskLlmResponse = Static<
+  typeof CodenamesAskLlmResponseType
+>;
+
 // End turn
 export const CodenamesEndTurnRequestType = t.Object({});
 export type CodenamesEndTurnRequest = Static<

@@ -11,6 +11,7 @@ import { WebSocketProvider } from "./contexts/WebSocketContext";
 import Home from "./home";
 import Join from "./join";
 import Joystick from "./joystick";
+import Pong from "./pong";
 
 export function App() {
   return (
@@ -37,6 +38,9 @@ export function App() {
             </Route>
             <Route path="/codenames">
               <Codenames />
+            </Route>
+            <Route path="/pong">
+              <Pong />
             </Route>
             <Route path="/admin">
               <Admin />

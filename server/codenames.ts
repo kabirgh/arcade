@@ -24,7 +24,7 @@ const client = new OpenAI({ apiKey: process.env["OPENAI_API_KEY"] });
 const words = await Bun.file("./server/words.txt").text();
 
 const makePrompt = (gameState: GameState) => {
-  const { board, history, remainingGuesses, clue, turn } = gameState;
+  const { board, history, clue, turn } = gameState;
 
   const boardForGuessing = board.map((c) => ({
     word: c.word,

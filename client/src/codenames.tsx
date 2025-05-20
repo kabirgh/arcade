@@ -161,7 +161,6 @@ export const Codenames = () => {
       if (clueInputRef.current) {
         clueInputRef.current.value = "";
       }
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error("Failed to submit clue:", error);
       setError(error.message || "Failed to submit clue");

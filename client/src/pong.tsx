@@ -1,20 +1,33 @@
-import { NextPage } from "next";
-import { useRouter } from "next/router";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useLocation } from "wouter";
 
-import usePongAudio from "../lib/usePongAudio";
-import { ListTeams, ReadControllers } from "../wailsjs/wailsjs/go/main/App";
+import { APIRoute } from "../../shared/types/api/schema";
+import { Avatar, Color } from "../../shared/types/domain/player";
+import usePongAudio from "./hooks/usePongAudio";
+import { apiFetch } from "./util/apiFetch";
 
-const DEBUG = false;
+const DEBUG = true;
 
-type Player = {
+type Position = "left" | "right" | "top" | "bottom";
+
+type PongPlayer = {
   x: number;
   y: number;
+  id: string;
+  name: string;
+  avatar: Avatar;
+  teamId: string;
+  // Position should match team position
+  position: Position;
+};
+
+type PongTeam = {
+  id: string;
   name: string;
   color: string;
-  buzzerId: string;
   lives: number;
-  type: "player" | "dummy";
+  type: "active" | "dummy";
+  position: Position;
 };
 
 type Ball = {
@@ -29,16 +42,17 @@ type Wall = {
   y: number;
   width: number;
   height: number;
-  position: "left" | "right" | "top" | "bottom";
+  position: Position;
   color?: string;
 };
 
 type State = {
   lastTick: number;
-  winner: null | Player;
+  winner: null | PongTeam;
   phase: "not_started" | "in_progress" | "game_over";
   walls: Wall[];
-  players: { left: Player; right: Player; top: Player; bottom: Player };
+  teams: PongTeam[];
+  players: PongPlayer[];
   ball: Ball;
   gameOverText: string;
 };
@@ -64,49 +78,94 @@ const STARTING_LIVES = 2;
 // I'm not sure this works, but here just in case it helps at smaller speeds
 const COLLISION_EXTENSION = 1000;
 
-const DEFAULT_PLAYERS: {
-  left: Player;
-  right: Player;
-  top: Player;
-  bottom: Player;
-} = {
-  top: {
-    x: CANVAS_SIZE / 2 - PADDLE_LENGTH / 2,
-    y: 0 + PADDLE_OFFSET,
-    name: "top",
-    color: "red",
-    buzzerId: "",
-    lives: 0,
-    type: "dummy",
+const POSITIONS: Array<Position> = ["bottom", "top", "right", "left"] as const;
+
+const DEFAULT_TEAMS: PongTeam[] = [
+  {
+    id: "1",
+    name: "Team 1",
+    color: Color.Red,
+    lives: 3,
+    type: "active",
+    position: "left",
   },
+  {
+    id: "2",
+    name: "Team 2",
+    color: Color.Blue,
+    lives: 3,
+    type: "active",
+    position: "right",
+  },
+  {
+    id: "3",
+    name: "Team 3",
+    color: Color.Green,
+    lives: 3,
+    type: "active",
+    position: "top",
+  },
+  {
+    id: "4",
+    name: "Team 4",
+    color: Color.Yellow,
+    lives: 3,
+    type: "active",
+    position: "bottom",
+  },
+];
+
+const POSITION_TO_DEFAULT_XY: Record<Position, { x: number; y: number }> = {
+  top: { x: CANVAS_SIZE / 2 - PADDLE_LENGTH / 2, y: 0 + PADDLE_OFFSET },
   bottom: {
     x: CANVAS_SIZE / 2 - PADDLE_LENGTH / 2,
     y: CANVAS_SIZE - PADDLE_THICKNESS - PADDLE_OFFSET,
-    name: "bottom",
-    color: "blue",
-    buzzerId: "",
-    lives: 0,
-    type: "dummy",
   },
-  left: {
-    x: 0 + PADDLE_OFFSET,
-    y: CANVAS_SIZE / 2 - PADDLE_LENGTH / 2,
-    name: "left",
-    color: "green",
-    buzzerId: "Controller 1",
-    lives: 0,
-    type: "dummy",
-  },
+  left: { x: 0 + PADDLE_OFFSET, y: CANVAS_SIZE / 2 - PADDLE_LENGTH / 2 },
   right: {
     x: CANVAS_SIZE - PADDLE_THICKNESS - PADDLE_OFFSET,
     y: CANVAS_SIZE / 2 - PADDLE_LENGTH / 2,
-    name: "right",
-    color: "yellow",
-    buzzerId: "",
-    lives: 0,
-    type: "dummy",
   },
 };
+
+const DEFAULT_PLAYERS: PongPlayer[] = [
+  {
+    x: POSITION_TO_DEFAULT_XY.top.x,
+    y: POSITION_TO_DEFAULT_XY.top.y,
+    id: "top_1",
+    name: "top",
+    avatar: Avatar.Icecream,
+    teamId: "1",
+    position: "top",
+  },
+  {
+    x: POSITION_TO_DEFAULT_XY.bottom.x,
+    y: POSITION_TO_DEFAULT_XY.bottom.y,
+    id: "bottom_1",
+    name: "bottom",
+    avatar: Avatar.Book,
+    teamId: "2",
+    position: "bottom",
+  },
+  {
+    x: POSITION_TO_DEFAULT_XY.left.x,
+    y: POSITION_TO_DEFAULT_XY.left.y,
+    id: "left_1",
+    name: "left",
+    avatar: Avatar.Cap,
+    teamId: "3",
+    position: "left",
+  },
+  {
+    x: POSITION_TO_DEFAULT_XY.right.x,
+    y: POSITION_TO_DEFAULT_XY.right.y,
+    id: "right_1",
+    name: "right",
+    avatar: Avatar.Bulb,
+    teamId: "4",
+    position: "right",
+  },
+];
 
 const DEFAULT_WALLS: Wall[] = [
   {
@@ -167,13 +226,14 @@ const DEFAULT_WALLS: Wall[] = [
   },
 ];
 
-const Quadrapong: NextPage = () => {
-  const router = useRouter();
+// 1-4 teams. Each team can have multiple players. Each player has their own mini-paddle.
+const Quadrapong = () => {
+  // const [, setLocation] = useLocation();
   const playSound = usePongAudio();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [startingLives, setStartingLives] = useState(STARTING_LIVES);
   const [loadingPlayers, setLoadingPlayers] = useState(true);
-  const [numActivePlayers, setNumActivePlayers] = useState(0);
+  const [numActiveTeams, setNumActiveTeams] = useState(0);
   const [initialAngle] = useState(Math.random() * Math.PI * 2);
   const [, setRenderTrigger] = useState({});
   const stateRef = useRef<State>({
@@ -181,7 +241,8 @@ const Quadrapong: NextPage = () => {
     winner: null,
     phase: "not_started",
     walls: structuredClone(DEFAULT_WALLS),
-    players: structuredClone(DEFAULT_PLAYERS),
+    players: [],
+    teams: [],
     ball: {
       x: CANVAS_SIZE / 2,
       y: CANVAS_SIZE / 2,
@@ -191,115 +252,317 @@ const Quadrapong: NextPage = () => {
     gameOverText: "",
   });
 
-  const makeWall = useCallback(
-    (position: "left" | "right" | "bottom" | "top") => {
-      const { players, walls } = stateRef.current;
-      let newWall: Wall | null = null;
+  const makeWall = useCallback((position: Position) => {
+    const { teams, walls } = stateRef.current;
+    let newWall: Wall | null = null;
 
-      if (position === "left") {
-        newWall = {
-          x: WALL_OFFSET,
-          y: WALL_OFFSET + WALL_THICKNESS,
-          width: WALL_THICKNESS,
-          height: CANVAS_SIZE - 2 * WALL_OFFSET - 2 * WALL_THICKNESS,
-          color: players.left.color,
-          position: "left",
-        };
-      } else if (position === "right") {
-        newWall = {
-          x: CANVAS_SIZE - WALL_OFFSET - WALL_THICKNESS,
-          y: WALL_OFFSET + WALL_THICKNESS,
-          width: WALL_THICKNESS,
-          height: CANVAS_SIZE - 2 * WALL_OFFSET - 2 * WALL_THICKNESS,
-          color: players.right.color,
-          position: "right",
-        };
-      } else if (position === "top") {
-        newWall = {
-          x: WALL_OFFSET + WALL_THICKNESS,
-          y: WALL_OFFSET,
-          width: CANVAS_SIZE - 2 * WALL_OFFSET - 2 * WALL_THICKNESS,
-          height: WALL_THICKNESS,
-          color: players.top.color,
-          position: "top",
-        };
-      } else if (position === "bottom") {
-        newWall = {
-          x: WALL_OFFSET + WALL_THICKNESS,
-          y: CANVAS_SIZE - WALL_OFFSET - WALL_THICKNESS,
-          width: CANVAS_SIZE - 2 * WALL_OFFSET - 2 * WALL_THICKNESS,
-          height: WALL_THICKNESS,
-          color: players.bottom.color,
-          position: "bottom",
-        };
-      }
-
-      // Remove existing walls with overlap because
-      // collisions get weird with multiple walls
-      stateRef.current.walls = walls.filter(
-        (wall) =>
-          wall.x + wall.width <= newWall!.x ||
-          wall.x >= newWall!.x + newWall!.width ||
-          wall.y + wall.height <= newWall!.y ||
-          wall.y >= newWall!.y + newWall!.height
-      );
-      stateRef.current.walls.push(newWall!);
-    },
-    []
-  );
-
-  // Get teams from backend
-  useEffect(() => {
-    const state = stateRef.current;
-
-    if (DEBUG) {
-      state.players = {
-        left: { ...DEFAULT_PLAYERS.left, lives: startingLives, type: "player" },
-        right: {
-          ...DEFAULT_PLAYERS.right,
-          lives: startingLives,
-          type: "player",
-        },
-        top: { ...DEFAULT_PLAYERS.top, lives: startingLives, type: "player" },
-        bottom: {
-          ...DEFAULT_PLAYERS.bottom,
-          lives: startingLives,
-          type: "player",
-        },
+    if (position === "left") {
+      newWall = {
+        x: WALL_OFFSET,
+        y: WALL_OFFSET + WALL_THICKNESS,
+        width: WALL_THICKNESS,
+        height: CANVAS_SIZE - 2 * WALL_OFFSET - 2 * WALL_THICKNESS,
+        color: teams.find((t) => t.position === "left")!.color,
+        position: "left",
       };
-      setNumActivePlayers(Object.keys(DEFAULT_PLAYERS).length);
+    } else if (position === "right") {
+      newWall = {
+        x: CANVAS_SIZE - WALL_OFFSET - WALL_THICKNESS,
+        y: WALL_OFFSET + WALL_THICKNESS,
+        width: WALL_THICKNESS,
+        height: CANVAS_SIZE - 2 * WALL_OFFSET - 2 * WALL_THICKNESS,
+        color: teams.find((t) => t.position === "right")!.color,
+        position: "right",
+      };
+    } else if (position === "top") {
+      newWall = {
+        x: WALL_OFFSET + WALL_THICKNESS,
+        y: WALL_OFFSET,
+        width: CANVAS_SIZE - 2 * WALL_OFFSET - 2 * WALL_THICKNESS,
+        height: WALL_THICKNESS,
+        color: teams.find((t) => t.position === "top")!.color,
+        position: "top",
+      };
+    } else if (position === "bottom") {
+      newWall = {
+        x: WALL_OFFSET + WALL_THICKNESS,
+        y: CANVAS_SIZE - WALL_OFFSET - WALL_THICKNESS,
+        width: CANVAS_SIZE - 2 * WALL_OFFSET - 2 * WALL_THICKNESS,
+        height: WALL_THICKNESS,
+        color: teams.find((t) => t.position === "bottom")!.color,
+        position: "bottom",
+      };
+    }
+
+    // Remove existing walls with overlap because collisions get weird with multiple walls
+    stateRef.current.walls = walls.filter(
+      (wall) =>
+        wall.x + wall.width <= newWall!.x ||
+        wall.x >= newWall!.x + newWall!.width ||
+        wall.y + wall.height <= newWall!.y ||
+        wall.y >= newWall!.y + newWall!.height
+    );
+    stateRef.current.walls.push(newWall!);
+  }, []);
+
+  // Get teams & players from backend
+  useEffect(() => {
+    if (DEBUG) {
+      stateRef.current.teams = structuredClone(DEFAULT_TEAMS);
+      stateRef.current.players = structuredClone(DEFAULT_PLAYERS);
       setLoadingPlayers(false);
+      console.log("Loaded default teams", stateRef.current.teams);
+      console.log("Loaded default players", stateRef.current.players);
       return;
     }
 
-    ListTeams()
-      .then((teams) => {
-        const positions: Array<"bottom" | "top" | "left" | "right"> = [
-          "bottom",
-          "top",
-          "right",
-          "left",
-        ];
+    const state = stateRef.current;
 
+    apiFetch(APIRoute.ListTeams)
+      .then(({ teams }) => {
         for (let i = 0; i < teams.length; i++) {
-          const position = positions[i];
           const team = teams[i];
 
-          state.players[position] = {
+          state.teams.push({
+            id: team.id,
             name: team.name,
             color: team.color,
-            buzzerId: team.buzzerId || "",
-            lives: startingLives,
-            x: DEFAULT_PLAYERS[position].x,
-            y: DEFAULT_PLAYERS[position].y,
-            type: "player",
+            lives: STARTING_LIVES,
+            type: "active",
+            position: POSITIONS[i],
+          });
+        }
+        setNumActiveTeams(teams.length);
+        console.log("Loaded teams", stateRef.current.teams);
+      })
+      .then(() => {
+        return apiFetch(APIRoute.ListPlayers);
+      })
+      .then(({ players }) => {
+        // Set the player position based on the team position
+        const teamIdToDefaultPosition: Record<
+          string,
+          { position: Position; x: number; y: number }
+        > = {};
+        for (let i = 0; i < stateRef.current.teams.length; i++) {
+          teamIdToDefaultPosition[stateRef.current.teams[i].id] = {
+            position: stateRef.current.teams[i].position,
+            x: POSITION_TO_DEFAULT_XY[stateRef.current.teams[i].position].x,
+            y: POSITION_TO_DEFAULT_XY[stateRef.current.teams[i].position].y,
           };
         }
-        setNumActivePlayers(teams.length);
+
+        stateRef.current.players = players.map((p) => {
+          const defaultPosition = teamIdToDefaultPosition[p.teamId];
+          return {
+            ...p,
+            // TODO space paddles correctly
+            x: defaultPosition.x,
+            y: defaultPosition.y,
+            position: defaultPosition.position,
+          };
+        });
         setLoadingPlayers(false);
+        console.log("Loaded players", stateRef.current.players);
       })
-      .catch((err) => console.error(err));
-  }, [startingLives]); // Re-runs every time startingLives changes, inefficient, eh
+      .catch((err) => {
+        console.error(err);
+      });
+  }, []);
+
+  // If user changes the starting lives, update the teams
+  // It should be impossible to change the starting lives while the game is running
+  useEffect(() => {
+    const { teams } = stateRef.current;
+    for (const team of teams) {
+      team.lives = startingLives;
+    }
+  }, [startingLives]);
+
+  const handleTeamPaddleCollision = useCallback(
+    (
+      ball: Ball,
+      playersOfTeamAtPosition: PongPlayer[],
+      teamPosition: "left" | "right" | "top" | "bottom",
+      playSound: (sound: string) => void
+    ) => {
+      const hitPaddles: PongPlayer[] = [];
+      const [ballLeft, ballRight, ballTop, ballBottom] = [
+        ball.x,
+        ball.x + BALL_SIZE,
+        ball.y,
+        ball.y + BALL_SIZE,
+      ];
+
+      for (const player of playersOfTeamAtPosition) {
+        let [pl, pr, pt, pb] = [
+          player.x,
+          player.x +
+            (teamPosition === "left" || teamPosition === "right"
+              ? PADDLE_THICKNESS
+              : PADDLE_LENGTH),
+          player.y,
+          player.y +
+            (teamPosition === "left" || teamPosition === "right"
+              ? PADDLE_LENGTH
+              : PADDLE_THICKNESS),
+        ];
+
+        // Consider collision extension for individual paddle check
+        if (teamPosition === "left") pl -= COLLISION_EXTENSION;
+        else if (teamPosition === "right") pr += COLLISION_EXTENSION;
+        else if (teamPosition === "top") pt -= COLLISION_EXTENSION;
+        else if (teamPosition === "bottom") pb += COLLISION_EXTENSION;
+
+        if (
+          ballBottom > pt &&
+          ballTop < pb &&
+          ballRight > pl &&
+          ballLeft < pr
+        ) {
+          hitPaddles.push(player);
+        }
+      }
+
+      if (hitPaddles.length === 0) {
+        return false; // No paddles from this team were hit
+      }
+
+      // Determine effective paddle surface from hitPaddles
+      let effectivePaddleMin: number, effectivePaddleMax: number;
+      let paddleLineCoordinate: number;
+
+      if (teamPosition === "left" || teamPosition === "right") {
+        effectivePaddleMin = Math.min(...hitPaddles.map((p) => p.y));
+        effectivePaddleMax = Math.max(
+          ...hitPaddles.map((p) => p.y + PADDLE_LENGTH)
+        );
+        paddleLineCoordinate = hitPaddles[0].x; // All paddles in a vertical team share the same x base
+      } else {
+        // Top or Bottom
+        effectivePaddleMin = Math.min(...hitPaddles.map((p) => p.x));
+        effectivePaddleMax = Math.max(
+          ...hitPaddles.map((p) => p.x + PADDLE_LENGTH)
+        );
+        paddleLineCoordinate = hitPaddles[0].y; // All paddles in a horizontal team share the same y base
+      }
+
+      const effectivePaddleSpan = effectivePaddleMax - effectivePaddleMin;
+
+      // Reset ball to 'front' of the effective paddle surface
+      // This uses the original paddle line, not the COLLISION_EXTENSION version for reset
+      if (teamPosition === "left") {
+        ball.x = paddleLineCoordinate + PADDLE_THICKNESS;
+      } else if (teamPosition === "right") {
+        ball.x = paddleLineCoordinate - BALL_SIZE;
+      } else if (teamPosition === "top") {
+        ball.y = paddleLineCoordinate + PADDLE_THICKNESS;
+      } else if (teamPosition === "bottom") {
+        ball.y = paddleLineCoordinate - BALL_SIZE;
+      }
+
+      // Calculate the collision point on the effective surface
+      let rawCollisionPoint: number;
+      if (teamPosition === "left" || teamPosition === "right") {
+        rawCollisionPoint =
+          (ball.y + BALL_SIZE / 2 - effectivePaddleMin) / effectivePaddleSpan;
+      } else {
+        // Top or Bottom
+        rawCollisionPoint =
+          (ball.x + BALL_SIZE / 2 - effectivePaddleMin) / effectivePaddleSpan;
+      }
+
+      // Normalize collision point to [-1, 1]
+      const normalizedCollisionPoint = Math.max(
+        -1,
+        Math.min(1, rawCollisionPoint * 2 - 1)
+      );
+
+      // Calculate new angle (up to 75 degrees)
+      const maxAngle = (Math.PI * 5) / 12; // 75 degrees
+      const newAngle =
+        normalizedCollisionPoint *
+        maxAngle *
+        (teamPosition === "left" || teamPosition === "right" ? -1 : 1);
+
+      const speed = SPEED_MULTIPLIER * Math.sqrt(ball.dx ** 2 + ball.dy ** 2);
+
+      // Update ball direction based on which paddle was hit
+      if (teamPosition === "left" || teamPosition === "right") {
+        ball.dx =
+          speed * Math.cos(newAngle) * (teamPosition === "left" ? 1 : -1);
+        ball.dy = speed * -Math.sin(newAngle);
+      } else {
+        // Top or Bottom
+        ball.dx = speed * Math.sin(newAngle);
+        ball.dy =
+          speed * Math.cos(newAngle) * (teamPosition === "top" ? 1 : -1);
+      }
+
+      playSound("paddle");
+      return true; // Collision occurred
+    },
+    [] // Dependencies like PADDLE_THICKNESS, PADDLE_LENGTH etc are constants
+  );
+
+  const handleWallCollision = useCallback(
+    (ball: Ball, wall: Wall, playSound: (sound: string) => void) => {
+      let [wl, wr, wt, wb] = [
+        wall.x,
+        wall.x + wall.width,
+        wall.y,
+        wall.y + wall.height,
+      ];
+
+      // Avoid tunneling effect from fast balls
+      if (wall.position === "left") {
+        wl -= COLLISION_EXTENSION;
+      } else if (wall.position === "right") {
+        wr += COLLISION_EXTENSION;
+      } else if (wall.position === "top") {
+        wt -= COLLISION_EXTENSION;
+      } else if (wall.position === "bottom") {
+        wb += COLLISION_EXTENSION;
+      }
+
+      const [bl, br, bt, bb] = [
+        ball.x,
+        ball.x + BALL_SIZE,
+        ball.y,
+        ball.y + BALL_SIZE,
+      ];
+
+      // Check if ball is colliding with wall
+      if (br > wl && bl < wr && bb > wt && bt < wb) {
+        // Reset ball to 'front' of wall
+        if (wall.position === "left") {
+          ball.x = wr;
+        } else if (wall.position === "right") {
+          ball.x = wl - BALL_SIZE;
+        } else if (wall.position === "top") {
+          ball.y = wb;
+        } else if (wall.position === "bottom") {
+          ball.y = wt - BALL_SIZE;
+        }
+
+        if (wall.width > wall.height) {
+          // Horizontal wall
+          ball.dy = -ball.dy * SPEED_MULTIPLIER;
+          ball.dx = ball.dx * SPEED_MULTIPLIER;
+        } else {
+          // Vertical wall
+          ball.dx = -ball.dx * SPEED_MULTIPLIER;
+          ball.dy = ball.dy * SPEED_MULTIPLIER;
+        }
+
+        playSound("wall");
+
+        return true;
+      }
+      return false;
+    },
+    []
+  );
 
   useEffect(() => {
     if (canvasRef.current === null) {
@@ -321,43 +584,48 @@ const Quadrapong: NextPage = () => {
     let animationFrameId: number;
 
     const update = (deltaTime: number) => {
-      const { ball, players, walls } = stateRef.current;
+      const { ball, players, walls, teams } = stateRef.current;
 
       if (stateRef.current.phase !== "in_progress") {
         return;
       }
 
       // Move players
-      if (!DEBUG) {
-        ReadControllers().then((json) => {
-          const controllers = JSON.parse(json);
-
-          for (const [position, player] of Object.entries(players)) {
-            const controller = controllers[player.buzzerId];
-            if (!controller) continue;
-
-            if (position === "left" || position === "right") {
-              const dy = -controller.LeftJoystick.Y || 0; // invert Y axis
-              player.y = Math.max(
-                PADDLE_STOP,
-                Math.min(
-                  CANVAS_SIZE - PADDLE_LENGTH - PADDLE_STOP,
-                  player.y + dy * deltaTime * JOYSTICK_SENSITIVITY
-                )
-              );
-            } else {
-              const dx = controller.LeftJoystick.X || 0;
-              player.x = Math.max(
-                PADDLE_STOP,
-                Math.min(
-                  CANVAS_SIZE - PADDLE_LENGTH - PADDLE_STOP,
-                  player.x + dx * deltaTime * JOYSTICK_SENSITIVITY
-                )
-              );
-            }
-          }
-        });
-      }
+      // if (!DEBUG) {
+      //   // ReadControllers().then((json) => {
+      //   //   const controllers = JSON.parse(json);
+      //   //
+      //   //   for (const /*[position, player]*/ player of players) { // Iterate over players array
+      //   //     // const controller = controllers[player.buzzerId]; // player.buzzerId does not exist
+      //   //     // if (!controller) continue;
+      //   //
+      //   //     // Determine position from player object
+      //   //     const position = player.position;
+      //   //
+      //   //     if (position === "left" || position === "right") {
+      //   //       // const dy = -controller.LeftJoystick.Y || 0; // invert Y axis
+      //   //       const dy = 0; // Placeholder
+      //   //       player.y = Math.max(
+      //   //         PADDLE_STOP,
+      //   //         Math.min(
+      //   //           CANVAS_SIZE - PADDLE_LENGTH - PADDLE_STOP,
+      //   //           player.y + dy * deltaTime * JOYSTICK_SENSITIVITY
+      //   //         )
+      //   //       );
+      //   //     } else {
+      //   //       // const dx = controller.LeftJoystick.X || 0;
+      //   //       const dx = 0; // Placeholder
+      //   //       player.x = Math.max(
+      //   //         PADDLE_STOP,
+      //   //         Math.min(
+      //   //           CANVAS_SIZE - PADDLE_LENGTH - PADDLE_STOP,
+      //   //           player.x + dx * deltaTime * JOYSTICK_SENSITIVITY
+      //   //         )
+      //   //       );
+      //   //     }
+      //   //   }
+      //   // });
+      // }
 
       // Update ball position
       ball.x += ball.dx * deltaTime;
@@ -370,132 +638,33 @@ const Quadrapong: NextPage = () => {
         ball.y + BALL_SIZE,
       ];
 
-      // Collision with players
-      for (const [position, player] of Object.entries(players)) {
-        // Only check collision if player is still in the game
-        if (player.lives <= 0) {
+      // Collision with paddles
+      for (const team of teams) {
+        if (team.lives <= 0 || team.type === "dummy") {
           continue;
         }
 
-        let [pl, pr, pt, pb] = [
-          player.x,
-          player.x +
-            (position === "left" || position === "right"
-              ? PADDLE_THICKNESS
-              : PADDLE_LENGTH),
-          player.y,
-          player.y +
-            (position === "left" || position === "right"
-              ? PADDLE_LENGTH
-              : PADDLE_THICKNESS),
-        ];
+        const playersOfTeamAtPosition = players.filter(
+          (p) => p.teamId === team.id && p.position === team.position
+        );
 
-        // Avoid tunneling effect from fast balls
-        if (position === "left") {
-          pl -= COLLISION_EXTENSION;
-        } else if (position === "right") {
-          pr += COLLISION_EXTENSION;
-        } else if (position === "top") {
-          pt -= COLLISION_EXTENSION;
-        } else if (position === "bottom") {
-          pb += COLLISION_EXTENSION;
-        }
-
-        // Check if ball is colliding with player
-        if (bb > pt && bt < pb && br > pl && bl < pr) {
-          // Reset ball to 'front' of paddle
-          if (position === "left") {
-            ball.x = pr;
-          } else if (position === "right") {
-            ball.x = pl - BALL_SIZE;
-          } else if (position === "top") {
-            ball.y = pb;
-          } else if (position === "bottom") {
-            ball.y = pt - BALL_SIZE;
+        if (playersOfTeamAtPosition.length > 0) {
+          if (
+            handleTeamPaddleCollision(
+              ball,
+              playersOfTeamAtPosition,
+              team.position,
+              playSound
+            )
+          ) {
+            return; // Collision handled for this frame
           }
-
-          // Calculate the collision point
-          const collisionPoint =
-            position === "left" || position === "right"
-              ? (ball.y + BALL_SIZE / 2 - pt) / (pb - pt)
-              : (ball.x + BALL_SIZE / 2 - pl) / (pr - pl);
-
-          // Normalize collision point to [-1, 1]
-          const normalizedCollisionPoint = collisionPoint * 2 - 1;
-
-          // Calculate new angle (up to 75 degrees)
-          const maxAngle = (Math.PI * 5) / 12; // 75 degrees
-          const newAngle =
-            normalizedCollisionPoint *
-            maxAngle *
-            (position === "left" || position === "right" ? -1 : 1);
-
-          const speed =
-            SPEED_MULTIPLIER * Math.sqrt(ball.dx ** 2 + ball.dy ** 2);
-
-          // Update ball direction based on which paddle was hit
-          if (position === "left" || position === "right") {
-            ball.dx =
-              speed * Math.cos(newAngle) * (position === "left" ? 1 : -1);
-            ball.dy = speed * -Math.sin(newAngle);
-          } else {
-            ball.dx = speed * Math.sin(newAngle);
-            ball.dy =
-              speed * Math.cos(newAngle) * (position === "top" ? 1 : -1);
-          }
-
-          playSound("paddle");
-
-          return;
         }
       }
 
       // Collision with walls
-      // Unlike player collision, this is always a standard reflection
       for (const wall of walls) {
-        let [wl, wr, wt, wb] = [
-          wall.x,
-          wall.x + wall.width,
-          wall.y,
-          wall.y + wall.height,
-        ];
-
-        // Avoid tunneling effect from fast balls
-        if (wall.position === "left") {
-          wl -= COLLISION_EXTENSION;
-        } else if (wall.position === "right") {
-          wr += COLLISION_EXTENSION;
-        } else if (wall.position === "top") {
-          wt -= COLLISION_EXTENSION;
-        } else if (wall.position === "bottom") {
-          wb += COLLISION_EXTENSION;
-        }
-
-        // Check if ball is colliding with wall
-        if (br > wl && bl < wr && bb > wt && bt < wb) {
-          // Reset ball to 'front' of wall
-          if (wall.position === "left") {
-            ball.x = wr;
-          } else if (wall.position === "right") {
-            ball.x = wl - BALL_SIZE;
-          } else if (wall.position === "top") {
-            ball.y = wb;
-          } else if (wall.position === "bottom") {
-            ball.y = wt - BALL_SIZE;
-          }
-
-          if (wall.width > wall.height) {
-            // Horizontal wall
-            ball.dy = -ball.dy * SPEED_MULTIPLIER;
-            ball.dx = ball.dx * SPEED_MULTIPLIER;
-          } else {
-            // Vertical wall
-            ball.dx = -ball.dx * SPEED_MULTIPLIER;
-            ball.dy = ball.dy * SPEED_MULTIPLIER;
-          }
-
-          playSound("wall");
-
+        if (handleWallCollision(ball, wall, playSound)) {
           return;
         }
       }
@@ -510,30 +679,46 @@ const Quadrapong: NextPage = () => {
         // Reduce lives. Let it go negative, we use the 0 marker to add
         // additional walls to the game area
         if (bl < WALL_OFFSET) {
-          players.left.lives -= 1;
+          stateRef.current.teams.find((t) => t.position === "left")!.lives -= 1;
           playSound("score");
-          if (players.left.lives === 0) {
+          if (
+            stateRef.current.teams.find((t) => t.position === "left")!.lives ===
+            0
+          ) {
             makeWall("left");
           }
         }
         if (br > CANVAS_SIZE - WALL_OFFSET) {
-          players.right.lives -= 1;
+          stateRef.current.teams.find(
+            (t) => t.position === "right"
+          )!.lives -= 1;
           playSound("score");
-          if (players.right.lives === 0) {
+          if (
+            stateRef.current.teams.find((t) => t.position === "right")!
+              .lives === 0
+          ) {
             makeWall("right");
           }
         }
         if (bt < WALL_OFFSET) {
-          players.top.lives -= 1;
+          stateRef.current.teams.find((t) => t.position === "top")!.lives -= 1;
           playSound("score");
-          if (players.top.lives === 0) {
+          if (
+            stateRef.current.teams.find((t) => t.position === "top")!.lives ===
+            0
+          ) {
             makeWall("top");
           }
         }
         if (bb > CANVAS_SIZE - WALL_OFFSET) {
-          players.bottom.lives -= 1;
+          stateRef.current.teams.find(
+            (t) => t.position === "bottom"
+          )!.lives -= 1;
           playSound("score");
-          if (players.bottom.lives === 0) {
+          if (
+            stateRef.current.teams.find((t) => t.position === "bottom")!
+              .lives === 0
+          ) {
             makeWall("bottom");
           }
         }
@@ -545,24 +730,25 @@ const Quadrapong: NextPage = () => {
 
         // If there is only one player left & we started with multiple players, game over
         let playersLeft = 0;
-        for (const player of Object.values(players)) {
-          if (player.lives > 0) {
+        let lastTeamStanding: PongTeam | null = null;
+        for (const team of teams) {
+          if (team.lives > 0 && team.type === "active") {
             playersLeft += 1;
             // Set winner now, will be unset if there is more than one player left
-            stateRef.current.winner = player;
+            lastTeamStanding = team;
           }
         }
-        if (playersLeft === 1 && numActivePlayers > 1) {
+        stateRef.current.winner = null; // Default to null
+        if (playersLeft === 1 && numActiveTeams > 1) {
           stateRef.current.phase = "game_over";
+          stateRef.current.winner = lastTeamStanding;
           stateRef.current.gameOverText = `${
             stateRef.current.winner!.name
           }   wins!`.toUpperCase();
-        } else if (playersLeft === 0 && numActivePlayers == 1) {
+        } else if (playersLeft === 0 && numActiveTeams > 0) {
+          // Changed numActiveTeams == 1 to > 0
           stateRef.current.phase = "game_over";
           stateRef.current.gameOverText = "GAME   OVER";
-          stateRef.current.winner = null;
-        } else {
-          stateRef.current.winner = null;
         }
 
         // Pause before firing ball again
@@ -575,7 +761,7 @@ const Quadrapong: NextPage = () => {
     };
 
     const render = () => {
-      const { ball, players, walls } = stateRef.current;
+      const { ball, players, walls, teams } = stateRef.current;
       ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
       // Draw walls
@@ -585,25 +771,29 @@ const Quadrapong: NextPage = () => {
       }
 
       // Draw player-related elements
-      for (const [position, player] of Object.entries(players)) {
-        if (player.lives <= 0) {
-          // Don't draw player if they're out of the game
-          // Walls will be drawn in their place
+      for (const player of players) {
+        const playerTeam = teams.find((t) => t.position === player.position);
+        if (
+          !playerTeam ||
+          playerTeam.lives <= 0 ||
+          playerTeam.type === "dummy"
+        ) {
+          // Don't draw player if their team is out or is a dummy (wall will be drawn by makeWall)
           continue;
         }
 
         // Draw player paddle
-        ctx.fillStyle = "white";
-        if (position === "left" || position === "right") {
+        ctx.fillStyle = playerTeam.color;
+        if (player.position === "left" || player.position === "right") {
           ctx.fillRect(player.x, player.y, PADDLE_THICKNESS, PADDLE_LENGTH);
         } else {
           ctx.fillRect(player.x, player.y, PADDLE_LENGTH, PADDLE_THICKNESS);
         }
 
-        // Draw player lives
-        ctx.fillStyle = player.color;
-        for (let i = 0; i < player.lives; i++) {
-          if (position === "left") {
+        // Draw player lives (Team lives)
+        ctx.fillStyle = playerTeam.color;
+        for (let i = 0; i < playerTeam.lives; i++) {
+          if (player.position === "left") {
             ctx.fillRect(
               0,
               WALL_OFFSET +
@@ -616,7 +806,7 @@ const Quadrapong: NextPage = () => {
               SCORE_THICKNESS
             );
           }
-          if (position === "right") {
+          if (player.position === "right") {
             ctx.fillRect(
               CANVAS_SIZE - SCORE_LENGTH,
               CANVAS_SIZE -
@@ -629,7 +819,7 @@ const Quadrapong: NextPage = () => {
               SCORE_THICKNESS
             );
           }
-          if (position === "top") {
+          if (player.position === "top") {
             ctx.fillRect(
               CANVAS_SIZE -
                 WALL_OFFSET -
@@ -642,7 +832,7 @@ const Quadrapong: NextPage = () => {
               SCORE_LENGTH
             );
           }
-          if (position === "bottom") {
+          if (player.position === "bottom") {
             ctx.fillRect(
               WALL_OFFSET +
                 WALL_THICKNESS +
@@ -700,61 +890,57 @@ const Quadrapong: NextPage = () => {
     return () => {
       window.cancelAnimationFrame(animationFrameId);
     };
-  }, [playSound, makeWall, numActivePlayers]);
+  }, [
+    playSound,
+    makeWall,
+    numActiveTeams,
+    handleTeamPaddleCollision,
+    handleWallCollision,
+  ]);
 
   const start = useCallback(() => {
     const state = stateRef.current;
 
+    // Reset teams lives and type for a new game
+    const newTeams = structuredClone(DEFAULT_TEAMS);
+    for (const team of newTeams) {
+      team.lives = startingLives;
+    }
+
+    // Reset players to their initial positions based on their designated 'position'
+    const newPlayers = structuredClone(DEFAULT_PLAYERS).map((p) => {
+      return {
+        ...p,
+        x: POSITION_TO_DEFAULT_XY[p.position].x,
+        y: POSITION_TO_DEFAULT_XY[p.position].y,
+      };
+    });
+
     stateRef.current = {
-      ...stateRef.current,
+      ...state, // Keep lastTick, etc.
       phase: "in_progress",
       walls: structuredClone(DEFAULT_WALLS),
-      players: {
-        left: {
-          ...state.players.left,
-          x: 0 + PADDLE_OFFSET,
-          y: CANVAS_SIZE / 2 - PADDLE_LENGTH / 2,
-        },
-        right: {
-          ...state.players.right,
-          x: CANVAS_SIZE - PADDLE_THICKNESS - PADDLE_OFFSET,
-          y: CANVAS_SIZE / 2 - PADDLE_LENGTH / 2,
-        },
-        top: {
-          ...state.players.top,
-          x: CANVAS_SIZE / 2 - PADDLE_LENGTH / 2,
-          y: 0 + PADDLE_OFFSET,
-        },
-        bottom: {
-          ...state.players.bottom,
-          x: CANVAS_SIZE / 2 - PADDLE_LENGTH / 2,
-          y: CANVAS_SIZE - PADDLE_THICKNESS - PADDLE_OFFSET,
-        },
+      teams: newTeams,
+      players: newPlayers,
+      ball: {
+        // Reset ball
+        x: CANVAS_SIZE / 2,
+        y: CANVAS_SIZE / 2,
+        dx: INITIAL_BALL_SPEED * Math.sin(initialAngle),
+        dy: INITIAL_BALL_SPEED * Math.cos(initialAngle),
       },
+      winner: null,
+      gameOverText: "",
     };
 
-    for (const [position, player] of Object.entries(stateRef.current.players)) {
-      if (player.type === "dummy") {
-        player.color = "white";
-        makeWall(position as any);
+    // Process dummy teams to make walls
+    for (const team of stateRef.current.teams) {
+      if (team.type === "dummy") {
+        // The color for dummy walls is handled by makeWall itself if not specified, or by the team color.
+        makeWall(team.position);
       }
     }
-  }, [makeWall]);
-
-  useEffect(() => {
-    const keydownHandler = (event: any) => {
-      switch (event.code) {
-        case "Backspace":
-          router.push("/gamelist");
-          break;
-      }
-    };
-
-    addEventListener("keydown", keydownHandler);
-    return () => {
-      removeEventListener("keydown", keydownHandler);
-    };
-  }, [router]);
+  }, [makeWall, startingLives, initialAngle]);
 
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-gray-950">
@@ -772,7 +958,7 @@ const Quadrapong: NextPage = () => {
         }}
       >
         <input
-          className="w-10 mx-4"
+          className="w-12 mx-4 py-0.5 px-2 bg-white focus:outline-none"
           type="number"
           placeholder="lives"
           value={startingLives}
@@ -783,7 +969,7 @@ const Quadrapong: NextPage = () => {
           }}
         />
         <button
-          className="text-sm px-3 py-1 mb-0 mt-2"
+          className="w-16 bg-gray-200 text-black text-sm px-3 py-1 mb-0 mt-2"
           disabled={loadingPlayers}
           onClick={() => start()}
         >

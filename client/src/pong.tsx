@@ -2,17 +2,24 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 
 import { APIRoute } from "../../shared/types/api/schema";
+import type { WebSocketMessage } from "../../shared/types/api/websocket";
 import { Avatar, Color } from "../../shared/types/domain/player";
+import { Channel, MessageType } from "../../shared/types/domain/websocket";
+import { useWebSocketContext } from "./contexts/WebSocketContext";
 import usePongAudio from "./hooks/usePongAudio";
 import { apiFetch } from "./util/apiFetch";
+import { createThrottledLog } from "./util/throttledLog";
 
 const DEBUG = true;
 
 type Position = "left" | "right" | "top" | "bottom";
 
 type PongPlayer = {
+  // x, y are the coordinates of the top-left corner of the paddle
   x: number;
   y: number;
+  dx: number;
+  dy: number;
   id: string;
   name: string;
   avatar: Avatar;
@@ -132,6 +139,8 @@ const DEFAULT_PLAYERS: PongPlayer[] = [
   {
     x: POSITION_TO_DEFAULT_XY.top.x,
     y: POSITION_TO_DEFAULT_XY.top.y,
+    dx: 0,
+    dy: 0,
     id: "top_1",
     name: "top",
     avatar: Avatar.Icecream,
@@ -141,6 +150,8 @@ const DEFAULT_PLAYERS: PongPlayer[] = [
   {
     x: POSITION_TO_DEFAULT_XY.bottom.x,
     y: POSITION_TO_DEFAULT_XY.bottom.y,
+    dx: 0,
+    dy: 0,
     id: "bottom_1",
     name: "bottom",
     avatar: Avatar.Book,
@@ -150,6 +161,8 @@ const DEFAULT_PLAYERS: PongPlayer[] = [
   {
     x: POSITION_TO_DEFAULT_XY.left.x,
     y: POSITION_TO_DEFAULT_XY.left.y,
+    dx: 0,
+    dy: 0,
     id: "left_1",
     name: "left",
     avatar: Avatar.Cap,
@@ -159,6 +172,8 @@ const DEFAULT_PLAYERS: PongPlayer[] = [
   {
     x: POSITION_TO_DEFAULT_XY.right.x,
     y: POSITION_TO_DEFAULT_XY.right.y,
+    dx: 0,
+    dy: 0,
     id: "right_1",
     name: "right",
     avatar: Avatar.Bulb,
@@ -226,13 +241,17 @@ const DEFAULT_WALLS: Wall[] = [
   },
 ];
 
+// Create the throttled log function outside the component to prevent recreation on each render
+const log5s = createThrottledLog(5000);
+
 // 1-4 teams. Each team can have multiple players. Each player has their own mini-paddle.
 const Quadrapong = () => {
   // const [, setLocation] = useLocation();
+  const { subscribe, unsubscribe } = useWebSocketContext();
   const playSound = usePongAudio();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [startingLives, setStartingLives] = useState(STARTING_LIVES);
-  const [loadingPlayers, setLoadingPlayers] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [numActiveTeams, setNumActiveTeams] = useState(0);
   const [initialAngle] = useState(Math.random() * Math.PI * 2);
   const [, setRenderTrigger] = useState({});
@@ -310,9 +329,7 @@ const Quadrapong = () => {
     if (DEBUG) {
       stateRef.current.teams = structuredClone(DEFAULT_TEAMS);
       stateRef.current.players = structuredClone(DEFAULT_PLAYERS);
-      setLoadingPlayers(false);
-      console.log("Loaded default teams", stateRef.current.teams);
-      console.log("Loaded default players", stateRef.current.players);
+      setLoading(false);
       return;
     }
 
@@ -359,10 +376,12 @@ const Quadrapong = () => {
             // TODO space paddles correctly
             x: defaultPosition.x,
             y: defaultPosition.y,
+            dx: 0,
+            dy: 0,
             position: defaultPosition.position,
           };
         });
-        setLoadingPlayers(false);
+        setLoading(false);
         console.log("Loaded players", stateRef.current.players);
       })
       .catch((err) => {
@@ -379,134 +398,161 @@ const Quadrapong = () => {
     }
   }, [startingLives]);
 
+  // Subscribe to joystick move updates
+  useEffect(() => {
+    subscribe(Channel.JOYSTICK, (message: WebSocketMessage) => {
+      if (message.messageType !== MessageType.MOVE) {
+        return;
+      }
+
+      const { playerId, angle, force } = message.payload;
+      const player = stateRef.current.players.find((p) => p.id === playerId);
+      if (!player) {
+        console.error(`Player ${playerId} not found`);
+        return;
+      }
+
+      // Angle of 0 = right
+      player.dx = force * Math.cos(angle) * JOYSTICK_SENSITIVITY;
+      player.dy = force * Math.sin(angle) * JOYSTICK_SENSITIVITY;
+    });
+
+    return () => unsubscribe(Channel.JOYSTICK);
+  }, [subscribe, unsubscribe]);
+
   const handleTeamPaddleCollision = useCallback(
-    (
-      ball: Ball,
-      playersOfTeamAtPosition: PongPlayer[],
-      teamPosition: "left" | "right" | "top" | "bottom",
-      playSound: (sound: string) => void
-    ) => {
-      const hitPaddles: PongPlayer[] = [];
-      const [ballLeft, ballRight, ballTop, ballBottom] = [
+    (playersOfTeam: PongPlayer[], position: Position) => {
+      const { ball } = stateRef.current;
+      const [bl, br, bt, bb] = [
         ball.x,
         ball.x + BALL_SIZE,
         ball.y,
         ball.y + BALL_SIZE,
       ];
 
-      for (const player of playersOfTeamAtPosition) {
-        let [pl, pr, pt, pb] = [
-          player.x,
-          player.x +
-            (teamPosition === "left" || teamPosition === "right"
+      // pl, pr, pt, pb
+      const effectivePaddles: [number, number, number, number][] = [];
+      // Combine overlapping paddles into a single effective paddle
+      let c: "x" | "y";
+      if (position === "left" || position === "right") {
+        c = "y";
+      } else {
+        c = "x";
+      }
+
+      // First, sort by coordinates
+      playersOfTeam.sort((a, b) => a[c] - b[c]);
+
+      // i=1 because we compare to the previous player
+      let overlapStartIndex: number = 0;
+      let overlapEndIndex: number = 0;
+
+      // Helper function to add an effective paddle to the array
+      const addEffectivePaddle = (start: number, end: number) => {
+        effectivePaddles.push([
+          playersOfTeam[start][c],
+          playersOfTeam[end][c] +
+            (position === "left" || position === "right"
               ? PADDLE_THICKNESS
               : PADDLE_LENGTH),
-          player.y,
-          player.y +
-            (teamPosition === "left" || teamPosition === "right"
+          playersOfTeam[start][c],
+          playersOfTeam[end][c] +
+            (position === "left" || position === "right"
               ? PADDLE_LENGTH
               : PADDLE_THICKNESS),
-        ];
+        ]);
+      };
 
-        // Consider collision extension for individual paddle check
-        if (teamPosition === "left") pl -= COLLISION_EXTENSION;
-        else if (teamPosition === "right") pr += COLLISION_EXTENSION;
-        else if (teamPosition === "top") pt -= COLLISION_EXTENSION;
-        else if (teamPosition === "bottom") pb += COLLISION_EXTENSION;
-
-        if (
-          ballBottom > pt &&
-          ballTop < pb &&
-          ballRight > pl &&
-          ballLeft < pr
-        ) {
-          hitPaddles.push(player);
+      for (let i = 1; i < playersOfTeam.length; i++) {
+        const player = playersOfTeam[i];
+        const prevPlayer = playersOfTeam[i - 1];
+        if (prevPlayer[c] + PADDLE_LENGTH > player[c]) {
+          // This paddle overlaps with the previous paddle
+          overlapEndIndex = i;
+        } else {
+          // This paddle does not overlap with the previous paddle
+          // Push the complete paddle to the effective paddles
+          addEffectivePaddle(overlapStartIndex, overlapEndIndex);
+          // Reset the overlap indices
+          overlapStartIndex = i;
+          overlapEndIndex = i;
         }
       }
-
-      if (hitPaddles.length === 0) {
-        return false; // No paddles from this team were hit
+      // Handle the final group of paddles
+      if (playersOfTeam.length > 0) {
+        addEffectivePaddle(overlapStartIndex, overlapEndIndex);
       }
 
-      // Determine effective paddle surface from hitPaddles
-      let effectivePaddleMin: number, effectivePaddleMax: number;
-      let paddleLineCoordinate: number;
+      log5s("effectivePaddles for team", position, effectivePaddles);
 
-      if (teamPosition === "left" || teamPosition === "right") {
-        effectivePaddleMin = Math.min(...hitPaddles.map((p) => p.y));
-        effectivePaddleMax = Math.max(
-          ...hitPaddles.map((p) => p.y + PADDLE_LENGTH)
-        );
-        paddleLineCoordinate = hitPaddles[0].x; // All paddles in a vertical team share the same x base
-      } else {
-        // Top or Bottom
-        effectivePaddleMin = Math.min(...hitPaddles.map((p) => p.x));
-        effectivePaddleMax = Math.max(
-          ...hitPaddles.map((p) => p.x + PADDLE_LENGTH)
-        );
-        paddleLineCoordinate = hitPaddles[0].y; // All paddles in a horizontal team share the same y base
+      // For each effective paddle, check if the ball is colliding with it
+      for (let [pl, pr, pt, pb] of effectivePaddles) {
+        // Avoid tunneling effect from fast balls
+        if (position === "left") {
+          pl -= COLLISION_EXTENSION;
+        } else if (position === "right") {
+          pr += COLLISION_EXTENSION;
+        } else if (position === "top") {
+          pt -= COLLISION_EXTENSION;
+        } else if (position === "bottom") {
+          pb += COLLISION_EXTENSION;
+        }
+
+        // Check if ball is colliding with paddle
+        if (bl < pr && br > pl && bt < pb && bb > pt) {
+          // Reset ball to 'front' of paddle
+          if (position === "left") {
+            ball.x = pr;
+          } else if (position === "right") {
+            ball.x = pl - BALL_SIZE;
+          } else if (position === "top") {
+            ball.y = pb;
+          } else if (position === "bottom") {
+            ball.y = pt - BALL_SIZE;
+          }
+
+          // Calculate the collision point
+          const collisionPoint =
+            position === "left" || position === "right"
+              ? (ball.y + BALL_SIZE / 2 - pt) / (pb - pt)
+              : (ball.x + BALL_SIZE / 2 - pl) / (pr - pl);
+
+          // Normalize collision point to [-1, 1]
+          const normalizedCollisionPoint = collisionPoint * 2 - 1;
+
+          // Calculate new angle (up to 75 degrees)
+          const maxAngle = (Math.PI * 5) / 12; // 75 degrees
+          const newAngle =
+            normalizedCollisionPoint *
+            maxAngle *
+            (position === "left" || position === "right" ? -1 : 1);
+
+          const speed =
+            SPEED_MULTIPLIER * Math.sqrt(ball.dx ** 2 + ball.dy ** 2);
+
+          // Update ball direction based on which paddle was hit
+          if (position === "left" || position === "right") {
+            ball.dx =
+              speed * Math.cos(newAngle) * (position === "left" ? 1 : -1);
+            ball.dy = speed * -Math.sin(newAngle);
+          } else {
+            ball.dx = speed * Math.sin(newAngle);
+            ball.dy =
+              speed * Math.cos(newAngle) * (position === "top" ? 1 : -1);
+          }
+
+          playSound("paddle");
+
+          return true;
+        }
       }
-
-      const effectivePaddleSpan = effectivePaddleMax - effectivePaddleMin;
-
-      // Reset ball to 'front' of the effective paddle surface
-      // This uses the original paddle line, not the COLLISION_EXTENSION version for reset
-      if (teamPosition === "left") {
-        ball.x = paddleLineCoordinate + PADDLE_THICKNESS;
-      } else if (teamPosition === "right") {
-        ball.x = paddleLineCoordinate - BALL_SIZE;
-      } else if (teamPosition === "top") {
-        ball.y = paddleLineCoordinate + PADDLE_THICKNESS;
-      } else if (teamPosition === "bottom") {
-        ball.y = paddleLineCoordinate - BALL_SIZE;
-      }
-
-      // Calculate the collision point on the effective surface
-      let rawCollisionPoint: number;
-      if (teamPosition === "left" || teamPosition === "right") {
-        rawCollisionPoint =
-          (ball.y + BALL_SIZE / 2 - effectivePaddleMin) / effectivePaddleSpan;
-      } else {
-        // Top or Bottom
-        rawCollisionPoint =
-          (ball.x + BALL_SIZE / 2 - effectivePaddleMin) / effectivePaddleSpan;
-      }
-
-      // Normalize collision point to [-1, 1]
-      const normalizedCollisionPoint = Math.max(
-        -1,
-        Math.min(1, rawCollisionPoint * 2 - 1)
-      );
-
-      // Calculate new angle (up to 75 degrees)
-      const maxAngle = (Math.PI * 5) / 12; // 75 degrees
-      const newAngle =
-        normalizedCollisionPoint *
-        maxAngle *
-        (teamPosition === "left" || teamPosition === "right" ? -1 : 1);
-
-      const speed = SPEED_MULTIPLIER * Math.sqrt(ball.dx ** 2 + ball.dy ** 2);
-
-      // Update ball direction based on which paddle was hit
-      if (teamPosition === "left" || teamPosition === "right") {
-        ball.dx =
-          speed * Math.cos(newAngle) * (teamPosition === "left" ? 1 : -1);
-        ball.dy = speed * -Math.sin(newAngle);
-      } else {
-        // Top or Bottom
-        ball.dx = speed * Math.sin(newAngle);
-        ball.dy =
-          speed * Math.cos(newAngle) * (teamPosition === "top" ? 1 : -1);
-      }
-
-      playSound("paddle");
-      return true; // Collision occurred
+      return false;
     },
-    [] // Dependencies like PADDLE_THICKNESS, PADDLE_LENGTH etc are constants
+    [playSound]
   );
 
   const handleWallCollision = useCallback(
-    (ball: Ball, wall: Wall, playSound: (sound: string) => void) => {
+    (ball: Ball, wall: Wall) => {
       let [wl, wr, wt, wb] = [
         wall.x,
         wall.x + wall.width,
@@ -561,8 +607,40 @@ const Quadrapong = () => {
       }
       return false;
     },
-    []
+    [playSound]
   );
+
+  const movePlayers = useCallback((deltaTime: number) => {
+    const { players } = stateRef.current;
+
+    let c: "x" | "y";
+    let dc: "dx" | "dy";
+
+    for (const player of players) {
+      if (player.position === "left" || player.position === "right") {
+        c = "y";
+        dc = "dy";
+      } else {
+        c = "x";
+        dc = "dx";
+      }
+
+      player[c] = Math.max(
+        PADDLE_STOP,
+        Math.min(
+          CANVAS_SIZE - PADDLE_LENGTH - PADDLE_STOP,
+          player[c] + player[dc] * deltaTime * JOYSTICK_SENSITIVITY
+        )
+      );
+    }
+  }, []);
+
+  const moveBall = useCallback((deltaTime: number) => {
+    const { ball } = stateRef.current;
+    // Update ball position
+    ball.x += ball.dx * deltaTime;
+    ball.y += ball.dy * deltaTime;
+  }, []);
 
   useEffect(() => {
     if (canvasRef.current === null) {
@@ -590,53 +668,11 @@ const Quadrapong = () => {
         return;
       }
 
-      // Move players
-      // if (!DEBUG) {
-      //   // ReadControllers().then((json) => {
-      //   //   const controllers = JSON.parse(json);
-      //   //
-      //   //   for (const /*[position, player]*/ player of players) { // Iterate over players array
-      //   //     // const controller = controllers[player.buzzerId]; // player.buzzerId does not exist
-      //   //     // if (!controller) continue;
-      //   //
-      //   //     // Determine position from player object
-      //   //     const position = player.position;
-      //   //
-      //   //     if (position === "left" || position === "right") {
-      //   //       // const dy = -controller.LeftJoystick.Y || 0; // invert Y axis
-      //   //       const dy = 0; // Placeholder
-      //   //       player.y = Math.max(
-      //   //         PADDLE_STOP,
-      //   //         Math.min(
-      //   //           CANVAS_SIZE - PADDLE_LENGTH - PADDLE_STOP,
-      //   //           player.y + dy * deltaTime * JOYSTICK_SENSITIVITY
-      //   //         )
-      //   //       );
-      //   //     } else {
-      //   //       // const dx = controller.LeftJoystick.X || 0;
-      //   //       const dx = 0; // Placeholder
-      //   //       player.x = Math.max(
-      //   //         PADDLE_STOP,
-      //   //         Math.min(
-      //   //           CANVAS_SIZE - PADDLE_LENGTH - PADDLE_STOP,
-      //   //           player.x + dx * deltaTime * JOYSTICK_SENSITIVITY
-      //   //         )
-      //   //       );
-      //   //     }
-      //   //   }
-      //   // });
-      // }
+      if (!DEBUG) {
+        movePlayers(deltaTime);
+      }
 
-      // Update ball position
-      ball.x += ball.dx * deltaTime;
-      ball.y += ball.dy * deltaTime;
-
-      const [bl, br, bt, bb] = [
-        ball.x,
-        ball.x + BALL_SIZE,
-        ball.y,
-        ball.y + BALL_SIZE,
-      ];
+      moveBall(deltaTime);
 
       // Collision with paddles
       for (const team of teams) {
@@ -644,30 +680,25 @@ const Quadrapong = () => {
           continue;
         }
 
-        const playersOfTeamAtPosition = players.filter(
-          (p) => p.teamId === team.id && p.position === team.position
-        );
-
-        if (playersOfTeamAtPosition.length > 0) {
-          if (
-            handleTeamPaddleCollision(
-              ball,
-              playersOfTeamAtPosition,
-              team.position,
-              playSound
-            )
-          ) {
-            return; // Collision handled for this frame
-          }
+        const playersOfTeam = players.filter((p) => p.teamId === team.id);
+        if (handleTeamPaddleCollision(playersOfTeam, team.position)) {
+          return; // Collision handled for this frame
         }
       }
 
       // Collision with walls
       for (const wall of walls) {
-        if (handleWallCollision(ball, wall, playSound)) {
+        if (handleWallCollision(ball, wall)) {
           return;
         }
       }
+
+      const [bl, br, bt, bb] = [
+        ball.x,
+        ball.x + BALL_SIZE,
+        ball.y,
+        ball.y + BALL_SIZE,
+      ];
 
       // Reset ball when out of bounds & reduce player lives
       if (
@@ -756,7 +787,7 @@ const Quadrapong = () => {
           const randomAngle = Math.random() * Math.PI * 2;
           ball.dx = INITIAL_BALL_SPEED * Math.sin(randomAngle);
           ball.dy = INITIAL_BALL_SPEED * Math.cos(randomAngle);
-        }, 0);
+        }, 500);
       }
     };
 
@@ -896,6 +927,8 @@ const Quadrapong = () => {
     numActiveTeams,
     handleTeamPaddleCollision,
     handleWallCollision,
+    moveBall,
+    movePlayers,
   ]);
 
   const start = useCallback(() => {
@@ -970,7 +1003,7 @@ const Quadrapong = () => {
         />
         <button
           className="w-16 bg-gray-200 text-black text-sm px-3 py-1 mb-0 mt-2"
-          disabled={loadingPlayers}
+          disabled={loading}
           onClick={() => start()}
         >
           {stateRef.current.phase === "not_started" ? "Start" : "Play again"}

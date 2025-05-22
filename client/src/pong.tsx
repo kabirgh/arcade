@@ -148,13 +148,24 @@ const DEFAULT_PLAYERS: PongPlayer[] = [
     position: "top",
   },
   {
-    x: POSITION_TO_DEFAULT_XY.bottom.x,
+    x: POSITION_TO_DEFAULT_XY.bottom.x - PADDLE_LENGTH - 10,
     y: POSITION_TO_DEFAULT_XY.bottom.y,
     dx: 0,
     dy: 0,
     id: "bottom_1",
     name: "bottom",
     avatar: Avatar.Book,
+    teamId: "4",
+    position: "bottom",
+  },
+  {
+    x: POSITION_TO_DEFAULT_XY.bottom.x + PADDLE_LENGTH + 10,
+    y: POSITION_TO_DEFAULT_XY.bottom.y,
+    dx: 0,
+    dy: 0,
+    id: "bottom_2",
+    name: "bottom2",
+    avatar: Avatar.Spikyball,
     teamId: "4",
     position: "bottom",
   },
@@ -455,10 +466,10 @@ const Quadrapong = () => {
           effectivePaddles.push([x1, x2, y1, y2]);
         } else {
           // For horizontal paddles, y is fixed, x varies
-          const y1 = playersOfTeam[start].y;
-          const y2 = y1 + PADDLE_LENGTH;
           const x1 = playersOfTeam[start].x;
           const x2 = playersOfTeam[end].x + PADDLE_LENGTH;
+          const y1 = playersOfTeam[start].y;
+          const y2 = y1 + PADDLE_THICKNESS;
           effectivePaddles.push([x1, x2, y1, y2]);
         }
       };
@@ -470,7 +481,7 @@ const Quadrapong = () => {
       for (let i = 1; i < playersOfTeam.length; i++) {
         const player = playersOfTeam[i];
         const prevPlayer = playersOfTeam[i - 1];
-        if (prevPlayer[c] + PADDLE_LENGTH > player[c]) {
+        if (prevPlayer[c] + PADDLE_LENGTH >= player[c]) {
           // This paddle overlaps with the previous paddle
           overlapEndIndex = i;
         } else {
@@ -487,8 +498,8 @@ const Quadrapong = () => {
         addEffectivePaddle(overlapStartIndex, overlapEndIndex);
       }
 
-      if (position === "left") {
-        log5s("effectivePaddles for left team", effectivePaddles);
+      if (position === "bottom") {
+        log5s("effectivePaddles for bottom team", effectivePaddles);
       }
 
       // For each effective paddle, check if the ball is colliding with it
@@ -650,18 +661,28 @@ const Quadrapong = () => {
 
   useEffect(() => {
     const keydownHandler = (event: KeyboardEvent) => {
-      const bottomPlayer = stateRef.current.players.find(
+      const bottomPlayers = stateRef.current.players.filter(
         (p) => p.position === "bottom"
       );
-
       switch (event.code) {
         case "KeyA":
-          bottomPlayer!.x -= 10;
+          bottomPlayers[0].x = Math.max(PADDLE_STOP, bottomPlayers[0].x - 20);
           break;
-        case "KeyD": {
-          bottomPlayer!.x += 10;
+        case "KeyD":
+          bottomPlayers[0].x = Math.min(
+            CANVAS_SIZE - PADDLE_LENGTH - PADDLE_STOP,
+            bottomPlayers[0].x + 20
+          );
           break;
-        }
+        case "ArrowLeft":
+          bottomPlayers[1].x = Math.max(PADDLE_STOP, bottomPlayers[1].x - 20);
+          break;
+        case "ArrowRight":
+          bottomPlayers[1].x = Math.min(
+            CANVAS_SIZE - PADDLE_LENGTH - PADDLE_STOP,
+            bottomPlayers[1].x + 20
+          );
+          break;
       }
     };
 
@@ -798,9 +819,6 @@ const Quadrapong = () => {
             lastTeamStanding = team;
           }
         }
-
-        console.log("playersLeft", playersLeft);
-        console.log("numActiveTeams", numActiveTeams);
 
         stateRef.current.winner = null; // Default to null
         if (playersLeft === 1 && numActiveTeams > 1) {

@@ -144,7 +144,7 @@ const DEFAULT_PLAYERS: PongPlayer[] = [
     id: "top_1",
     name: "top",
     avatar: Avatar.Icecream,
-    teamId: "1",
+    teamId: "3",
     position: "top",
   },
   {
@@ -155,7 +155,7 @@ const DEFAULT_PLAYERS: PongPlayer[] = [
     id: "bottom_1",
     name: "bottom",
     avatar: Avatar.Book,
-    teamId: "2",
+    teamId: "4",
     position: "bottom",
   },
   {
@@ -166,7 +166,7 @@ const DEFAULT_PLAYERS: PongPlayer[] = [
     id: "left_1",
     name: "left",
     avatar: Avatar.Cap,
-    teamId: "3",
+    teamId: "1",
     position: "left",
   },
   {
@@ -177,7 +177,7 @@ const DEFAULT_PLAYERS: PongPlayer[] = [
     id: "right_1",
     name: "right",
     avatar: Avatar.Bulb,
-    teamId: "4",
+    teamId: "2",
     position: "right",
   },
 ];
@@ -329,6 +329,7 @@ const Quadrapong = () => {
     if (DEBUG) {
       stateRef.current.teams = structuredClone(DEFAULT_TEAMS);
       stateRef.current.players = structuredClone(DEFAULT_PLAYERS);
+      setNumActiveTeams(4);
       setLoading(false);
       return;
     }
@@ -443,26 +444,29 @@ const Quadrapong = () => {
       // First, sort by coordinates
       playersOfTeam.sort((a, b) => a[c] - b[c]);
 
-      // i=1 because we compare to the previous player
+      // Helper function to add an effective paddle to the array
+      const addEffectivePaddle = (start: number, end: number) => {
+        if (position === "left" || position === "right") {
+          // For vertical paddles, x is fixed, y varies
+          const x1 = playersOfTeam[start].x;
+          const x2 = x1 + PADDLE_THICKNESS;
+          const y1 = playersOfTeam[start].y;
+          const y2 = playersOfTeam[end].y + PADDLE_LENGTH;
+          effectivePaddles.push([x1, x2, y1, y2]);
+        } else {
+          // For horizontal paddles, y is fixed, x varies
+          const y1 = playersOfTeam[start].y;
+          const y2 = y1 + PADDLE_LENGTH;
+          const x1 = playersOfTeam[start].x;
+          const x2 = playersOfTeam[end].x + PADDLE_LENGTH;
+          effectivePaddles.push([x1, x2, y1, y2]);
+        }
+      };
+
       let overlapStartIndex: number = 0;
       let overlapEndIndex: number = 0;
 
-      // Helper function to add an effective paddle to the array
-      const addEffectivePaddle = (start: number, end: number) => {
-        effectivePaddles.push([
-          playersOfTeam[start][c],
-          playersOfTeam[end][c] +
-            (position === "left" || position === "right"
-              ? PADDLE_THICKNESS
-              : PADDLE_LENGTH),
-          playersOfTeam[start][c],
-          playersOfTeam[end][c] +
-            (position === "left" || position === "right"
-              ? PADDLE_LENGTH
-              : PADDLE_THICKNESS),
-        ]);
-      };
-
+      // i=1 because we compare to the previous player
       for (let i = 1; i < playersOfTeam.length; i++) {
         const player = playersOfTeam[i];
         const prevPlayer = playersOfTeam[i - 1];
@@ -483,7 +487,9 @@ const Quadrapong = () => {
         addEffectivePaddle(overlapStartIndex, overlapEndIndex);
       }
 
-      log5s("effectivePaddles for team", position, effectivePaddles);
+      if (position === "left") {
+        log5s("effectivePaddles for left team", effectivePaddles);
+      }
 
       // For each effective paddle, check if the ball is colliding with it
       for (let [pl, pr, pt, pb] of effectivePaddles) {
@@ -643,6 +649,29 @@ const Quadrapong = () => {
   }, []);
 
   useEffect(() => {
+    const keydownHandler = (event: KeyboardEvent) => {
+      const bottomPlayer = stateRef.current.players.find(
+        (p) => p.position === "bottom"
+      );
+
+      switch (event.code) {
+        case "KeyA":
+          bottomPlayer!.x -= 10;
+          break;
+        case "KeyD": {
+          bottomPlayer!.x += 10;
+          break;
+        }
+      }
+    };
+
+    addEventListener("keydown", keydownHandler);
+    return () => {
+      removeEventListener("keydown", keydownHandler);
+    };
+  }, []);
+
+  useEffect(() => {
     if (canvasRef.current === null) {
       return;
     }
@@ -769,6 +798,10 @@ const Quadrapong = () => {
             lastTeamStanding = team;
           }
         }
+
+        console.log("playersLeft", playersLeft);
+        console.log("numActiveTeams", numActiveTeams);
+
         stateRef.current.winner = null; // Default to null
         if (playersLeft === 1 && numActiveTeams > 1) {
           stateRef.current.phase = "game_over";
@@ -784,7 +817,11 @@ const Quadrapong = () => {
 
         // Pause before firing ball again
         setTimeout(() => {
-          const randomAngle = Math.random() * Math.PI * 2;
+          // const randomAngle = Math.random() * Math.PI * 2;
+          // Not random for testing, will change to random later
+          const randomAngle = 0; // straight down
+          ball.x = CANVAS_SIZE / 2;
+          ball.y = CANVAS_SIZE / 2;
           ball.dx = INITIAL_BALL_SPEED * Math.sin(randomAngle);
           ball.dy = INITIAL_BALL_SPEED * Math.cos(randomAngle);
         }, 500);

@@ -911,6 +911,10 @@ const Quadrapong = () => {
     (ctx as any).webkitImageSmoothingEnabled = false;
     (ctx as any).mozImageSmoothingEnabled = false;
     (ctx as any).msImageSmoothingEnabled = false;
+    // Additional settings for pixel-perfect rendering
+    ctx.translate(0.5, 0.5); // Align to pixel grid
+    canvas.style.imageRendering = "pixelated";
+    canvas.style.imageRendering = "crisp-edges";
 
     let animationFrameId: number;
 
@@ -1036,13 +1040,7 @@ const Quadrapong = () => {
     const drawWalls = (ctx: CanvasRenderingContext2D, walls: Wall[]) => {
       for (const wall of walls) {
         ctx.fillStyle = wall.color ?? "white";
-        // Round coordinates to integers to prevent subpixel rendering
-        ctx.fillRect(
-          Math.round(wall.x),
-          Math.round(wall.y),
-          wall.width,
-          wall.height
-        );
+        ctx.fillRect(wall.x, wall.y, wall.width, wall.height);
       }
     };
 
@@ -1076,13 +1074,10 @@ const Quadrapong = () => {
       team: PongTeam
     ) => {
       ctx.fillStyle = team.color;
-      // Round coordinates to integers to prevent subpixel rendering
-      const x = Math.round(player.x);
-      const y = Math.round(player.y);
       if (player.position === "left" || player.position === "right") {
-        ctx.fillRect(x, y, PADDLE_THICKNESS, player.paddleLength);
+        ctx.fillRect(player.x, player.y, PADDLE_THICKNESS, player.paddleLength);
       } else {
-        ctx.fillRect(x, y, player.paddleLength, PADDLE_THICKNESS);
+        ctx.fillRect(player.x, player.y, player.paddleLength, PADDLE_THICKNESS);
       }
     };
 
@@ -1142,26 +1137,14 @@ const Quadrapong = () => {
         };
 
         const pos = scorePositions[team.position];
-        // Round coordinates to integers to prevent subpixel rendering
-        ctx.fillRect(
-          Math.round(pos.x),
-          Math.round(pos.y),
-          pos.width,
-          pos.height
-        );
+        ctx.fillRect(pos.x, pos.y, pos.width, pos.height);
       }
     };
 
     const drawBall = (ctx: CanvasRenderingContext2D, ball: Ball) => {
       if (stateRef.current.phase !== "game_over") {
         ctx.fillStyle = "white";
-        // Round coordinates to integers to prevent subpixel rendering
-        ctx.fillRect(
-          Math.round(ball.x),
-          Math.round(ball.y),
-          BALL_SIZE,
-          BALL_SIZE
-        );
+        ctx.fillRect(ball.x, ball.y, BALL_SIZE, BALL_SIZE);
       }
     };
 

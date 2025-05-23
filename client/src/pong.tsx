@@ -6,7 +6,7 @@ import { Avatar, Color } from "../../shared/types/domain/player";
 import { Channel, MessageType } from "../../shared/types/domain/websocket";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
 import { useListenNavigate } from "./hooks/useListenNavigate";
-import usePongAudio from "./hooks/usePongAudio";
+import useWebAudio from "./hooks/useWebAudio";
 import { apiFetch } from "./util/apiFetch";
 
 const DEBUG = true;
@@ -289,7 +289,7 @@ const calculatePaddleLengthsAndCoordinates = (
 const Quadrapong = () => {
   useListenNavigate("host");
   const { subscribe, unsubscribe } = useWebSocketContext();
-  const playSound = usePongAudio();
+  const playSound = useWebAudio();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [startingLives, setStartingLives] = useState(STARTING_LIVES);
   const [loading, setLoading] = useState(true);

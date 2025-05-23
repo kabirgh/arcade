@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 
 const VOLUME_STEP = 0.1;
 
@@ -12,18 +12,18 @@ export const useVolumeControl = (initialVolume: number) => {
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       switch (event.code) {
-        case 'ArrowUp':
+        case "ArrowUp":
           setVolume((prev) => Math.min(prev + VOLUME_STEP, 1));
           break;
-        case 'ArrowDown':
+        case "ArrowDown":
           setVolume((prev) => Math.max(prev - VOLUME_STEP, 0));
           break;
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener("keydown", handleKeyDown);
     };
   }, []);
 

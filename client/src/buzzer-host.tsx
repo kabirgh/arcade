@@ -16,7 +16,7 @@ import { useWebSocketContext } from "./contexts/WebSocketContext";
 import { useAdminAuth } from "./hooks/useAdminAuth";
 import useClientRect from "./hooks/useClientRect";
 import { useListenNavigate } from "./hooks/useListenNavigate";
-import { useVolumeControl } from "./hooks/useVolumeControl";
+import useWebAudio from "./hooks/useWebAudio";
 import { apiFetch } from "./util/apiFetch";
 
 type ExpandedPlayer = Player & {
@@ -44,16 +44,14 @@ const getPlayersWithDistinctTeams = (players: Player[]): Player[] => {
 const BuzzerHost: React.FC = () => {
   useListenNavigate("host");
   const { subscribe, unsubscribe } = useWebSocketContext();
+  const playSound = useWebAudio();
   const [players, setPlayers] = useState<Player[]>([]);
   const [expandedPlayers, setExpandedPlayers] = useState<
     Record<string, ExpandedPlayer>
   >({}); // id -> player
   const [teams, setTeams] = useState<Team[]>([]);
   const [buzzes, setBuzzes] = useState<Buzz[]>([]);
-  const { volume } = useVolumeControl(0.5);
   const teamRowRef = useRef<HTMLElement>(null);
-  // TODO: unlock audio https://chatgpt.com/c/68246cd3-479c-8002-8f17-434e2b9f5844
-  const audioRef = useRef<HTMLAudioElement>(null);
   const rect = useClientRect(teamRowRef);
   const { isAuthenticated } = useAdminAuth({ claimHost: true });
 
@@ -81,17 +79,12 @@ const BuzzerHost: React.FC = () => {
           return a.timestamp - b.timestamp;
         });
 
-        if (!audioRef.current) {
-          return prev;
-        }
-        audioRef.current.pause(); // Pause the currently playing sound
-        audioRef.current.currentTime = 0; // Reset playback to the start
-        audioRef.current.play(); // Play the sound again
+        playSound("bell");
 
         return newBuzzes;
       });
     },
-    [teams]
+    [teams, playSound]
   );
 
   // Get players and teams from backend
@@ -197,14 +190,6 @@ const BuzzerHost: React.FC = () => {
     };
   }, [players, teams]);
 
-  // Update volume of hidden audio element
-  useEffect(() => {
-    if (!audioRef.current) {
-      return;
-    }
-    audioRef.current.volume = volume;
-  }, [volume]);
-
   const rowSize = useMemo(() => 100.0 / teams.length, [teams]);
   const cardSize = useMemo(() => 0.9 * rowSize, [rowSize]);
   const spacerSize = useMemo(() => 0.1 * rowSize, [rowSize]);
@@ -297,12 +282,6 @@ const BuzzerHost: React.FC = () => {
             ref={teamRowRef as RefObject<HTMLDivElement>}
             style={{ gridArea: `2/3/3/4`, height: "100%" }}
           ></div>
-          <audio
-            ref={audioRef}
-            src="/audio/bell.mp3"
-            style={{ display: "none" }}
-            preload="auto"
-          ></audio>
         </div>
       )}
     </>

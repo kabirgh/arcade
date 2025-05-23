@@ -268,7 +268,7 @@ const AdminPage: React.FC = () => {
       )}
       {isAuthenticated && (
         <div className="grid grid-cols-7 h-full w-full gap-4">
-          <div className="col-start-1 col-span-1 flex flex-col items-center justify-center h-full gap-8">
+          <div className="col-start-1 col-span-1 flex flex-col items-center justify-center h-full gap-4">
             <button
               className="bg-red-600 text-white p-2 w-32 rounded-md cursor-pointer hover:bg-red-500
                        transition duration-100 ease-in-out active:bg-red-700"
@@ -276,7 +276,7 @@ const AdminPage: React.FC = () => {
             >
               Reset buzzers
             </button>
-            <h4 className="text-lg font-bold">Host navigation</h4>
+            <h4 className="text-lg font-bold mt-8">Host navigation</h4>
             <button
               className="bg-blue-700 text-white p-2 w-32 rounded-md cursor-pointer hover:bg-blue-600
                        transition duration-100 ease-in-out active:bg-blue-800"
@@ -298,7 +298,7 @@ const AdminPage: React.FC = () => {
             >
               Codenames
             </button>
-            <h4 className="text-lg font-bold">Player navigation</h4>
+            <h4 className="text-lg font-bold mt-8">Player navigation</h4>
             <button
               className="bg-green-700 text-white p-2 w-32 rounded-md cursor-pointer hover:bg-green-600
                        transition duration-100 ease-in-out active:bg-green-800"

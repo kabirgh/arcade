@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 const useWebAudio = () => {
   const audioContextRef = useRef<AudioContext | null>(null);
@@ -29,7 +29,7 @@ const useWebAudio = () => {
     };
   }, []);
 
-  const playSound = (sound: string) => {
+  const playSound = useCallback((sound: string) => {
     if (audioContextRef.current && audioBuffersRef.current[sound]) {
       // Stop currently playing sound if any
       if (currentSourceRef.current) {
@@ -52,7 +52,7 @@ const useWebAudio = () => {
       source.start(0);
       currentSourceRef.current = source;
     }
-  };
+  }, []);
 
   return playSound;
 };

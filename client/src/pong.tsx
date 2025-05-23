@@ -8,8 +8,9 @@ import { useWebSocketContext } from "./contexts/WebSocketContext";
 import { useListenNavigate } from "./hooks/useListenNavigate";
 import useWebAudio from "./hooks/useWebAudio";
 import { apiFetch } from "./util/apiFetch";
+import { createThrottledLog } from "./util/throttledLog";
 
-const DEBUG = true;
+const DEBUG = false;
 
 type Position = "left" | "right" | "top" | "bottom";
 
@@ -285,6 +286,8 @@ const calculatePaddleLengthsAndCoordinates = (
   return { paddleLength, coordinates };
 };
 
+// const log5s = createThrottledLog(5000);
+
 // 1-4 teams. Each team can have multiple players. Each player has their own mini-paddle.
 const Quadrapong = () => {
   useListenNavigate("host");
@@ -303,12 +306,7 @@ const Quadrapong = () => {
     walls: structuredClone(DEFAULT_WALLS),
     players: [],
     teams: [],
-    ball: {
-      x: CANVAS_SIZE / 2,
-      y: CANVAS_SIZE / 2,
-      dx: INITIAL_BALL_SPEED * Math.sin(initialAngle),
-      dy: INITIAL_BALL_SPEED * Math.cos(initialAngle),
-    },
+    ball: { x: CANVAS_SIZE / 2, y: CANVAS_SIZE / 2, dx: 0, dy: 0 },
     gameOverText: "",
   });
 
@@ -366,23 +364,40 @@ const Quadrapong = () => {
   }, []);
 
   const setPaddleLengthsAndCoordinates = useCallback(
-    (players: PongPlayer[]) => {
-      const teamToPlayers = players.reduce((acc, player) => {
-        acc[player.teamId] = [...(acc[player.teamId] || []), player];
-        return acc;
-      }, {} as Record<string, PongPlayer[]>);
+    (playersArr: PongPlayer[]): PongPlayer[] => {
+      const ps = structuredClone(playersArr);
 
-      for (const teamId in teamToPlayers) {
-        const players = teamToPlayers[teamId];
-        const c = ["left", "right"].includes(players[0].position) ? "y" : "x";
-        const { paddleLength, coordinates } =
-          calculatePaddleLengthsAndCoordinates(players.length);
-
-        for (let i = 0; i < players.length; i++) {
-          players[i].paddleLength = paddleLength;
-          players[i][c] = coordinates[i];
+      const teamToPlayers: Record<
+        string,
+        { originalIndex: number; player: PongPlayer }[]
+      > = {};
+      for (let i = 0; i < ps.length; i++) {
+        const p = ps[i];
+        const val = { originalIndex: i, player: p };
+        if (!teamToPlayers[p.teamId]) {
+          teamToPlayers[p.teamId] = [val];
+        } else {
+          teamToPlayers[p.teamId].push(val);
         }
       }
+
+      for (const [, psInTeam] of Object.entries(teamToPlayers)) {
+        const { paddleLength, coordinates } =
+          calculatePaddleLengthsAndCoordinates(psInTeam.length);
+        const c = ["left", "right"].includes(psInTeam[0].player.position)
+          ? "y"
+          : "x";
+
+        for (let i = 0; i < psInTeam.length; i++) {
+          const { originalIndex } = psInTeam[i];
+          // Update the player's paddle length and coordinates in the cloned array
+          // We do this to keep the original player ordering unchanged
+          ps[originalIndex].paddleLength = paddleLength;
+          ps[originalIndex][c] = coordinates[i];
+        }
+      }
+
+      return ps;
     },
     []
   );
@@ -391,9 +406,9 @@ const Quadrapong = () => {
   useEffect(() => {
     if (DEBUG) {
       stateRef.current.teams = structuredClone(DEFAULT_TEAMS);
-      stateRef.current.players = structuredClone(DEFAULT_PLAYERS);
-
-      setPaddleLengthsAndCoordinates(stateRef.current.players);
+      stateRef.current.players = setPaddleLengthsAndCoordinates(
+        structuredClone(DEFAULT_PLAYERS)
+      );
 
       setNumActiveTeams(DEFAULT_TEAMS.length);
       setLoading(false);
@@ -404,17 +419,35 @@ const Quadrapong = () => {
 
     apiFetch(APIRoute.ListTeams)
       .then(({ teams }) => {
-        for (let i = 0; i < teams.length; i++) {
-          const team = teams[i];
+        state.teams = [];
+        const unusedColors = ["padding1", "padding2"].concat(
+          DEFAULT_TEAMS.map((t) => t.color).filter(
+            (c) => !teams.some((t) => t.color === c)
+          )
+        );
 
-          state.teams.push({
-            id: team.id,
-            name: team.name,
-            color: team.color,
-            lives: STARTING_LIVES,
-            type: "active",
-            position: POSITIONS[i],
-          });
+        for (let i = 0; i < DEFAULT_TEAMS.length; i++) {
+          if (i < teams.length) {
+            const team = teams[i];
+            state.teams.push({
+              id: team.id,
+              name: team.name,
+              color: team.color,
+              lives: STARTING_LIVES,
+              type: "active",
+              position: POSITIONS[i],
+            });
+          } else {
+            state.teams.push({
+              id: DEFAULT_TEAMS[i].id,
+              name: DEFAULT_TEAMS[i].name,
+              color: unusedColors[i],
+              lives: 0,
+              type: "dummy",
+              position: POSITIONS[i],
+            });
+            makeWall(POSITIONS[i]);
+          }
         }
         setNumActiveTeams(teams.length);
         console.log("Loaded teams", stateRef.current.teams);
@@ -429,35 +462,35 @@ const Quadrapong = () => {
           { position: Position; x: number; y: number }
         > = {};
         for (let i = 0; i < stateRef.current.teams.length; i++) {
+          const pos = stateRef.current.teams[i].position;
           teamIdToDefaultPosition[stateRef.current.teams[i].id] = {
-            position: stateRef.current.teams[i].position,
-            x: POSITION_TO_DEFAULT_XY[stateRef.current.teams[i].position].x,
-            y: POSITION_TO_DEFAULT_XY[stateRef.current.teams[i].position].y,
+            position: pos,
+            x: POSITION_TO_DEFAULT_XY[pos].x,
+            y: POSITION_TO_DEFAULT_XY[pos].y,
           };
         }
 
-        stateRef.current.players = players.map((p) => {
+        const ps = players.map((p) => {
           const defaultPosition = teamIdToDefaultPosition[p.teamId];
           return {
             ...p,
             dx: 0,
             dy: 0,
             position: defaultPosition.position,
-            // x, y, paddleLength are overwritten in setPaddleLengthsAndCoordinates
-            x: 0,
-            y: 0,
+            // x, y, paddleLength may be overwritten in setPaddleLengthsAndCoordinates
+            x: defaultPosition.x,
+            y: defaultPosition.y,
             paddleLength: 200,
           };
         });
-        setPaddleLengthsAndCoordinates(stateRef.current.players);
+        stateRef.current.players = setPaddleLengthsAndCoordinates(ps);
 
         setLoading(false);
-        console.log("Loaded players", stateRef.current.players);
       })
       .catch((err) => {
         console.error(err);
       });
-  }, [setPaddleLengthsAndCoordinates]);
+  }, [setPaddleLengthsAndCoordinates, makeWall]);
 
   // If user changes the starting lives, update the teams
   // It should be impossible to change the starting lives while the game is running
@@ -1053,22 +1086,17 @@ const Quadrapong = () => {
   const start = useCallback(() => {
     const state = stateRef.current;
 
-    // Reset teams lives for a new game
-    for (const team of state.teams) {
-      team.lives = startingLives;
-      team.type = "active";
-    }
-    // Reset players to their initial positions
-    setPaddleLengthsAndCoordinates(state.players);
-
     stateRef.current = {
-      ...state, // Keep lastTick, etc.
+      lastTick: 0,
       phase: "in_progress",
       walls: structuredClone(DEFAULT_WALLS),
-      teams: state.teams,
-      players: state.players,
+      teams: state.teams.map((t) => ({
+        ...t,
+        lives: startingLives,
+      })),
+      // Reset players to their initial positions
+      players: setPaddleLengthsAndCoordinates(state.players),
       ball: {
-        // Reset ball
         x: CANVAS_SIZE / 2,
         y: CANVAS_SIZE / 2,
         dx: INITIAL_BALL_SPEED * Math.sin(initialAngle),
@@ -1096,7 +1124,7 @@ const Quadrapong = () => {
         // className="border border-solid border-white"
       />
       <div
-        className="flex flex-col items-center justify-center"
+        className="flex flex-row items-center justify-center"
         style={{
           visibility:
             stateRef.current.phase === "in_progress" ? "hidden" : "visible",
@@ -1108,13 +1136,13 @@ const Quadrapong = () => {
           placeholder="lives"
           value={startingLives}
           min={1}
-          max={10}
+          max={9}
           onChange={(e) => {
             setStartingLives(e.target.valueAsNumber);
           }}
         />
         <button
-          className="w-16 bg-gray-200 text-black text-sm px-3 py-1 mb-0 mt-2"
+          className="bg-gray-200 text-black text-sm px-3 py-1"
           disabled={loading}
           onClick={() => start()}
         >

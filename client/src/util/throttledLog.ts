@@ -8,7 +8,7 @@ export function createThrottledLog(interval: number = 1000) {
 
   return function throttledLog(...args: any[]) {
     const now = Date.now();
-    if (now - lastLogTime >= interval) {
+    if (now - lastLogTime >= interval || lastLogTime === 0) {
       console.log(...args);
       lastLogTime = now;
     }

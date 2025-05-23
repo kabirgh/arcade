@@ -14,12 +14,12 @@ export const useListenNavigate = (pageType: "host" | "player") => {
         message.messageType === MessageType.HOST_NAVIGATE &&
         pageType === "host"
       ) {
-        setLocation(message.payload.url);
+        setLocation(message.payload.screen);
       } else if (
         message.messageType === MessageType.PLAYER_NAVIGATE &&
         pageType === "player"
       ) {
-        setLocation(message.payload.url);
+        setLocation(message.payload.screen);
       }
     });
 

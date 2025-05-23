@@ -6,7 +6,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { useLocation } from "wouter";
 
 import { APIRoute } from "../../shared/types/api/schema";
 import type { WebSocketMessage } from "../../shared/types/api/websocket";
@@ -16,6 +15,7 @@ import { avatarToPath } from "../../shared/utils";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
 import { useAdminAuth } from "./hooks/useAdminAuth";
 import useClientRect from "./hooks/useClientRect";
+import { useListenNavigate } from "./hooks/useListenNavigate";
 import { useVolumeControl } from "./hooks/useVolumeControl";
 import { apiFetch } from "./util/apiFetch";
 
@@ -42,7 +42,7 @@ const getPlayersWithDistinctTeams = (players: Player[]): Player[] => {
 };
 
 const BuzzerHost: React.FC = () => {
-  const [, setLocation] = useLocation();
+  useListenNavigate("host");
   const { subscribe, unsubscribe } = useWebSocketContext();
   const [players, setPlayers] = useState<Player[]>([]);
   const [expandedPlayers, setExpandedPlayers] = useState<
@@ -96,19 +96,25 @@ const BuzzerHost: React.FC = () => {
 
   // Get players and teams from backend
   useEffect(() => {
-    apiFetch(APIRoute.ListPlayers)
-      .then(({ players }) => {
-        setPlayers(players);
+    Promise.all([apiFetch(APIRoute.ListPlayers), apiFetch(APIRoute.ListTeams)])
+      .then(([{ players: ps }, { teams: ts }]) => {
+        setPlayers(ps);
+        setTeams(ts);
+        return { ts, ps };
+      })
+      .then(({ ts, ps }) => {
+        const expPlayers: Record<string, ExpandedPlayer> = {};
+        for (const player of ps) {
+          const team = ts.find((t) => t.id === player.teamId);
+          if (!team) {
+            throw new Error(`Team with id ${player.teamId} not found`);
+          }
+          expPlayers[player.id] = { ...player, team };
+        }
+        setExpandedPlayers(expPlayers);
       })
       .catch((error) => {
-        console.error("Failed to fetch players:", error);
-      });
-    apiFetch(APIRoute.ListTeams)
-      .then(({ teams }) => {
-        setTeams(teams);
-      })
-      .catch((error) => {
-        console.error("Failed to fetch teams:", error);
+        console.error("Failed to fetch players and/or teams:", error);
       });
   }, []);
 
@@ -148,17 +154,7 @@ const BuzzerHost: React.FC = () => {
     };
   }, [handlePlayerBuzzerPress, subscribe, unsubscribe]);
 
-  useEffect(() => {
-    const expPlayers: Record<string, ExpandedPlayer> = {};
-    for (const player of players) {
-      const team = teams.find((t) => t.id === player.teamId);
-      if (!team) {
-        throw new Error(`Team with id ${player.teamId} not found`);
-      }
-      expPlayers[player.id] = { ...player, team };
-    }
-    setExpandedPlayers(expPlayers);
-  }, [teams, players]);
+  useEffect(() => {}, [teams, players]);
 
   // Reset played teams on right click
   useEffect(() => {
@@ -192,10 +188,6 @@ const BuzzerHost: React.FC = () => {
           );
           break;
         }
-        case "Backspace":
-          setBuzzes([]);
-          setLocation("/");
-          break;
       }
     };
 
@@ -203,7 +195,7 @@ const BuzzerHost: React.FC = () => {
     return () => {
       removeEventListener("keydown", keydownHandler);
     };
-  }, [players, setLocation, teams]);
+  }, [players, teams]);
 
   // Update volume of hidden audio element
   useEffect(() => {

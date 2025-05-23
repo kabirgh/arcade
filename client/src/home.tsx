@@ -11,6 +11,7 @@ import { Channel, MessageType } from "../../shared/types/domain/websocket";
 import PastelBackground from "./components/PastelBackground";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
 import { useAdminAuth } from "./hooks/useAdminAuth";
+import { useListenNavigate } from "./hooks/useListenNavigate";
 import { apiFetch } from "./util/apiFetch";
 
 type TeamSectionProps = {
@@ -72,6 +73,7 @@ const TeamSection = ({ team, onTeamNameConfirm }: TeamSectionProps) => {
 };
 
 export default function Home() {
+  useListenNavigate("host");
   const { subscribe, unsubscribe } = useWebSocketContext();
   const [players, setPlayers] = useState<Player[]>([]);
   const [teams, setTeams] = useState<Team[]>([

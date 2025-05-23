@@ -2,6 +2,7 @@ import "./index.css";
 
 import { Route, Switch } from "wouter";
 
+import { HostScreen, PlayerScreen } from "../../shared/types/domain/misc";
 import Admin from "./admin";
 import Buzzer from "./buzzer";
 import BuzzerHost from "./buzzer-host";
@@ -20,26 +21,26 @@ export function App() {
         <div className="min-h-screen min-w-full mx-auto text-center relative z-10">
           <Switch>
             {/* Player screens */}
-            <Route path="/join">
+            <Route path={PlayerScreen.Join}>
               <Join />
             </Route>
-            <Route path="/buzzer">
+            <Route path={PlayerScreen.Buzzer}>
               <Buzzer />
             </Route>
-            <Route path="/joystick">
+            <Route path={PlayerScreen.Joystick}>
               <Joystick />
             </Route>
             {/* Host screens */}
-            <Route path="/">
+            <Route path={HostScreen.Home}>
               <Home />
             </Route>
-            <Route path="/buzzer-host">
+            <Route path={HostScreen.BuzzerHost}>
               <BuzzerHost />
             </Route>
-            <Route path="/codenames">
+            <Route path={HostScreen.Codenames}>
               <Codenames />
             </Route>
-            <Route path="/pong">
+            <Route path={HostScreen.Pong}>
               <Pong />
             </Route>
             <Route path="/admin">

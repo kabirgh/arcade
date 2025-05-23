@@ -3,6 +3,7 @@ import React, { useEffect, useMemo, useState } from "react";
 
 import { APIRoute, APIRouteToSchema } from "../../shared/types/api/schema";
 import { WebSocketMessageType } from "../../shared/types/api/websocket";
+import { HostScreen, PlayerScreen } from "../../shared/types/domain/misc";
 import { Channel, MessageType } from "../../shared/types/domain/websocket";
 import PastelBackground from "./components/PastelBackground";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
@@ -159,6 +160,26 @@ const AdminPage: React.FC = () => {
     });
   };
 
+  const handleNavigateHostScreen = (hostScreen: HostScreen) => {
+    publish({
+      channel: Channel.ADMIN,
+      messageType: MessageType.HOST_NAVIGATE,
+      payload: {
+        screen: hostScreen,
+      },
+    });
+  };
+
+  const handleNavigatePlayerScreen = (playerScreen: PlayerScreen) => {
+    publish({
+      channel: Channel.ADMIN,
+      messageType: MessageType.PLAYER_NAVIGATE,
+      payload: {
+        screen: playerScreen,
+      },
+    });
+  };
+
   const handleAPIChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedAPI(e.target.value);
   };
@@ -246,8 +267,8 @@ const AdminPage: React.FC = () => {
         </div>
       )}
       {isAuthenticated && (
-        <div className="grid grid-cols-7 h-full gap-4">
-          <div className="col-span-1 flex items-center justify-center">
+        <div className="grid grid-cols-7 h-full w-full gap-4">
+          <div className="col-start-1 col-span-1 flex flex-col items-center justify-center h-full gap-8">
             <button
               className="bg-red-600 text-white p-2 w-32 rounded-md cursor-pointer hover:bg-red-500
                        transition duration-100 ease-in-out active:bg-red-700"
@@ -255,8 +276,45 @@ const AdminPage: React.FC = () => {
             >
               Reset buzzers
             </button>
+            <h4 className="text-lg font-bold">Host navigation</h4>
+            <button
+              className="bg-blue-700 text-white p-2 w-32 rounded-md cursor-pointer hover:bg-blue-600
+                       transition duration-100 ease-in-out active:bg-blue-800"
+              onClick={() => handleNavigateHostScreen(HostScreen.BuzzerHost)}
+            >
+              Buzzer host
+            </button>
+            <button
+              className="bg-blue-700 text-white p-2 w-32 rounded-md cursor-pointer hover:bg-blue-600
+                       transition duration-100 ease-in-out active:bg-blue-800"
+              onClick={() => handleNavigateHostScreen(HostScreen.Pong)}
+            >
+              Pong
+            </button>
+            <button
+              className="bg-blue-700 text-white p-2 w-32 rounded-md cursor-pointer hover:bg-blue-600
+                       transition duration-100 ease-in-out active:bg-blue-800"
+              onClick={() => handleNavigateHostScreen(HostScreen.Codenames)}
+            >
+              Codenames
+            </button>
+            <h4 className="text-lg font-bold">Player navigation</h4>
+            <button
+              className="bg-green-700 text-white p-2 w-32 rounded-md cursor-pointer hover:bg-green-600
+                       transition duration-100 ease-in-out active:bg-green-800"
+              onClick={() => handleNavigatePlayerScreen(PlayerScreen.Buzzer)}
+            >
+              Buzzer
+            </button>
+            <button
+              className="bg-green-700 text-white p-2 w-32 rounded-md cursor-pointer hover:bg-green-600
+                       transition duration-100 ease-in-out active:bg-green-800"
+              onClick={() => handleNavigatePlayerScreen(PlayerScreen.Joystick)}
+            >
+              Joystick
+            </button>
           </div>
-          <div className="col-span-3 text-gray-900 flex flex-col h-full p-6">
+          <div className="col-start-2 col-span-3 text-gray-900 flex flex-col h-full p-6">
             <form onSubmit={handleSubmit} className="flex flex-col h-full">
               <div className="mb-4">
                 <p className="text-md text-left font-bold min-w-[150px] mb-1">
@@ -350,7 +408,7 @@ const AdminPage: React.FC = () => {
             </form>
           </div>
 
-          <div className="col-span-3 h-full p-4 overflow-auto bg-opacity-80">
+          <div className="col-start-5 col-span-3 h-full p-4 overflow-auto bg-opacity-80">
             <h2 className="text-xl font-bold mb-3 text-left">Response Log</h2>
             {logs.length === 0 ? (
               <p className="text-gray-500 text-left">No requests yet</p>

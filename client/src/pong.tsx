@@ -287,7 +287,7 @@ const calculatePaddleLengthsAndCoordinates = (
 
 // 1-4 teams. Each team can have multiple players. Each player has their own mini-paddle.
 const Quadrapong = () => {
-  useListenNavigate("host"); // When server publishes a NavigateMessage, we navigate to a new page
+  useListenNavigate("host");
   const { subscribe, unsubscribe } = useWebSocketContext();
   const playSound = usePongAudio();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);

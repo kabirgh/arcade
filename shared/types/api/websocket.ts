@@ -1,5 +1,6 @@
 import { type Static, t } from "elysia";
 
+import { HostScreenType, PlayerScreenType } from "../domain/misc";
 import { PlayerType } from "../domain/player";
 import { Channel } from "../domain/websocket";
 import { MessageType } from "../domain/websocket";
@@ -61,17 +62,23 @@ export const ClaimHostMessageType = t.Object({
 });
 export type ClaimHostMessage = Static<typeof ClaimHostMessageType>;
 
-const NavigateMessageType = t.Object({
+const NavigatePlayerMessageType = t.Object({
   channel: t.Literal(Channel.ADMIN),
-  messageType: t.Union([
-    t.Literal(MessageType.HOST_NAVIGATE),
-    t.Literal(MessageType.PLAYER_NAVIGATE),
-  ]),
+  messageType: t.Literal(MessageType.PLAYER_NAVIGATE),
   payload: t.Object({
-    url: t.String(),
+    screen: PlayerScreenType,
   }),
 });
-export type NavigateMessage = Static<typeof NavigateMessageType>;
+export type NavigatePlayerMessage = Static<typeof NavigatePlayerMessageType>;
+
+const NavigateHostMessageType = t.Object({
+  channel: t.Literal(Channel.ADMIN),
+  messageType: t.Literal(MessageType.HOST_NAVIGATE),
+  payload: t.Object({
+    screen: HostScreenType,
+  }),
+});
+export type NavigateHostMessage = Static<typeof NavigateHostMessageType>;
 
 export const WebSocketMessageType = t.Union([
   PlayerListAllMessageType,
@@ -81,7 +88,8 @@ export const WebSocketMessageType = t.Union([
   BuzzerResetMessageType,
   JoystickMoveMessageType,
   ClaimHostMessageType,
-  NavigateMessageType,
+  NavigatePlayerMessageType,
+  NavigateHostMessageType,
 ]);
 export type WebSocketMessage = Static<typeof WebSocketMessageType>;
 

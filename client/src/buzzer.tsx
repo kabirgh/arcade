@@ -5,8 +5,10 @@ import ConnectionStatusPill from "./components/ConnectionStatusPill";
 import PastelBackground from "./components/PastelBackground";
 import { usePlayerContext } from "./contexts/PlayerContext";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
+import { useListenNavigate } from "./hooks/useListenNavigate";
 
 export default function Buzzer() {
+  useListenNavigate("player");
   const { publish } = useWebSocketContext();
   const { sessionPlayer } = usePlayerContext();
 

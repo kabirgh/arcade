@@ -7,6 +7,7 @@ import {
   type GameState,
 } from "../../shared/types/domain/codenames";
 import { Markdown } from "./components/Markdown";
+import { useListenNavigate } from "./hooks/useListenNavigate";
 import { apiFetch } from "./util/apiFetch";
 
 const UNSELECTED_CARD_STYLES = {
@@ -63,6 +64,7 @@ const TeamWordsList: React.FC<TeamWordsListProps> = ({
 
 // TODO: game over screen
 export const Codenames = () => {
+  useListenNavigate("host");
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

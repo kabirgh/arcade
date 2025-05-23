@@ -254,7 +254,7 @@ export default function JoinScreen() {
       setSessionPlayer(player);
 
       // Navigate to buzzer screen
-      setLocation("/buzzer");
+      setLocation(PlayerScreen.Buzzer);
     }
   };
 

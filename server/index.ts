@@ -59,6 +59,13 @@ const handleWebSocketMessage = (ws: ElysiaWS, message: WebSocketMessage) => {
           console.log("Claiming host:", ws.id);
           db.hostWs = ws;
           break;
+        case MessageType.HOST_NAVIGATE:
+          sendHostMessage(message);
+          break;
+        case MessageType.PLAYER_NAVIGATE:
+          db.screen = message.payload.screen;
+          broadcast(message);
+          break;
       }
       break;
 

@@ -20,6 +20,7 @@ type PongPlayer = {
   y: number;
   dx: number;
   dy: number;
+  paddleLength: number;
   id: string;
   name: string;
   avatar: Avatar;
@@ -141,6 +142,7 @@ const DEFAULT_PLAYERS: PongPlayer[] = [
     y: POSITION_TO_DEFAULT_XY.top.y,
     dx: 0,
     dy: 0,
+    paddleLength: PADDLE_LENGTH,
     id: "top_1",
     name: "top",
     avatar: Avatar.Icecream,
@@ -148,10 +150,11 @@ const DEFAULT_PLAYERS: PongPlayer[] = [
     position: "top",
   },
   {
-    x: POSITION_TO_DEFAULT_XY.bottom.x - PADDLE_LENGTH - 10,
+    x: POSITION_TO_DEFAULT_XY.bottom.x,
     y: POSITION_TO_DEFAULT_XY.bottom.y,
     dx: 0,
     dy: 0,
+    paddleLength: PADDLE_LENGTH,
     id: "bottom_1",
     name: "bottom",
     avatar: Avatar.Book,
@@ -159,10 +162,11 @@ const DEFAULT_PLAYERS: PongPlayer[] = [
     position: "bottom",
   },
   {
-    x: POSITION_TO_DEFAULT_XY.bottom.x + PADDLE_LENGTH + 10,
+    x: POSITION_TO_DEFAULT_XY.bottom.x,
     y: POSITION_TO_DEFAULT_XY.bottom.y,
     dx: 0,
     dy: 0,
+    paddleLength: PADDLE_LENGTH,
     id: "bottom_2",
     name: "bottom2",
     avatar: Avatar.Spikyball,
@@ -174,6 +178,7 @@ const DEFAULT_PLAYERS: PongPlayer[] = [
     y: POSITION_TO_DEFAULT_XY.left.y,
     dx: 0,
     dy: 0,
+    paddleLength: PADDLE_LENGTH,
     id: "left_1",
     name: "left",
     avatar: Avatar.Cap,
@@ -185,6 +190,7 @@ const DEFAULT_PLAYERS: PongPlayer[] = [
     y: POSITION_TO_DEFAULT_XY.right.y,
     dx: 0,
     dy: 0,
+    paddleLength: PADDLE_LENGTH,
     id: "right_1",
     name: "right",
     avatar: Avatar.Bulb,
@@ -254,6 +260,34 @@ const DEFAULT_WALLS: Wall[] = [
 
 // Create the throttled log function outside the component to prevent recreation on each render
 const log5s = createThrottledLog(5000);
+
+// Calculate paddle lengths and positions based on the number of players on the team
+const calculatePaddleLengthsAndCoordinates = (
+  numPlayers: number
+): { paddleLength: number; coordinates: number[] } => {
+  // Custom paddle lengths for different numbers of players
+  // multiplying lengths: approx inrease by 10px for total size. 80, 90, 100, 110, 120, 130
+  const paddleLengths = [80, 45, 33, 28, 24, 22];
+  const paddleLength =
+    paddleLengths[Math.min(numPlayers - 1, paddleLengths.length - 1)];
+
+  // space evenly: paddles are distributed so that the spacing between any two paddles (and the space to the edges) is equal
+  const availableSpace =
+    CANVAS_SIZE -
+    paddleLength * numPlayers -
+    2 * WALL_OFFSET -
+    2 * WALL_THICKNESS;
+  const spacePerGap = availableSpace / (numPlayers + 1);
+
+  const coordinates = [];
+  for (let i = 0; i < numPlayers; i++) {
+    coordinates.push(
+      (i + 1) * spacePerGap + i * paddleLength + WALL_OFFSET + WALL_THICKNESS
+    );
+  }
+
+  return { paddleLength, coordinates };
+};
 
 // 1-4 teams. Each team can have multiple players. Each player has their own mini-paddle.
 const Quadrapong = () => {
@@ -335,12 +369,37 @@ const Quadrapong = () => {
     stateRef.current.walls.push(newWall!);
   }, []);
 
+  const setPaddleLengthsAndCoordinates = useCallback(
+    (players: PongPlayer[]) => {
+      const teamToPlayers = players.reduce((acc, player) => {
+        acc[player.teamId] = [...(acc[player.teamId] || []), player];
+        return acc;
+      }, {} as Record<string, PongPlayer[]>);
+
+      for (const teamId in teamToPlayers) {
+        const players = teamToPlayers[teamId];
+        const c = ["left", "right"].includes(players[0].position) ? "y" : "x";
+        const { paddleLength, coordinates } =
+          calculatePaddleLengthsAndCoordinates(players.length);
+
+        for (let i = 0; i < players.length; i++) {
+          players[i].paddleLength = paddleLength;
+          players[i][c] = coordinates[i];
+        }
+      }
+    },
+    []
+  );
+
   // Get teams & players from backend
   useEffect(() => {
     if (DEBUG) {
       stateRef.current.teams = structuredClone(DEFAULT_TEAMS);
       stateRef.current.players = structuredClone(DEFAULT_PLAYERS);
-      setNumActiveTeams(4);
+
+      setPaddleLengthsAndCoordinates(stateRef.current.players);
+
+      setNumActiveTeams(DEFAULT_TEAMS.length);
       setLoading(false);
       return;
     }
@@ -385,21 +444,24 @@ const Quadrapong = () => {
           const defaultPosition = teamIdToDefaultPosition[p.teamId];
           return {
             ...p,
-            // TODO space paddles correctly
-            x: defaultPosition.x,
-            y: defaultPosition.y,
             dx: 0,
             dy: 0,
             position: defaultPosition.position,
+            // x, y, paddleLength are overwritten in setPaddleLengthsAndCoordinates
+            x: 0,
+            y: 0,
+            paddleLength: 200,
           };
         });
+        setPaddleLengthsAndCoordinates(stateRef.current.players);
+
         setLoading(false);
         console.log("Loaded players", stateRef.current.players);
       })
       .catch((err) => {
         console.error(err);
       });
-  }, []);
+  }, [setPaddleLengthsAndCoordinates]);
 
   // If user changes the starting lives, update the teams
   // It should be impossible to change the starting lives while the game is running
@@ -462,12 +524,12 @@ const Quadrapong = () => {
           const x1 = playersOfTeam[start].x;
           const x2 = x1 + PADDLE_THICKNESS;
           const y1 = playersOfTeam[start].y;
-          const y2 = playersOfTeam[end].y + PADDLE_LENGTH;
+          const y2 = playersOfTeam[end].y + playersOfTeam[end].paddleLength;
           effectivePaddles.push([x1, x2, y1, y2]);
         } else {
           // For horizontal paddles, y is fixed, x varies
           const x1 = playersOfTeam[start].x;
-          const x2 = playersOfTeam[end].x + PADDLE_LENGTH;
+          const x2 = playersOfTeam[end].x + playersOfTeam[end].paddleLength;
           const y1 = playersOfTeam[start].y;
           const y2 = y1 + PADDLE_THICKNESS;
           effectivePaddles.push([x1, x2, y1, y2]);
@@ -481,7 +543,7 @@ const Quadrapong = () => {
       for (let i = 1; i < playersOfTeam.length; i++) {
         const player = playersOfTeam[i];
         const prevPlayer = playersOfTeam[i - 1];
-        if (prevPlayer[c] + PADDLE_LENGTH >= player[c]) {
+        if (prevPlayer[c] + prevPlayer.paddleLength >= player[c]) {
           // This paddle overlaps with the previous paddle
           overlapEndIndex = i;
         } else {
@@ -645,7 +707,7 @@ const Quadrapong = () => {
       player[c] = Math.max(
         PADDLE_STOP,
         Math.min(
-          CANVAS_SIZE - PADDLE_LENGTH - PADDLE_STOP,
+          CANVAS_SIZE - player.paddleLength - PADDLE_STOP,
           player[c] + player[dc] * deltaTime * JOYSTICK_SENSITIVITY
         )
       );
@@ -670,7 +732,7 @@ const Quadrapong = () => {
           break;
         case "KeyD":
           bottomPlayers[0].x = Math.min(
-            CANVAS_SIZE - PADDLE_LENGTH - PADDLE_STOP,
+            CANVAS_SIZE - bottomPlayers[0].paddleLength - PADDLE_STOP,
             bottomPlayers[0].x + 20
           );
           break;
@@ -679,7 +741,7 @@ const Quadrapong = () => {
           break;
         case "ArrowRight":
           bottomPlayers[1].x = Math.min(
-            CANVAS_SIZE - PADDLE_LENGTH - PADDLE_STOP,
+            CANVAS_SIZE - bottomPlayers[1].paddleLength - PADDLE_STOP,
             bottomPlayers[1].x + 20
           );
           break;
@@ -871,9 +933,19 @@ const Quadrapong = () => {
         // Draw player paddle
         ctx.fillStyle = playerTeam.color;
         if (player.position === "left" || player.position === "right") {
-          ctx.fillRect(player.x, player.y, PADDLE_THICKNESS, PADDLE_LENGTH);
+          ctx.fillRect(
+            player.x,
+            player.y,
+            PADDLE_THICKNESS,
+            player.paddleLength
+          );
         } else {
-          ctx.fillRect(player.x, player.y, PADDLE_LENGTH, PADDLE_THICKNESS);
+          ctx.fillRect(
+            player.x,
+            player.y,
+            player.paddleLength,
+            PADDLE_THICKNESS
+          );
         }
 
         // Draw player lives (Team lives)
@@ -989,27 +1061,20 @@ const Quadrapong = () => {
   const start = useCallback(() => {
     const state = stateRef.current;
 
-    // Reset teams lives and type for a new game
-    const newTeams = structuredClone(DEFAULT_TEAMS);
-    for (const team of newTeams) {
+    // Reset teams lives for a new game
+    for (const team of state.teams) {
       team.lives = startingLives;
+      team.type = "active";
     }
-
-    // Reset players to their initial positions based on their designated 'position'
-    const newPlayers = structuredClone(DEFAULT_PLAYERS).map((p) => {
-      return {
-        ...p,
-        x: POSITION_TO_DEFAULT_XY[p.position].x,
-        y: POSITION_TO_DEFAULT_XY[p.position].y,
-      };
-    });
+    // Reset players to their initial positions
+    setPaddleLengthsAndCoordinates(state.players);
 
     stateRef.current = {
       ...state, // Keep lastTick, etc.
       phase: "in_progress",
       walls: structuredClone(DEFAULT_WALLS),
-      teams: newTeams,
-      players: newPlayers,
+      teams: state.teams,
+      players: state.players,
       ball: {
         // Reset ball
         x: CANVAS_SIZE / 2,
@@ -1028,7 +1093,7 @@ const Quadrapong = () => {
         makeWall(team.position);
       }
     }
-  }, [makeWall, startingLives, initialAngle]);
+  }, [setPaddleLengthsAndCoordinates, initialAngle, startingLives, makeWall]);
 
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-gray-950">

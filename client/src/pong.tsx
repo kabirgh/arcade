@@ -1,14 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useLocation } from "wouter";
 
 import { APIRoute } from "../../shared/types/api/schema";
 import type { WebSocketMessage } from "../../shared/types/api/websocket";
 import { Avatar, Color } from "../../shared/types/domain/player";
 import { Channel, MessageType } from "../../shared/types/domain/websocket";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
+import { useListenNavigate } from "./hooks/useListenNavigate";
 import usePongAudio from "./hooks/usePongAudio";
 import { apiFetch } from "./util/apiFetch";
-import { createThrottledLog } from "./util/throttledLog";
 
 const DEBUG = true;
 
@@ -258,9 +257,6 @@ const DEFAULT_WALLS: Wall[] = [
   },
 ];
 
-// Create the throttled log function outside the component to prevent recreation on each render
-const log5s = createThrottledLog(5000);
-
 // Calculate paddle lengths and positions based on the number of players on the team
 const calculatePaddleLengthsAndCoordinates = (
   numPlayers: number
@@ -291,7 +287,7 @@ const calculatePaddleLengthsAndCoordinates = (
 
 // 1-4 teams. Each team can have multiple players. Each player has their own mini-paddle.
 const Quadrapong = () => {
-  // const [, setLocation] = useLocation();
+  useListenNavigate("host"); // When server publishes a NavigateMessage, we navigate to a new page
   const { subscribe, unsubscribe } = useWebSocketContext();
   const playSound = usePongAudio();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -558,10 +554,6 @@ const Quadrapong = () => {
       // Handle the final group of paddles
       if (playersOfTeam.length > 0) {
         addEffectivePaddle(overlapStartIndex, overlapEndIndex);
-      }
-
-      if (position === "bottom") {
-        log5s("effectivePaddles for bottom team", effectivePaddles);
       }
 
       // For each effective paddle, check if the ball is colliding with it

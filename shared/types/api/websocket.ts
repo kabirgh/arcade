@@ -54,13 +54,25 @@ export const JoystickMoveMessageType = t.Object({
 });
 export type JoystickMoveMessage = Static<typeof JoystickMoveMessageType>;
 
-const ClaimHostMessageType = t.Object({
+export const ClaimHostMessageType = t.Object({
   channel: t.Literal(Channel.ADMIN),
   messageType: t.Literal(MessageType.CLAIM_HOST),
   // No payload, server looks at websocket id to set host
 });
-
 export type ClaimHostMessage = Static<typeof ClaimHostMessageType>;
+
+const NavigateMessageType = t.Object({
+  channel: t.Literal(Channel.ADMIN),
+  messageType: t.Union([
+    t.Literal(MessageType.HOST_NAVIGATE),
+    t.Literal(MessageType.PLAYER_NAVIGATE),
+  ]),
+  payload: t.Object({
+    url: t.String(),
+  }),
+});
+export type NavigateMessage = Static<typeof NavigateMessageType>;
+
 export const WebSocketMessageType = t.Union([
   PlayerListAllMessageType,
   PlayerJoinMessageType,
@@ -69,6 +81,7 @@ export const WebSocketMessageType = t.Union([
   BuzzerResetMessageType,
   JoystickMoveMessageType,
   ClaimHostMessageType,
+  NavigateMessageType,
 ]);
 export type WebSocketMessage = Static<typeof WebSocketMessageType>;
 

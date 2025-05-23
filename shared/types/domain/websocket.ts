@@ -17,4 +17,6 @@ export enum MessageType {
   MOVE = "MOVE",
   // Admin channel
   CLAIM_HOST = "CLAIM_HOST",
+  HOST_NAVIGATE = "HOST_NAVIGATE",
+  PLAYER_NAVIGATE = "PLAYER_NAVIGATE",
 }

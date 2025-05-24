@@ -606,8 +606,6 @@ const Quadrapong = () => {
         return;
       }
 
-      console.log("joystick move", message);
-
       const { playerId, angle, force } = message.payload;
       const player = stateRef.current.players.find((p) => p.id === playerId);
       if (!player) {
@@ -615,12 +613,14 @@ const Quadrapong = () => {
         return;
       }
 
+      // Apply cubic response curve for more precise control
+      // Small movements become more precise, large movements remain responsive
+      const cubicForce = force * force * force;
+
       // Convert polar coordinates to velocity
       // Angle of 0 = right
-      player.dx = force * Math.cos(angle) * JOYSTICK_SENSITIVITY;
-      // player.dy = force * Math.sin(angle) * JOYSTICK_SENSITIVITY;
-      console.log("playerId", playerId, "angle", angle, "force", force);
-      console.log("player dx", player.dx, "dy", player.dy);
+      player.dx = cubicForce * Math.cos(angle) * JOYSTICK_SENSITIVITY;
+      player.dy = cubicForce * Math.sin(angle) * JOYSTICK_SENSITIVITY;
     });
 
     return () => unsubscribe(Channel.JOYSTICK);
@@ -878,8 +878,7 @@ const Quadrapong = () => {
 
       // Calculate new position based on velocity
       const newPosition =
-        player[coordinateKey] +
-        player[velocityKey] * deltaTime * JOYSTICK_SENSITIVITY;
+        player[coordinateKey] + player[velocityKey] * deltaTime;
 
       // Constrain paddle within bounds
       player[coordinateKey] = Math.max(
@@ -930,6 +929,7 @@ const Quadrapong = () => {
       const { ball, players, walls, teams } = stateRef.current;
 
       if (stateRef.current.phase !== "in_progress") {
+        movePlayers(deltaTime);
         return;
       }
 
@@ -1018,7 +1018,7 @@ const Quadrapong = () => {
         // Pause before firing ball again
         setTimeout(() => {
           // TODO: Make this random again after testing
-          const randomAngle = Math.PI / 2; // straight right for testing
+          const randomAngle = 0; // straight down for testing
           ball.x = CANVAS_SIZE / 2;
           ball.y = CANVAS_SIZE / 2;
           ball.dx = INITIAL_BALL_SPEED * Math.sin(randomAngle);

@@ -18,6 +18,14 @@ type JoystickMoveData = {
   force: number;
 };
 
+// Helper function to convert vmin to pixels
+const vminToPixels = (vmin: number): number => {
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const minDimension = Math.min(vw, vh);
+  return (vmin / 100) * minDimension;
+};
+
 export default function Joystick() {
   useListenNavigate("player");
   const { publish } = useWebSocketContext();
@@ -34,20 +42,20 @@ export default function Joystick() {
     angle: -1,
     force: -1,
   });
-  const [joystickSize, setJoystickSize] = useState<number>(0);
+  const [joystickSize, setJoystickSize] = useState<number>(vminToPixels(50));
 
-  // Calculate 40vmin in pixels
-  useEffect(() => {
-    const calculateSize = () => {
-      const vmin = Math.min(window.innerWidth, window.innerHeight) * 0.4;
-      setJoystickSize(vmin);
-    };
+  // Calculate min and max sizes in pixels
+  const minSizePx = vminToPixels(10);
+  const maxSizePx = vminToPixels(90);
+  const deltaSizePx = vminToPixels(10);
 
-    calculateSize();
-    window.addEventListener("resize", calculateSize);
+  const increaseSize = () => {
+    setJoystickSize((prev) => Math.min(prev + deltaSizePx, maxSizePx));
+  };
 
-    return () => window.removeEventListener("resize", calculateSize);
-  }, []);
+  const decreaseSize = () => {
+    setJoystickSize((prev) => Math.max(prev - deltaSizePx, minSizePx));
+  };
 
   useEffect(() => {
     if (sessionPlayer) {
@@ -100,7 +108,7 @@ export default function Joystick() {
       const manager = nipplejs.create({
         zone: joystickContainerRef.current,
         mode: "static" as const,
-        position: { left: "50%", top: "67%" },
+        position: { left: "50%", top: "90%" },
         color: "black",
         fadeTime: 50,
         restOpacity: 0.8,
@@ -133,9 +141,30 @@ export default function Joystick() {
   }, [publish, joystickSize]);
 
   return (
-    <div className="flex flex-col items-center justify-center h-screen relative overflow-hidden">
+    <div className="flex flex-col items-center justify-center h-screen relative overflow-hidden select-none">
       <PastelBackground />
       <ConnectionStatusPill />
+
+      {/* Joystick Size Controls */}
+      <div className="absolute top-[15%] left-1/2 transform -translate-x-1/2 z-10">
+        <div className="flex items-center gap-8 bg-white/20 backdrop-blur-sm rounded-full px-4 py-2 shadow-sm">
+          <button
+            onClick={decreaseSize}
+            disabled={joystickSize <= minSizePx}
+            className="w-8 h-8 rounded-full bg-white/30 hover:bg-white/50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-gray-800 font-bold transition-colors"
+          >
+            −
+          </button>
+          <button
+            onClick={increaseSize}
+            disabled={joystickSize >= maxSizePx}
+            className="w-8 h-8 rounded-full bg-white/30 hover:bg-white/50 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center text-gray-800 font-bold transition-colors"
+          >
+            +
+          </button>
+        </div>
+      </div>
+
       <div
         ref={joystickContainerRef}
         className="flex items-center justify-center w-[80vmin] h-[80vmin] relative"

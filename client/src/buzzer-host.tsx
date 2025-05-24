@@ -29,9 +29,11 @@ type Buzz = {
   timestamp: number;
 };
 
-const getPlayersWithDistinctTeams = (players: Player[]): Player[] => {
+const getPlayersWithDistinctTeams = (
+  players: ExpandedPlayer[]
+): ExpandedPlayer[] => {
   const seenTeamNames: Set<string> = new Set();
-  const playersToReturn: Player[] = [];
+  const playersToReturn: ExpandedPlayer[] = [];
   for (const player of players) {
     if (!seenTeamNames.has(player.teamId)) {
       playersToReturn.push(player);
@@ -45,7 +47,6 @@ const BuzzerHost: React.FC = () => {
   useListenNavigate("host");
   const { subscribe, unsubscribe } = useWebSocketContext();
   const playSound = useWebAudio();
-  const [players, setPlayers] = useState<Player[]>([]);
   const [expandedPlayers, setExpandedPlayers] = useState<
     Record<string, ExpandedPlayer>
   >({}); // id -> player
@@ -85,7 +86,6 @@ const BuzzerHost: React.FC = () => {
   useEffect(() => {
     Promise.all([apiFetch(APIRoute.ListPlayers), apiFetch(APIRoute.ListTeams)])
       .then(([{ players: ps }, { teams: ts }]) => {
-        setPlayers(ps);
         setTeams(ts);
         return { ts, ps };
       })
@@ -104,22 +104,6 @@ const BuzzerHost: React.FC = () => {
         console.error("Failed to fetch players and/or teams:", error);
       });
   }, []);
-
-  // Subscribe to player list updates
-  useEffect(() => {
-    subscribe(Channel.PLAYER, (message: WebSocketMessage) => {
-      console.log("Received message on player channel:", message);
-      if (message.messageType === MessageType.LIST) {
-        setPlayers(message.payload as Player[]);
-      }
-    });
-
-    return () => {
-      if (unsubscribe) {
-        unsubscribe(Channel.PLAYER);
-      }
-    };
-  }, [subscribe, unsubscribe]);
 
   // Listen to buzzer presses & reset commands
   useEffect(() => {
@@ -141,7 +125,7 @@ const BuzzerHost: React.FC = () => {
     };
   }, [handlePlayerBuzzerPress, subscribe, unsubscribe]);
 
-  useEffect(() => {}, [teams, players]);
+  useEffect(() => {}, [teams]);
 
   // Reset played teams on right click
   useEffect(() => {
@@ -165,7 +149,9 @@ const BuzzerHost: React.FC = () => {
           setBuzzes([]);
           break;
         case "KeyS": {
-          const distinctPlayers = getPlayersWithDistinctTeams(players);
+          const distinctPlayers = getPlayersWithDistinctTeams(
+            Object.values(expandedPlayers)
+          );
           setBuzzes(
             distinctPlayers.map((p, idx) => ({
               playerId: p.id,
@@ -182,7 +168,7 @@ const BuzzerHost: React.FC = () => {
     return () => {
       removeEventListener("keydown", keydownHandler);
     };
-  }, [players, teams]);
+  }, [expandedPlayers, teams]);
 
   const rowSize = useMemo(() => 100.0 / teams.length, [teams]);
   const cardSize = useMemo(() => 0.9 * rowSize, [rowSize]);

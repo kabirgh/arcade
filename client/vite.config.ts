@@ -12,5 +12,6 @@ export default defineConfig({
         changeOrigin: true,
       },
     },
+    host: true, // bind to all interfaces including 0.0.0.0
   },
 });

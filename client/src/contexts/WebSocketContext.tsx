@@ -69,7 +69,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
     },
   });
 
-  // Effect to handle incoming messages from react-use-websocket
+  // Handle incoming messages from react-use-websocket
   useEffect(() => {
     const date = new Date().toISOString();
     if (lastMessage && lastMessage.data) {
@@ -100,7 +100,7 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
         console.error(`[${date}] Error parsing WebSocket message:`, err);
       }
     }
-  }, [lastMessage]); // removed channels.current from dep array as it's a ref
+  }, [lastMessage]);
 
   // Subscribe to a channel
   const subscribe = useCallback(

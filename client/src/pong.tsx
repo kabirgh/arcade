@@ -5,6 +5,7 @@ import type { WebSocketMessage } from "../../shared/types/api/websocket";
 import { Avatar, Color } from "../../shared/types/domain/player";
 import { Channel, MessageType } from "../../shared/types/domain/websocket";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
+import { useAdminAuth } from "./hooks/useAdminAuth";
 import { useListenNavigate } from "./hooks/useListenNavigate";
 import useWebAudio from "./hooks/useWebAudio";
 import { apiFetch } from "./util/apiFetch";
@@ -410,6 +411,8 @@ const isBallOutOfBounds = (ball: Ball, position: Position): boolean => {
  */
 const Quadrapong = () => {
   useListenNavigate("host");
+  // TODO: use value of isAuthenticated?
+  useAdminAuth({ claimHost: true });
   const { subscribe, unsubscribe } = useWebSocketContext();
   const playSound = useWebAudio();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -577,6 +580,7 @@ const Quadrapong = () => {
           };
         });
         stateRef.current.players = setPaddleLengthsAndCoordinates(ps);
+        console.log("Loaded players", stateRef.current.players);
 
         setLoading(false);
       })
@@ -602,6 +606,8 @@ const Quadrapong = () => {
         return;
       }
 
+      console.log("joystick move", message);
+
       const { playerId, angle, force } = message.payload;
       const player = stateRef.current.players.find((p) => p.id === playerId);
       if (!player) {
@@ -611,9 +617,10 @@ const Quadrapong = () => {
 
       // Convert polar coordinates to velocity
       // Angle of 0 = right
-      console.log("playerId", playerId, "angle", angle, "force", force);
       player.dx = force * Math.cos(angle) * JOYSTICK_SENSITIVITY;
-      player.dy = force * Math.sin(angle) * JOYSTICK_SENSITIVITY;
+      // player.dy = force * Math.sin(angle) * JOYSTICK_SENSITIVITY;
+      console.log("playerId", playerId, "angle", angle, "force", force);
+      console.log("player dx", player.dx, "dy", player.dy);
     });
 
     return () => unsubscribe(Channel.JOYSTICK);
@@ -1011,7 +1018,7 @@ const Quadrapong = () => {
         // Pause before firing ball again
         setTimeout(() => {
           // TODO: Make this random again after testing
-          const randomAngle = 0; // straight down for testing
+          const randomAngle = Math.PI / 2; // straight right for testing
           ball.x = CANVAS_SIZE / 2;
           ball.y = CANVAS_SIZE / 2;
           ball.dx = INITIAL_BALL_SPEED * Math.sin(randomAngle);

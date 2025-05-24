@@ -100,5 +100,6 @@ export const usePlayerContext = () => {
   if (context === undefined) {
     throw new Error("usePlayerContext must be used within a PlayerProvider");
   }
+  console.log("usePlayerContext sessionPlayer", context.sessionPlayer);
   return context;
 };

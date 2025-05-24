@@ -45,6 +45,7 @@ const getPlayersWithDistinctTeams = (
 
 const BuzzerHost: React.FC = () => {
   useListenNavigate("host");
+  const { isAuthenticated } = useAdminAuth({ claimHost: true });
   const { subscribe, unsubscribe } = useWebSocketContext();
   const playSound = useWebAudio();
   const [expandedPlayers, setExpandedPlayers] = useState<
@@ -54,7 +55,6 @@ const BuzzerHost: React.FC = () => {
   const [buzzes, setBuzzes] = useState<Buzz[]>([]);
   const teamRowRef = useRef<HTMLElement>(null);
   const rect = useClientRect(teamRowRef);
-  const { isAuthenticated } = useAdminAuth({ claimHost: true });
 
   // Update UI and play sound when a team presses the buzzer
   const handlePlayerBuzzerPress = useCallback(

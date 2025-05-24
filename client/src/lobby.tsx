@@ -63,7 +63,7 @@ const TeamSection = ({
               className="w-12 h-12 rounded-full object-cover"
               style={{
                 animation: buzzingPlayers.has(player.id)
-                  ? "hop 0.3s ease-out"
+                  ? "hop 0.1s ease-out"
                   : undefined,
               }}
             />
@@ -102,17 +102,18 @@ const TeamSection = ({
   );
 };
 
+// Add custom hop animation styles
+const hopAnimationStyle = `
+@keyframes hop {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+`;
+
 export default function Home() {
   useListenNavigate("host");
   const { subscribe, unsubscribe } = useWebSocketContext();
-
-  // Add custom hop animation styles
-  const hopAnimationStyle = `
-    @keyframes hop {
-      0%, 100% { transform: translateY(0) scale(1); }
-      50% { transform: translateY(-8px) scale(1.1); }
-    }
-  `;
+  const { isAuthenticated } = useAdminAuth({ claimHost: true });
   const [players, setPlayers] = useState<Player[]>([]);
   const [buzzingPlayers, setBuzzingPlayers] = useState<Set<string>>(new Set());
   const [teams, setTeams] = useState<Team[]>([
@@ -122,7 +123,6 @@ export default function Home() {
     { id: "3", name: "", color: Color.Green },
     { id: "4", name: "", color: Color.Yellow },
   ]);
-  const { isAuthenticated } = useAdminAuth({ claimHost: true });
 
   useEffect(() => {
     apiFetch(APIRoute.ListPlayers).then(({ players }) => {

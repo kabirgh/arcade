@@ -12,5 +12,6 @@ export enum HostScreen {
   BuzzerHost = "/buzzer-host",
   Codenames = "/codenames",
   Pong = "/pong",
+  Boat = "/boat",
 }
 export const HostScreenType = t.Enum(HostScreen);

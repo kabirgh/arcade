@@ -4,6 +4,7 @@ import { Route, Switch } from "wouter";
 
 import { HostScreen, PlayerScreen } from "../../shared/types/domain/misc";
 import Admin from "./admin";
+import Boat from "./boat";
 import Buzzer from "./buzzer";
 import BuzzerHost from "./buzzer-host";
 import Codenames from "./codenames";
@@ -42,6 +43,9 @@ export function App() {
             </Route>
             <Route path={HostScreen.Pong}>
               <Pong />
+            </Route>
+            <Route path={HostScreen.Boat}>
+              <Boat />
             </Route>
             <Route path="/admin">
               <Admin />

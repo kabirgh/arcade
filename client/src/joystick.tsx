@@ -18,6 +18,9 @@ type JoystickMoveData = {
   force: number;
 };
 
+// Define how much larger the container should be than the joystick (total extra size in vmin)
+const CONTAINER_PADDING_TOTAL_VMIN = 12;
+
 // Helper function to convert vmin to pixels
 const vminToPixels = (vmin: number): number => {
   const vw = window.innerWidth;
@@ -48,6 +51,8 @@ export default function Joystick() {
   const minSizePx = vminToPixels(10);
   const maxSizePx = vminToPixels(90);
   const deltaSizePx = vminToPixels(10);
+  const containerExtraSizePx = vminToPixels(CONTAINER_PADDING_TOTAL_VMIN);
+  const joystickContainerDimension = joystickSize + containerExtraSizePx;
 
   const increaseSize = () => {
     setJoystickSize((prev) => Math.min(prev + deltaSizePx, maxSizePx));
@@ -108,7 +113,7 @@ export default function Joystick() {
       const manager = nipplejs.create({
         zone: joystickContainerRef.current,
         mode: "static" as const,
-        position: { left: "50%", top: "90%" },
+        position: { left: "50%", top: "50%" },
         color: "black",
         fadeTime: 50,
         restOpacity: 0.8,
@@ -167,8 +172,15 @@ export default function Joystick() {
 
       <div
         ref={joystickContainerRef}
-        className="flex items-center justify-center w-[80vmin] h-[80vmin] relative"
-        style={{ touchAction: "none" }} // Important for touch interactions
+        className="absolute flex items-center justify-center"
+        style={{
+          touchAction: "none",
+          width: `${joystickContainerDimension}px`,
+          height: `${joystickContainerDimension}px`,
+          top: "70%",
+          left: "50%",
+          transform: "translate(-50%, -50%)",
+        }}
       >
         {/* The joystick will be created here by nipplejs */}
       </div>

@@ -4,6 +4,7 @@ import { APIRoute } from "../../shared/types/api/schema";
 import type { WebSocketMessage } from "../../shared/types/api/websocket";
 import { Avatar, Color } from "../../shared/types/domain/player";
 import { Channel, MessageType } from "../../shared/types/domain/websocket";
+import { avatarToPath } from "../../shared/utils";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
 import { useAdminAuth } from "./hooks/useAdminAuth";
 import { useListenNavigate } from "./hooks/useListenNavigate";
@@ -416,6 +417,7 @@ const Quadrapong = () => {
   const { subscribe, unsubscribe } = useWebSocketContext();
   const playSound = useWebAudio();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const avatarImagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
   const [startingLives, setStartingLives] = useState(STARTING_LIVES);
   const [loading, setLoading] = useState(true);
   const [numActiveTeams, setNumActiveTeams] = useState(0);
@@ -431,6 +433,22 @@ const Quadrapong = () => {
     ball: { x: CANVAS_SIZE / 2, y: CANVAS_SIZE / 2, dx: 0, dy: 0 },
     gameOverText: "",
   });
+
+  // Load avatar images
+  const loadAvatarImages = useCallback((players: PongPlayer[]) => {
+    const uniqueAvatars = [...new Set(players.map((p) => p.avatar))];
+
+    uniqueAvatars.forEach((avatar) => {
+      if (!avatarImagesRef.current.has(avatar)) {
+        const img = new Image();
+        img.src = avatarToPath(avatar);
+        img.onload = () => {
+          avatarImagesRef.current.set(avatar, img);
+          setRenderTrigger({}); // Trigger re-render when image loads
+        };
+      }
+    });
+  }, []);
 
   const makeWall = useCallback((position: Position) => {
     const { teams, walls } = stateRef.current;
@@ -500,6 +518,7 @@ const Quadrapong = () => {
       stateRef.current.players = setPaddleLengthsAndCoordinates(
         structuredClone(DEFAULT_PLAYERS)
       );
+      loadAvatarImages(stateRef.current.players);
 
       setNumActiveTeams(DEFAULT_TEAMS.length);
       setLoading(false);
@@ -581,13 +600,14 @@ const Quadrapong = () => {
         });
         stateRef.current.players = setPaddleLengthsAndCoordinates(ps);
         console.log("Loaded players", stateRef.current.players);
+        loadAvatarImages(stateRef.current.players);
 
         setLoading(false);
       })
       .catch((err) => {
         console.error("Failed to load teams/players:", err);
       });
-  }, [setPaddleLengthsAndCoordinates, makeWall]);
+  }, [setPaddleLengthsAndCoordinates, makeWall, loadAvatarImages]);
 
   // =================== GAME STATE MANAGEMENT ===================
   // Update team lives when starting lives changes
@@ -1061,8 +1081,8 @@ const Quadrapong = () => {
           continue;
         }
 
-        // TODO: draw player avatar
         drawPaddle(ctx, player, playerTeam);
+        drawAvatar(ctx, player);
         drawTeamLives(ctx, playerTeam);
       }
     };
@@ -1078,6 +1098,42 @@ const Quadrapong = () => {
       } else {
         ctx.fillRect(player.x, player.y, player.paddleLength, PADDLE_THICKNESS);
       }
+    };
+
+    const drawAvatar = (ctx: CanvasRenderingContext2D, player: PongPlayer) => {
+      const avatarImg = avatarImagesRef.current.get(player.avatar);
+      if (!avatarImg) return; // Image not loaded yet
+
+      const avatarSize = 24; // Size of the avatar image
+      let avatarX: number;
+      let avatarY: number;
+
+      // Position avatar "underneath" paddle based on position
+      switch (player.position) {
+        case "left":
+          // Avatar to the left of paddle
+          avatarX = player.x - avatarSize - 4;
+          avatarY = player.y + player.paddleLength / 2 - avatarSize / 2;
+          break;
+        case "right":
+          // Avatar to the right of paddle
+          avatarX = player.x + PADDLE_THICKNESS + 4;
+          avatarY = player.y + player.paddleLength / 2 - avatarSize / 2;
+          break;
+        case "top":
+          // Avatar above paddle
+          avatarX = player.x + player.paddleLength / 2 - avatarSize / 2;
+          avatarY = player.y - avatarSize - 4;
+          break;
+        case "bottom":
+          // Avatar below paddle
+          avatarX = player.x + player.paddleLength / 2 - avatarSize / 2;
+          avatarY = player.y + PADDLE_THICKNESS + 4;
+          break;
+      }
+
+      // Draw the avatar image
+      ctx.drawImage(avatarImg, avatarX, avatarY, avatarSize, avatarSize);
     };
 
     const drawTeamLives = (ctx: CanvasRenderingContext2D, team: PongTeam) => {

@@ -9,9 +9,9 @@ import BuzzerHost from "./buzzer-host";
 import Codenames from "./codenames";
 import { PlayerProvider } from "./contexts/PlayerContext";
 import { WebSocketProvider } from "./contexts/WebSocketContext";
-import Home from "./home";
 import Join from "./join";
 import Joystick from "./joystick";
+import Lobby from "./lobby";
 import Pong from "./pong";
 
 export function App() {
@@ -31,8 +31,8 @@ export function App() {
               <Joystick />
             </Route>
             {/* Host screens */}
-            <Route path={HostScreen.Home}>
-              <Home />
+            <Route path={HostScreen.Lobby}>
+              <Lobby />
             </Route>
             <Route path={HostScreen.BuzzerHost}>
               <BuzzerHost />

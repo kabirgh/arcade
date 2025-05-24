@@ -10,8 +10,8 @@ class DB {
   public teams: Team[] = [
     { id: "1", name: "Team 1", color: Color.Red },
     { id: "2", name: "Team 2", color: Color.Blue },
-    // { id: "3", name: "Team 3", color: Color.Green },
-    // { id: "4", name: "Team 4", color: Color.Yellow },
+    { id: "3", name: "Team 3", color: Color.Green },
+    { id: "4", name: "Team 4", color: Color.Yellow },
   ];
   public screen: PlayerScreen = PlayerScreen.Join;
   public wsPlayerMap: Map<ElysiaWS, Player | null> = new Map();

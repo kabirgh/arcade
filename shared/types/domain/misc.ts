@@ -8,7 +8,7 @@ export enum PlayerScreen {
 export const PlayerScreenType = t.Enum(PlayerScreen);
 
 export enum HostScreen {
-  Home = "/",
+  Lobby = "/",
   BuzzerHost = "/buzzer-host",
   Codenames = "/codenames",
   Pong = "/pong",

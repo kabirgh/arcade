@@ -9,7 +9,7 @@ import { useListenNavigate } from "./hooks/useListenNavigate";
 import useWebAudio from "./hooks/useWebAudio";
 import { apiFetch } from "./util/apiFetch";
 
-const DEBUG = true;
+const DEBUG = false;
 
 // ============================================================================
 // TYPES
@@ -611,6 +611,7 @@ const Quadrapong = () => {
 
       // Convert polar coordinates to velocity
       // Angle of 0 = right
+      console.log("playerId", playerId, "angle", angle, "force", force);
       player.dx = force * Math.cos(angle) * JOYSTICK_SENSITIVITY;
       player.dy = force * Math.sin(angle) * JOYSTICK_SENSITIVITY;
     });
@@ -1023,16 +1024,9 @@ const Quadrapong = () => {
       const { ball, players, walls, teams } = stateRef.current;
       ctx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
-      // Draw walls
       drawWalls(ctx, walls);
-
-      // Draw player paddles and scores
       drawPlayers(ctx, players, teams);
-
-      // Draw ball
       drawBall(ctx, ball);
-
-      // Draw game over screen
       drawGameOverScreen(ctx, stateRef.current);
     };
 
@@ -1060,10 +1054,8 @@ const Quadrapong = () => {
           continue;
         }
 
-        // Draw paddle
+        // TODO: draw player avatar
         drawPaddle(ctx, player, playerTeam);
-
-        // Draw team lives
         drawTeamLives(ctx, playerTeam);
       }
     };

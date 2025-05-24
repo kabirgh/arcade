@@ -280,6 +280,13 @@ const AdminPage: React.FC = () => {
             <button
               className="bg-blue-700 text-white p-2 w-32 rounded-md cursor-pointer hover:bg-blue-600
                        transition duration-100 ease-in-out active:bg-blue-800"
+              onClick={() => handleNavigateHostScreen(HostScreen.Lobby)}
+            >
+              Home
+            </button>
+            <button
+              className="bg-blue-700 text-white p-2 w-32 rounded-md cursor-pointer hover:bg-blue-600
+                       transition duration-100 ease-in-out active:bg-blue-800"
               onClick={() => handleNavigateHostScreen(HostScreen.BuzzerHost)}
             >
               Buzzer host

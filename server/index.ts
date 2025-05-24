@@ -50,10 +50,9 @@ function broadcastAllPlayers(): PlayerListAllMessage {
 }
 
 const handleWebSocketMessage = (ws: ElysiaWS, message: WebSocketMessage) => {
-  console.log("Received message:", message);
-
   switch (message.channel) {
     case Channel.ADMIN:
+      console.log("Received admin message:", message);
       switch (message.messageType) {
         case MessageType.CLAIM_HOST:
           console.log("Claiming host:", ws.id);
@@ -70,6 +69,7 @@ const handleWebSocketMessage = (ws: ElysiaWS, message: WebSocketMessage) => {
       break;
 
     case Channel.PLAYER:
+      console.log("Received player message:", message);
       switch (message.messageType) {
         case MessageType.JOIN:
           for (const [otherWs, player] of db.wsPlayerMap.entries()) {

@@ -8,6 +8,7 @@ import {
   type Team,
 } from "../../shared/types/domain/player";
 import { Channel, MessageType } from "../../shared/types/domain/websocket";
+import { avatarToPath } from "../../shared/utils";
 import PastelBackground from "./components/PastelBackground";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
 import { useAdminAuth } from "./hooks/useAdminAuth";
@@ -20,7 +21,11 @@ type TeamSectionProps = {
   players: Player[];
 };
 
-const TeamSection = ({ team, onTeamNameConfirm }: TeamSectionProps) => {
+const TeamSection = ({
+  team,
+  onTeamNameConfirm,
+  players,
+}: TeamSectionProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editableName, setEditableName] = useState(team.name);
 
@@ -39,13 +44,31 @@ const TeamSection = ({ team, onTeamNameConfirm }: TeamSectionProps) => {
     setIsEditing(true);
   };
 
-  // TODO: Add player avatars to the team section
+  // Filter players for this specific team
+  const teamPlayers = players.filter((player) => player.teamId === team.id);
+
   return (
     <div className="flex flex-col justify-center w-[300px] h-full">
       <div
-        className="w-full h-[240px]"
+        className="w-full h-[240px] flex flex-wrap items-center justify-center gap-2 p-4"
         style={{ border: `8px solid ${team.color}` }}
-      ></div>
+      >
+        {teamPlayers.map((player) => (
+          <div key={player.id} className="flex flex-col items-center">
+            <img
+              src={avatarToPath(player.avatar)}
+              alt={`${player.name}'s avatar`}
+              className="w-12 h-12 rounded-full object-cover"
+            />
+            <span className="text-xs font-medium mt-1 text-center max-w-[60px] truncate">
+              {player.name}
+            </span>
+          </div>
+        ))}
+        {teamPlayers.length === 0 && (
+          <div className="text-gray-400 text-center">No players assigned</div>
+        )}
+      </div>
       <div className="flex items-center mt-2">
         <input
           type="text"

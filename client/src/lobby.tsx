@@ -19,12 +19,14 @@ type TeamSectionProps = {
   team: Team;
   onTeamNameConfirm: (name: string) => void;
   players: Player[];
+  buzzingPlayers: Set<string>;
 };
 
 const TeamSection = ({
   team,
   onTeamNameConfirm,
   players,
+  buzzingPlayers,
 }: TeamSectionProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editableName, setEditableName] = useState(team.name);
@@ -59,6 +61,11 @@ const TeamSection = ({
               src={avatarToPath(player.avatar)}
               alt={`${player.name}'s avatar`}
               className="w-12 h-12 rounded-full object-cover"
+              style={{
+                animation: buzzingPlayers.has(player.id)
+                  ? "hop 0.3s ease-out"
+                  : undefined,
+              }}
             />
             <span className="text-xs font-medium mt-1 text-center max-w-[60px] truncate">
               {player.name}
@@ -98,7 +105,16 @@ const TeamSection = ({
 export default function Home() {
   useListenNavigate("host");
   const { subscribe, unsubscribe } = useWebSocketContext();
+
+  // Add custom hop animation styles
+  const hopAnimationStyle = `
+    @keyframes hop {
+      0%, 100% { transform: translateY(0) scale(1); }
+      50% { transform: translateY(-8px) scale(1.1); }
+    }
+  `;
   const [players, setPlayers] = useState<Player[]>([]);
+  const [buzzingPlayers, setBuzzingPlayers] = useState<Set<string>>(new Set());
   const [teams, setTeams] = useState<Team[]>([
     // Default teams while we wait for the server to return the actual teams
     { id: "1", name: "", color: Color.Red },
@@ -109,6 +125,9 @@ export default function Home() {
   const { isAuthenticated } = useAdminAuth({ claimHost: true });
 
   useEffect(() => {
+    apiFetch(APIRoute.ListPlayers).then(({ players }) => {
+      setPlayers(players);
+    });
     apiFetch(APIRoute.ListTeams).then(({ teams }) => {
       setTeams(teams);
     });
@@ -131,10 +150,22 @@ export default function Home() {
     subscribe(Channel.BUZZER, (message: WebSocketMessage) => {
       if (message.messageType === MessageType.BUZZ) {
         const { playerId } = message.payload;
+
+        // Add player to buzzing set
+        setBuzzingPlayers((prev) => new Set([...prev, playerId]));
+
+        // Remove player from buzzing set after animation completes
+        setTimeout(() => {
+          setBuzzingPlayers((prev) => {
+            const newSet = new Set(prev);
+            newSet.delete(playerId);
+            return newSet;
+          });
+        }, 300); // Animation duration
       }
     });
 
-    return () => unsubscribe(Channel.PLAYER);
+    return () => unsubscribe(Channel.BUZZER);
   }, [subscribe, unsubscribe]);
 
   const handleTeamNameChange = (teamId: string, name: string) => {
@@ -153,6 +184,7 @@ export default function Home() {
   return (
     <div className="w-full h-full relative overflow-hidden">
       {/* Parent needs to be relative to keep the pastel background in view */}
+      <style>{hopAnimationStyle}</style>
       <PastelBackground animate />
       {!isAuthenticated && (
         <div className="flex flex-col items-center justify-center w-full h-full">
@@ -200,6 +232,7 @@ export default function Home() {
                   handleTeamNameChange(teams[0].id, name);
                 }}
                 players={players}
+                buzzingPlayers={buzzingPlayers}
               />
             )}
             {teams[1] && (
@@ -209,6 +242,7 @@ export default function Home() {
                   handleTeamNameChange(teams[1].id, name);
                 }}
                 players={players}
+                buzzingPlayers={buzzingPlayers}
               />
             )}
           </div>
@@ -223,6 +257,7 @@ export default function Home() {
                   handleTeamNameChange(teams[2].id, name);
                 }}
                 players={players}
+                buzzingPlayers={buzzingPlayers}
               />
             )}
             {teams[3] && (
@@ -232,6 +267,7 @@ export default function Home() {
                   handleTeamNameChange(teams[3].id, name);
                 }}
                 players={players}
+                buzzingPlayers={buzzingPlayers}
               />
             )}
           </div>

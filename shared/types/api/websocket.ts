@@ -31,7 +31,7 @@ const BuzzerPressMessageType = t.Object({
   channel: t.Literal(Channel.BUZZER),
   messageType: t.Literal(MessageType.BUZZ),
   payload: t.Object({
-    player: PlayerType,
+    playerId: t.String(),
     timestamp: t.Number(),
   }),
 });

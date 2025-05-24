@@ -22,7 +22,7 @@ export default function Buzzer() {
       channel: Channel.BUZZER,
       messageType: MessageType.BUZZ,
       payload: {
-        player: sessionPlayer,
+        playerId: sessionPlayer.id,
         timestamp: Date.now(),
       },
     });

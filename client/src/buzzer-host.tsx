@@ -57,12 +57,8 @@ const BuzzerHost: React.FC = () => {
 
   // Update UI and play sound when a team presses the buzzer
   const handlePlayerBuzzerPress = useCallback(
-    (player: Player, timestamp: number) => {
-      const team = teams.find((team) => team.id === player.teamId);
-      if (!team) {
-        console.error(`Team with id ${player.teamId} not found`);
-        return;
-      }
+    (playerId: string, timestamp: number) => {
+      const team = expandedPlayers[playerId].team;
 
       setBuzzes((prev) => {
         // If the player's team has already buzzed, don't add a new buzz
@@ -71,7 +67,7 @@ const BuzzerHost: React.FC = () => {
         }
         const newBuzzes = [
           ...prev,
-          { playerId: player.id, teamId: team.id, timestamp },
+          { playerId, teamId: team.id, timestamp },
         ].sort((a, b) => {
           // Sort by timestamp, oldest first
           return a.timestamp - b.timestamp;
@@ -82,7 +78,7 @@ const BuzzerHost: React.FC = () => {
         return newBuzzes;
       });
     },
-    [teams, playSound]
+    [expandedPlayers, playSound]
   );
 
   // Get players and teams from backend
@@ -130,7 +126,7 @@ const BuzzerHost: React.FC = () => {
     subscribe(Channel.BUZZER, (message: WebSocketMessage) => {
       if (message.messageType === MessageType.BUZZ) {
         handlePlayerBuzzerPress(
-          message.payload.player,
+          message.payload.playerId,
           message.payload.timestamp
         );
       } else if (message.messageType === MessageType.RESET) {

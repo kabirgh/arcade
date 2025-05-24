@@ -127,6 +127,16 @@ export default function Home() {
     return () => unsubscribe(Channel.PLAYER);
   }, [subscribe, unsubscribe]);
 
+  useEffect(() => {
+    subscribe(Channel.BUZZER, (message: WebSocketMessage) => {
+      if (message.messageType === MessageType.BUZZ) {
+        const { playerId } = message.payload;
+      }
+    });
+
+    return () => unsubscribe(Channel.PLAYER);
+  }, [subscribe, unsubscribe]);
+
   const handleTeamNameChange = (teamId: string, name: string) => {
     apiFetch(APIRoute.SetTeamName, { teamId, name }).then(() => {
       setTeams((prevTeams) => {

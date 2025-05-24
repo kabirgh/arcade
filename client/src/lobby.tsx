@@ -112,8 +112,8 @@ const hopAnimationStyle = `
 
 export default function Home() {
   useListenNavigate("host");
-  const { subscribe, unsubscribe } = useWebSocketContext();
   const { isAuthenticated } = useAdminAuth({ claimHost: true });
+  const { subscribe, unsubscribe } = useWebSocketContext();
   const [players, setPlayers] = useState<Player[]>([]);
   const [buzzingPlayers, setBuzzingPlayers] = useState<Set<string>>(new Set());
   const [teams, setTeams] = useState<Team[]>([
@@ -136,10 +136,7 @@ export default function Home() {
   useEffect(() => {
     subscribe(Channel.PLAYER, (message: WebSocketMessage) => {
       if (message.messageType === MessageType.LIST) {
-        setPlayers((prevPlayers) => {
-          const allPlayers = [...prevPlayers, ...message.payload];
-          return [...new Set(allPlayers)];
-        });
+        setPlayers(message.payload);
       }
     });
 

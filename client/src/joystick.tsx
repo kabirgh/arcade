@@ -24,7 +24,11 @@ export default function Joystick() {
   const { sessionPlayer } = usePlayerContext();
   const joystickContainerRef = useRef<HTMLDivElement>(null);
   const joystickInstanceRef = useRef<NippleManagerType | null>(null);
-  const joystickMoveDataRef = useRef<JoystickMoveData | null>(null);
+  const joystickMoveDataRef = useRef<JoystickMoveData>({
+    playerId: sessionPlayer?.id ?? "",
+    angle: 0,
+    force: 0,
+  });
   const [joystickSize, setJoystickSize] = useState<number>(0);
 
   // Calculate 40vmin in pixels
@@ -41,8 +45,14 @@ export default function Joystick() {
   }, []);
 
   useEffect(() => {
+    if (sessionPlayer) {
+      joystickMoveDataRef.current!.playerId = sessionPlayer.id;
+    }
+  }, [sessionPlayer]);
+
+  useEffect(() => {
     const interval = setInterval(() => {
-      if (joystickMoveDataRef.current) {
+      if (joystickMoveDataRef.current.playerId !== "") {
         publish({
           channel: Channel.JOYSTICK,
           messageType: MessageType.MOVE,
@@ -68,20 +78,23 @@ export default function Joystick() {
         color: "black",
         fadeTime: 50,
         restOpacity: 0.8,
-        size: joystickSize, // 50vmin converted to pixels
+        size: joystickSize,
       });
       joystickInstanceRef.current = manager;
 
-      manager.on("move", (evt, data) => {
-        joystickMoveDataRef.current = {
-          playerId: sessionPlayer!.id,
-          angle: data.angle.degree, // 0 is right
-          force: data.force,
-        };
+      manager.on("start", () => {
+        joystickMoveDataRef.current!.angle = 0;
+        joystickMoveDataRef.current!.force = 0;
+      });
+
+      manager.on("move", (_evt, data) => {
+        joystickMoveDataRef.current!.angle = data.angle.degree; // 0 is right
+        joystickMoveDataRef.current!.force = Math.min(data.force, 1);
       });
 
       manager.on("end", () => {
-        joystickMoveDataRef.current = null;
+        joystickMoveDataRef.current!.angle = 0;
+        joystickMoveDataRef.current!.force = 0;
       });
 
       return () => {
@@ -89,10 +102,9 @@ export default function Joystick() {
           joystickInstanceRef.current.destroy();
           joystickInstanceRef.current = null;
         }
-        joystickMoveDataRef.current = null;
       };
     }
-  }, [publish, sessionPlayer, joystickSize]);
+  }, [publish, joystickSize]);
 
   return (
     <div className="flex flex-col items-center justify-center h-screen relative overflow-hidden">

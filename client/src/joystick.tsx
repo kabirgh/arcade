@@ -29,6 +29,11 @@ export default function Joystick() {
     angle: 0,
     force: 0,
   });
+  const previousMoveDataRef = useRef<JoystickMoveData>({
+    playerId: "",
+    angle: -1,
+    force: -1,
+  });
   const [joystickSize, setJoystickSize] = useState<number>(0);
 
   // Calculate 40vmin in pixels
@@ -52,13 +57,34 @@ export default function Joystick() {
 
   useEffect(() => {
     const interval = setInterval(() => {
-      if (joystickMoveDataRef.current.playerId !== "") {
-        publish({
-          channel: Channel.JOYSTICK,
-          messageType: MessageType.MOVE,
-          payload: joystickMoveDataRef.current,
-        });
+      if (joystickMoveDataRef.current.playerId === "") {
+        return;
       }
+
+      const current = joystickMoveDataRef.current;
+      const previous = previousMoveDataRef.current;
+
+      // Only publish if data has changed
+      if (
+        current.playerId === previous.playerId &&
+        current.angle === previous.angle &&
+        current.force === previous.force
+      ) {
+        return;
+      }
+
+      publish({
+        channel: Channel.JOYSTICK,
+        messageType: MessageType.MOVE,
+        payload: current,
+      });
+
+      // Update previous data
+      previousMoveDataRef.current = {
+        playerId: current.playerId,
+        angle: current.angle,
+        force: current.force,
+      };
     }, 33); // 30 fps
 
     return () => clearInterval(interval);
@@ -88,7 +114,7 @@ export default function Joystick() {
       });
 
       manager.on("move", (_evt, data) => {
-        joystickMoveDataRef.current!.angle = data.angle.degree; // 0 is right
+        joystickMoveDataRef.current!.angle = data.angle.radian; // 0 is right
         joystickMoveDataRef.current!.force = Math.min(data.force, 1);
       });
 

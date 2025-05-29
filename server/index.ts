@@ -79,11 +79,11 @@ const handleWebSocketMessage = (ws: ElysiaWS, message: WebSocketMessage) => {
             if (player !== null && player.id === message.payload.id) {
               // We found a player with the same id in the list.
               // This means the websocket id has changed (usually due to a reconnect).
-              // Remove the old player from the list and add the new one
-              db.wsPlayerMap.set(otherWs, null);
+              // Remove the old player and add the new one
+              db.wsPlayerMap.delete(otherWs);
               db.wsPlayerMap.set(ws, message.payload);
               // Don't need to broadcast player list because only the websocket
-              // id changed, which the client doesn't need to know
+              // id changed, which the client doesn't need to know. Return early
               return;
             }
           }
@@ -92,7 +92,7 @@ const handleWebSocketMessage = (ws: ElysiaWS, message: WebSocketMessage) => {
           break;
 
         case MessageType.LEAVE:
-          db.wsPlayerMap.set(ws, null);
+          db.wsPlayerMap.delete(ws);
           break;
 
         case MessageType.LIST:
@@ -248,6 +248,31 @@ const app = new Elysia()
     {
       body: APIRouteToSchema[APIRoute.BroadcastAllPlayers].req,
       response: APIRouteToSchema[APIRoute.BroadcastAllPlayers].res,
+    }
+  )
+  .post(
+    APIRoute.KickPlayer,
+    ({ body }) => {
+      for (const [ws, player] of db.wsPlayerMap.entries()) {
+        if (player && player.name === body.playerName) {
+          handleWebSocketMessage(ws, {
+            channel: Channel.PLAYER,
+            messageType: MessageType.LEAVE,
+          });
+          return { ok: true as const, data: { playerId: player.id } };
+        }
+      }
+      return {
+        ok: false as const,
+        error: {
+          status: 404,
+          message: "Player not found",
+        },
+      };
+    },
+    {
+      body: APIRouteToSchema[APIRoute.KickPlayer].req,
+      response: APIRouteToSchema[APIRoute.KickPlayer].res,
     }
   )
   // Codenames

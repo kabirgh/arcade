@@ -14,13 +14,11 @@ class DB {
     { id: "4", name: "Team 4", color: Color.Yellow },
   ];
   public screen: PlayerScreen = PlayerScreen.Join;
-  public wsPlayerMap: Map<ElysiaWS, Player | null> = new Map();
+  public wsPlayerMap: Map<ElysiaWS, Player> = new Map();
   public hostWs: ElysiaWS | null = null;
 
   public get players(): Player[] {
-    return Array.from(this.wsPlayerMap.values()).filter(
-      (player) => player !== null
-    );
+    return Array.from(this.wsPlayerMap.values());
   }
 }
 

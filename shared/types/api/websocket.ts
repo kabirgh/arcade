@@ -23,9 +23,17 @@ const PlayerLeaveMessageType = t.Object({
   channel: t.Literal(Channel.PLAYER),
   messageType: t.Literal(MessageType.LEAVE),
   // No payload as relevant player is derived from websocket connection map
-  // TODO: provide player name in payload
 });
 export type PlayerLeaveMessage = Static<typeof PlayerLeaveMessageType>;
+
+const PlayerKickMessageType = t.Object({
+  channel: t.Literal(Channel.PLAYER),
+  messageType: t.Literal(MessageType.KICK),
+  payload: t.Object({
+    playerId: t.String(),
+  }),
+});
+export type PlayerKickMessage = Static<typeof PlayerKickMessageType>;
 
 const BuzzerPressMessageType = t.Object({
   channel: t.Literal(Channel.BUZZER),
@@ -84,6 +92,7 @@ export const WebSocketMessageType = t.Union([
   PlayerListAllMessageType,
   PlayerJoinMessageType,
   PlayerLeaveMessageType,
+  PlayerKickMessageType,
   BuzzerPressMessageType,
   BuzzerResetMessageType,
   JoystickMoveMessageType,

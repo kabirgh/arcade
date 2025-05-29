@@ -27,30 +27,8 @@ const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 export const PlayerProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
-  const { publish, readyState } = useWebSocketContext();
+  const { publish, readyState, subscribe, unsubscribe } = useWebSocketContext();
   const [player, setPlayer] = useState<Player | null>(null);
-
-  // Load player from localStorage on initial mount
-  useEffect(() => {
-    try {
-      const storedPlayer = localStorage.getItem("player");
-      if (!storedPlayer || readyState !== ReadyState.OPEN) {
-        return;
-      }
-
-      setPlayer(JSON.parse(storedPlayer));
-      // When the client disconnects, the server will remove the player from the list
-      // so we need to send a JOIN message to the server to re-add the player to the list
-      publish({
-        channel: Channel.PLAYER,
-        messageType: MessageType.JOIN,
-        payload: JSON.parse(storedPlayer),
-      });
-    } catch (error) {
-      console.error("Failed to parse player data from localStorage", error);
-      localStorage.removeItem("player"); // Clear corrupted data
-    }
-  }, [publish, readyState]);
 
   // Function to update player state and localStorage
   // Assumes ReadyState is OPEN
@@ -84,6 +62,43 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({
       messageType: MessageType.LEAVE,
     });
   }, [publish]);
+
+  // Load player from localStorage on initial mount
+  useEffect(() => {
+    try {
+      const storedPlayer = localStorage.getItem("player");
+      if (!storedPlayer || readyState !== ReadyState.OPEN) {
+        return;
+      }
+
+      setPlayer(JSON.parse(storedPlayer));
+      // When the client disconnects, the server will remove the player from the list
+      // so we need to send a JOIN message to the server to re-add the player to the list
+      publish({
+        channel: Channel.PLAYER,
+        messageType: MessageType.JOIN,
+        payload: JSON.parse(storedPlayer),
+      });
+    } catch (error) {
+      console.error("Failed to parse player data from localStorage", error);
+      localStorage.removeItem("player"); // Clear corrupted data
+    }
+  }, [publish, readyState]);
+
+  // Remove player if kicked by server
+  useEffect(() => {
+    subscribe(Channel.PLAYER, (message) => {
+      if (message.messageType === MessageType.KICK) {
+        clearSessionPlayer();
+      }
+    });
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe(Channel.PLAYER);
+      }
+    };
+  }, [clearSessionPlayer, subscribe, unsubscribe]);
 
   return (
     <PlayerContext.Provider

@@ -52,7 +52,7 @@ const TeamSection = ({
   return (
     <div className="flex flex-col justify-center w-[300px] h-full">
       <div
-        className="w-full h-[240px] flex flex-wrap items-center justify-center gap-2 p-4"
+        className="w-full h-[240px] flex flex-wrap items-center justify-center gap-2 p-4 shadow-md"
         style={{ border: `8px solid ${team.color}` }}
       >
         {teamPlayers.map((player) => (

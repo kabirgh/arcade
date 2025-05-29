@@ -72,6 +72,22 @@ const handleWebSocketMessage = (ws: ElysiaWS, message: WebSocketMessage) => {
       console.log("Received player message:", message);
       switch (message.messageType) {
         case MessageType.JOIN:
+          if (db.kickedPlayerIds.has(message.payload.id)) {
+            // Don't allow kicked players to join again
+            // Emit a message to the client to clear localstorage so they stop
+            // trying to reconnect
+            ws.send(
+              JSON.stringify({
+                channel: Channel.PLAYER,
+                messageType: MessageType.KICK,
+                payload: {
+                  playerId: message.payload.id,
+                },
+              })
+            );
+            return;
+          }
+
           for (const [otherWs, player] of db.wsPlayerMap.entries()) {
             if (otherWs === ws) {
               continue;
@@ -95,7 +111,12 @@ const handleWebSocketMessage = (ws: ElysiaWS, message: WebSocketMessage) => {
           db.wsPlayerMap.delete(ws);
           break;
 
+        case MessageType.KICK:
+          // Client message
+          break;
+
         case MessageType.LIST:
+          // Client message
           break;
       }
       // Broadcast the player list to all clients
@@ -255,10 +276,20 @@ const app = new Elysia()
     ({ body }) => {
       for (const [ws, player] of db.wsPlayerMap.entries()) {
         if (player && player.name === body.playerName) {
-          handleWebSocketMessage(ws, {
-            channel: Channel.PLAYER,
-            messageType: MessageType.LEAVE,
-          });
+          // Emit a message to the client to clear localstorage
+          // and prevent the player from rejoining
+          ws.send(
+            JSON.stringify({
+              channel: Channel.PLAYER,
+              messageType: MessageType.KICK,
+              payload: {
+                playerId: player.id,
+              },
+            })
+          );
+          db.wsPlayerMap.delete(ws);
+          db.kickedPlayerIds.add(player.id);
+          broadcastAllPlayers();
           return { ok: true as const, data: { playerId: player.id } };
         }
       }

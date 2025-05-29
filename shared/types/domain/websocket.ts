@@ -9,6 +9,7 @@ export enum MessageType {
   // Player channel
   JOIN = "JOIN",
   LEAVE = "LEAVE",
+  KICK = "KICK",
   LIST = "LIST",
   // Buzzer channel
   BUZZ = "BUZZ",

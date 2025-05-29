@@ -12,6 +12,7 @@ import type { WebSocketMessage } from "../../shared/types/api/websocket";
 import type { Player, Team } from "../../shared/types/domain/player";
 import { Channel, MessageType } from "../../shared/types/domain/websocket";
 import { avatarToPath } from "../../shared/utils";
+import PastelBackground from "./components/PastelBackground";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
 import { useAdminAuth } from "./hooks/useAdminAuth";
 import useClientRect from "./hooks/useClientRect";
@@ -186,8 +187,9 @@ const BuzzerHost: React.FC = () => {
       {isAuthenticated && (
         <div
           style={{
+            position: "relative",
+            overflow: "hidden",
             fontFamily: "Arvo",
-            backgroundColor: "#323232",
             height: "100vh",
             width: "100vw",
             display: "grid",
@@ -197,6 +199,7 @@ const BuzzerHost: React.FC = () => {
               .join(" ")}`,
           }}
         >
+          <PastelBackground animate />
           {buzzes.map((buzz, index) => {
             const player = expandedPlayers[buzz.playerId];
             if (!player) return null;

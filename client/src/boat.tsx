@@ -79,6 +79,10 @@ type State = {
 const CANVAS_WIDTH = 1200;
 const CANVAS_HEIGHT = 800;
 
+// Land border configuration
+const BORDER_TILE_SIZE = 64; // Size of each border tile
+const BORDER_THICKNESS = BORDER_TILE_SIZE; // How thick the border should be
+
 // Game mechanics
 const JOYSTICK_SENSITIVITY = 0.0008;
 const BOAT_MAX_SPEED = 0.3;
@@ -90,8 +94,8 @@ const BOUNCE_DAMPING = 0.5;
 const WINNING_SCORE = 5;
 
 // Object sizes
-const BOAT_WIDTH = 60;
-const BOAT_HEIGHT = 40;
+const BOAT_WIDTH = 40;
+const BOAT_HEIGHT = 80;
 const BOAT_COLLISION_RADIUS = 25;
 const DUCK_SIZE = 30;
 const DUCK_COLLISION_RADIUS = 15;
@@ -125,11 +129,11 @@ const DEFAULT_TEAMS: BoatTeam[] = [
     score: 0,
     type: "active",
     position: "left",
-    x: 200,
+    x: BORDER_THICKNESS + 100,
     y: CANVAS_HEIGHT / 2,
     vx: 0,
     vy: 0,
-    rotation: 0,
+    rotation: -Math.PI / 2,
     angularVelocity: 0,
   },
   {
@@ -139,11 +143,11 @@ const DEFAULT_TEAMS: BoatTeam[] = [
     score: 0,
     type: "active",
     position: "right",
-    x: CANVAS_WIDTH - 200,
+    x: CANVAS_WIDTH - BORDER_THICKNESS - 100,
     y: CANVAS_HEIGHT / 2,
     vx: 0,
     vy: 0,
-    rotation: Math.PI,
+    rotation: Math.PI / 2,
     angularVelocity: 0,
   },
   {
@@ -154,10 +158,10 @@ const DEFAULT_TEAMS: BoatTeam[] = [
     type: "active",
     position: "top",
     x: CANVAS_WIDTH / 2,
-    y: 150,
+    y: BORDER_THICKNESS + 100,
     vx: 0,
     vy: 0,
-    rotation: Math.PI / 2,
+    rotation: 0,
     angularVelocity: 0,
   },
   {
@@ -168,10 +172,10 @@ const DEFAULT_TEAMS: BoatTeam[] = [
     type: "active",
     position: "bottom",
     x: CANVAS_WIDTH / 2,
-    y: CANVAS_HEIGHT - 150,
+    y: CANVAS_HEIGHT - BORDER_THICKNESS - 100,
     vx: 0,
     vy: 0,
-    rotation: -Math.PI / 2,
+    rotation: Math.PI,
     angularVelocity: 0,
   },
 ];
@@ -225,8 +229,14 @@ const generateRandomPosition = (
   let positionFound = false;
 
   while (!positionFound && attempts < maxAttempts) {
-    x = margin + Math.random() * (CANVAS_WIDTH - 2 * margin);
-    y = margin + Math.random() * (CANVAS_HEIGHT - 2 * margin);
+    x =
+      BORDER_THICKNESS +
+      margin +
+      Math.random() * (CANVAS_WIDTH - 2 * BORDER_THICKNESS - 2 * margin);
+    y =
+      BORDER_THICKNESS +
+      margin +
+      Math.random() * (CANVAS_HEIGHT - 2 * BORDER_THICKNESS - 2 * margin);
     attempts++;
 
     const tooClose = existingObjects.some((obj) => {
@@ -329,6 +339,7 @@ const BoatGame = () => {
   const [loading, setLoading] = useState(true);
   const [numActiveTeams, setNumActiveTeams] = useState(0);
   const [, setRenderTrigger] = useState({});
+  const hasStartedGameRef = useRef(false); // Track if we've started a game before
   const stateRef = useRef<State>({
     lastTick: 0,
     winner: null,
@@ -345,6 +356,9 @@ const BoatGame = () => {
   const loadImages = useCallback(() => {
     const imagePaths = [
       "/boat/water.png",
+      "/boat/water32.png",
+      "/boat/water48.png",
+      "/boat/water64.png",
       "/boat/duck.png",
       "/boat/rock_1.png",
       "/boat/rock_1_moss.png",
@@ -356,6 +370,15 @@ const BoatGame = () => {
       "/boat/ship_blue.png",
       "/boat/ship_green.png",
       "/boat/ship_yellow.png",
+      // Land border tiles
+      "/boat/landborder_top_1.png",
+      "/boat/landborder_top_2.png",
+      "/boat/landborder_bottom_1.png",
+      "/boat/landborder_bottom_2.png",
+      "/boat/landborder_left_1.png",
+      "/boat/landborder_left_2.png",
+      "/boat/landborder_right_1.png",
+      "/boat/landborder_right_2.png",
     ];
 
     let loadedCount = 0;
@@ -741,14 +764,20 @@ const BoatGame = () => {
       team.x += team.vx * deltaTime;
       team.y += team.vy * deltaTime;
 
-      // Keep boats within bounds
+      // Keep boats within bounds (accounting for land borders)
       const margin = BOAT_COLLISION_RADIUS;
-      team.x = Math.max(margin, Math.min(CANVAS_WIDTH - margin, team.x));
-      team.y = Math.max(margin, Math.min(CANVAS_HEIGHT - margin, team.y));
+      team.x = Math.max(
+        BORDER_THICKNESS + margin,
+        Math.min(CANVAS_WIDTH - BORDER_THICKNESS - margin, team.x)
+      );
+      team.y = Math.max(
+        BORDER_THICKNESS + margin,
+        Math.min(CANVAS_HEIGHT - BORDER_THICKNESS - margin, team.y)
+      );
 
       // Update rotation to face movement direction
       if (speed > 0.01) {
-        const targetRotation = Math.atan2(team.vy, team.vx);
+        const targetRotation = Math.atan2(team.vy, team.vx) - Math.PI / 2; // Subtract PI/2 to make boat face upward
         let rotationDiff = targetRotation - team.rotation;
 
         // Normalize rotation difference to [-π, π]
@@ -803,6 +832,7 @@ const BoatGame = () => {
       ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
       drawBackground(ctx);
+      drawLandBorders(ctx);
       drawRocks(ctx, rocks);
       drawDucks(ctx, ducks);
       drawBoats(ctx, teams);
@@ -811,7 +841,7 @@ const BoatGame = () => {
 
     // Render helper functions
     const drawBackground = (ctx: CanvasRenderingContext2D) => {
-      const waterImg = imagesRef.current.get("/boat/water.png");
+      const waterImg = imagesRef.current.get("/boat/water48.png");
       if (waterImg) {
         const pattern = ctx.createPattern(waterImg, "repeat");
         if (pattern) {
@@ -821,6 +851,64 @@ const BoatGame = () => {
       } else {
         ctx.fillStyle = "#4A90E2";
         ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      }
+    };
+
+    const drawLandBorders = (ctx: CanvasRenderingContext2D) => {
+      // Draw top border
+      const topImg1 = imagesRef.current.get("/boat/landborder_top_1.png");
+      const topImg2 = imagesRef.current.get("/boat/landborder_top_2.png");
+      if (topImg1 && topImg2) {
+        for (let x = 0; x < CANVAS_WIDTH; x += BORDER_TILE_SIZE) {
+          const tileIndex = Math.floor(x / BORDER_TILE_SIZE);
+          const img = tileIndex % 2 === 0 ? topImg1 : topImg2;
+          ctx.drawImage(img, x, 0, BORDER_TILE_SIZE, BORDER_TILE_SIZE);
+        }
+      }
+
+      // Draw bottom border
+      const bottomImg1 = imagesRef.current.get("/boat/landborder_bottom_1.png");
+      const bottomImg2 = imagesRef.current.get("/boat/landborder_bottom_2.png");
+      if (bottomImg1 && bottomImg2) {
+        for (let x = 0; x < CANVAS_WIDTH; x += BORDER_TILE_SIZE) {
+          const tileIndex = Math.floor(x / BORDER_TILE_SIZE);
+          const img = tileIndex % 2 === 0 ? bottomImg1 : bottomImg2;
+          ctx.drawImage(
+            img,
+            x,
+            CANVAS_HEIGHT - BORDER_TILE_SIZE,
+            BORDER_TILE_SIZE,
+            BORDER_TILE_SIZE
+          );
+        }
+      }
+
+      // Draw left border
+      const leftImg1 = imagesRef.current.get("/boat/landborder_left_1.png");
+      const leftImg2 = imagesRef.current.get("/boat/landborder_left_2.png");
+      if (leftImg1 && leftImg2) {
+        for (let y = 0; y < CANVAS_HEIGHT; y += BORDER_TILE_SIZE) {
+          const tileIndex = Math.floor(y / BORDER_TILE_SIZE);
+          const img = tileIndex % 2 === 0 ? leftImg1 : leftImg2;
+          ctx.drawImage(img, 0, y, BORDER_TILE_SIZE, BORDER_TILE_SIZE);
+        }
+      }
+
+      // Draw right border
+      const rightImg1 = imagesRef.current.get("/boat/landborder_right_1.png");
+      const rightImg2 = imagesRef.current.get("/boat/landborder_right_2.png");
+      if (rightImg1 && rightImg2) {
+        for (let y = 0; y < CANVAS_HEIGHT; y += BORDER_TILE_SIZE) {
+          const tileIndex = Math.floor(y / BORDER_TILE_SIZE);
+          const img = tileIndex % 2 === 0 ? rightImg1 : rightImg2;
+          ctx.drawImage(
+            img,
+            CANVAS_WIDTH - BORDER_TILE_SIZE,
+            y,
+            BORDER_TILE_SIZE,
+            BORDER_TILE_SIZE
+          );
+        }
       }
     };
 
@@ -882,74 +970,8 @@ const BoatGame = () => {
     };
 
     const drawUI = (ctx: CanvasRenderingContext2D, state: State) => {
-      // Draw score panel
-      ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
-      ctx.fillRect(0, 0, CANVAS_WIDTH, SCORE_HEIGHT);
-
-      // Draw team scores
-      const activeTeams = state.teams.filter((t) => t.type === "active");
-      const teamWidth = CANVAS_WIDTH / activeTeams.length;
-
-      ctx.font = "24px Arial";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-
-      activeTeams.forEach((team, index) => {
-        const x = teamWidth * index + teamWidth / 2;
-        const y = SCORE_HEIGHT / 2;
-
-        ctx.fillStyle = team.color;
-        ctx.fillText(`${team.name}: ${team.score}`, x, y);
-      });
-
-      // Draw timer
-      if (state.phase === "in_progress") {
-        ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
-        ctx.fillRect(
-          CANVAS_WIDTH / 2 - 60,
-          SCORE_HEIGHT + 10,
-          120,
-          TIMER_HEIGHT
-        );
-
-        ctx.fillStyle = "white";
-        ctx.font = "20px Arial";
-        ctx.textAlign = "center";
-        ctx.fillText(
-          formatTime(state.currentTime),
-          CANVAS_WIDTH / 2,
-          SCORE_HEIGHT + 10 + TIMER_HEIGHT / 2
-        );
-      }
-
-      // Draw game over screen
-      if (state.phase === "game_over" && state.winner) {
-        ctx.fillStyle = "rgba(0, 0, 0, 0.8)";
-        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-
-        ctx.font = "48px Arial";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillStyle = state.winner.color;
-        ctx.fillText(
-          `${state.winner.name} Wins!`,
-          CANVAS_WIDTH / 2,
-          CANVAS_HEIGHT / 2 - 50
-        );
-
-        ctx.font = "24px Arial";
-        ctx.fillStyle = "white";
-        ctx.fillText(
-          `Score: ${state.winner.score} ducks`,
-          CANVAS_WIDTH / 2,
-          CANVAS_HEIGHT / 2 + 10
-        );
-        ctx.fillText(
-          `Time: ${formatTime(state.currentTime)}`,
-          CANVAS_WIDTH / 2,
-          CANVAS_HEIGHT / 2 + 50
-        );
-      }
+      // UI is now handled in HTML, this function is kept for any future canvas-specific UI needs
+      // Currently empty as scores, timer, and game over screen are handled in the React component
     };
 
     const loop = (time: DOMHighResTimeStamp) => {
@@ -986,6 +1008,23 @@ const BoatGame = () => {
   const start = useCallback(() => {
     const state = stateRef.current;
 
+    // Check if this is the first game or a subsequent game
+    const isFirstGame = !hasStartedGameRef.current;
+    hasStartedGameRef.current = true;
+
+    let newDucks: Duck[];
+    let newRocks: Rock[];
+
+    if (isFirstGame) {
+      // First game: preserve existing map but reset duck collection status
+      newDucks = state.ducks.map((duck) => ({ ...duck, collected: false }));
+      newRocks = state.rocks;
+    } else {
+      // Subsequent games: generate completely new map
+      newDucks = generateDucks(state.teams);
+      newRocks = generateRocks(state.teams, newDucks);
+    }
+
     // Reset game state
     stateRef.current = {
       lastTick: 0,
@@ -999,8 +1038,8 @@ const BoatGame = () => {
         score: 0,
       })),
       players: state.players,
-      ducks: generateDucks(state.teams),
-      rocks: generateRocks(state.teams, state.ducks),
+      ducks: newDucks,
+      rocks: newRocks,
       winner: null,
       gameStartTime: Date.now(),
       currentTime: 0,
@@ -1009,21 +1048,74 @@ const BoatGame = () => {
 
   // =================== RENDER ===================
   return (
-    <div className="flex flex-col items-center justify-center h-screen bg-gray-950">
-      {/* Game Canvas */}
-      <canvas ref={canvasRef} width={CANVAS_WIDTH} height={CANVAS_HEIGHT} />
+    <div className="min-h-screen bg-gray-950 p-4">
+      <div className="flex flex-col items-center">
+        {/* Score Display - Always visible above canvas */}
+        <div className="w-full max-w-[1200px] bg-black/70 rounded-lg p-4 mb-4">
+          <div className="flex justify-between items-center text-white">
+            {stateRef.current.teams
+              .filter((t) => t.type === "active")
+              .map((team) => (
+                <div key={team.id} className="text-center">
+                  <div
+                    className="text-xl font-bold"
+                    style={{ color: team.color }}
+                  >
+                    {team.name}
+                  </div>
+                  <div className="text-2xl font-bold">{team.score}</div>
+                </div>
+              ))}
+          </div>
+          {stateRef.current.phase === "in_progress" && (
+            <div className="text-center mt-2">
+              <div className="text-white text-lg">
+                Time: {formatTime(stateRef.current.currentTime)}
+              </div>
+            </div>
+          )}
+        </div>
 
-      {/* Game Controls */}
-      <div className="flex flex-row items-center justify-center mt-4">
-        <button
-          className="bg-blue-500 hover:bg-blue-600 text-white text-lg px-6 py-2 rounded disabled:opacity-50"
-          disabled={loading || stateRef.current.phase === "in_progress"}
-          onClick={() => start()}
-        >
-          {stateRef.current.phase === "not_started"
-            ? "Start Game"
-            : "Play Again"}
-        </button>
+        {/* Game Canvas */}
+        <canvas
+          ref={canvasRef}
+          width={CANVAS_WIDTH}
+          height={CANVAS_HEIGHT}
+          className="border-2 border-gray-600 rounded-lg"
+        />
+
+        {/* Game Controls - Always visible below canvas */}
+        <div className="flex flex-row items-center justify-center mt-4">
+          <button
+            className="bg-blue-500 hover:bg-blue-600 text-white text-lg px-6 py-2 rounded disabled:opacity-50"
+            disabled={loading || stateRef.current.phase === "in_progress"}
+            onClick={() => start()}
+          >
+            {stateRef.current.phase === "not_started"
+              ? "Start Game"
+              : "Play Again"}
+          </button>
+        </div>
+
+        {/* Game Over Overlay */}
+        {stateRef.current.phase === "game_over" && stateRef.current.winner && (
+          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+            <div className="bg-gray-900 p-8 rounded-lg text-center">
+              <h1
+                className="text-4xl font-bold mb-4"
+                style={{ color: stateRef.current.winner.color }}
+              >
+                {stateRef.current.winner.name} Wins!
+              </h1>
+              <p className="text-white text-xl mb-2">
+                Score: {stateRef.current.winner.score} ducks
+              </p>
+              <p className="text-white text-xl">
+                Time: {formatTime(stateRef.current.currentTime)}
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

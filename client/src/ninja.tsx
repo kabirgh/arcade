@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { APIRoute } from "../../shared/types/api/schema";
 import type { WebSocketMessage } from "../../shared/types/api/websocket";
-import { Color } from "../../shared/types/domain/player";
+import { Avatar, Color, type Player } from "../../shared/types/domain/player";
 import { Channel, MessageType } from "../../shared/types/domain/websocket";
 import { shuffle } from "../../shared/utils";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
@@ -11,15 +11,17 @@ import { useListenNavigate } from "./hooks/useListenNavigate";
 import useWebAudio from "./hooks/useWebAudio";
 import { apiFetch } from "./util/apiFetch";
 
-// Use dummy players. When false, calls ListTeams to get real players
+// Use dummy players. When false, calls server to get real players
 const DEBUG = true;
 
 //
 // Types
 //
-type Player = {
+type NinjaPlayer = {
+  id: string;
   name: string;
-  color: string;
+  avatar: string;
+  color: string; // same as team color
   teamId: string;
   x: number;
   y: number;
@@ -41,14 +43,20 @@ type Obstacle = {
   lastFrameUpdate: number;
 };
 
-type GameScreenState = {
-  player: Player;
-  obstacles: Obstacle[];
+type NinjaTeam = {
+  id: string;
+  name: string;
+  color: string;
+  players: NinjaPlayer[];
+  currentPlayerIndex: number;
+  state: "not_started" | "playing" | "countdown" | "game_over";
+  countdownStartTime?: number;
+  countdownMessage?: string;
 };
 
 type GameState = {
-  players: Player[];
-  obstaclePool: ObstaclePool;
+  teams: NinjaTeam[];
+  obstaclePoolsByPlayerIndex: ObstaclePool[];
   speed: number;
   obstacleBag: number[];
   lastTick: number;
@@ -56,6 +64,7 @@ type GameState = {
   phase: "not_started" | "in_progress" | "game_over";
   gameStartTime: number;
   speedUpdateAccumulator: number;
+  playerIdToTeamIdMap: Record<string, string>;
 };
 
 class ObstaclePool {
@@ -114,7 +123,7 @@ const PlayerSprite = ({
   currentAnimation,
   currentFrame,
   wall,
-}: Player) => {
+}: NinjaPlayer) => {
   const { url } = ANIMATIONS[currentAnimation];
 
   let transform = "none";
@@ -204,83 +213,118 @@ const ObstacleSprite = ({ x, y, currentFrame }: Obstacle) => {
   );
 };
 
-const GameScreen = ({ player, obstacles }: GameScreenState) => (
-  <div style={{ margin: 24 }}>
-    <div
-      style={{
-        width: GAME_WIDTH,
-        height: GAME_HEIGHT,
-        background: `
-          linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.9)),
-          url('images/ninja/bg4.jpeg') no-repeat center center
-        `,
-        backgroundSize: "100% 100%",
-        boxShadow: "0 10px 50px -12px rgb(255 255 255 / 0.3)",
-        overflow: "hidden",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "space-between",
-        // border: '1px solid black',
-        borderBottom: "none", // Connect with color bar
-      }}
-    >
-      {/* Score display */}
+const GameScreen = ({ team }: { team: NinjaTeam }) => {
+  const player = team.players[team.currentPlayerIndex];
+
+  return (
+    <div style={{ margin: 24 }}>
       <div
         style={{
-          alignSelf: "flex-end",
-          margin: "8px",
-          fontFamily: "Courier New",
-          fontSize: 16,
-          fontWeight: "bold",
-          color: "white",
-          zIndex: 100,
+          width: GAME_WIDTH,
+          height: GAME_HEIGHT,
+          background: `
+            linear-gradient(rgba(0, 0, 0, 0.3), rgba(0, 0, 0, 0.9)),
+            url('images/ninja/bg4.jpeg') no-repeat center center
+          `,
+          backgroundSize: "100% 100%",
+          boxShadow: "0 10px 50px -12px rgb(255 255 255 / 0.3)",
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+          justifyContent: "space-between",
+          // border: '1px solid black',
+          borderBottom: "none", // Connect with color bar
         }}
       >
-        {player.score}
+        {/* Score display */}
+        <div
+          style={{
+            alignSelf: "flex-end",
+            margin: "8px",
+            fontFamily: "Courier New",
+            fontSize: 16,
+            fontWeight: "bold",
+            color: "white",
+            zIndex: 100,
+          }}
+        >
+          {player.score}
+        </div>
+
+        {/* Game content */}
+        <div style={{ flex: 1, position: "relative" }}>
+          {/* Countdown overlay */}
+          {team.state === "countdown" &&
+            team.countdownMessage &&
+            team.countdownStartTime && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "50%",
+                  left: "50%",
+                  transform: "translate(-50%, -50%)",
+                  fontFamily: "Courier New",
+                  fontSize: 18,
+                  fontWeight: "bold",
+                  color: "white",
+                  textAlign: "center",
+                  zIndex: 200,
+                }}
+              >
+                <div>{team.countdownMessage}</div>
+                <div style={{ fontSize: 32, marginTop: "10px" }}>
+                  {Math.max(
+                    0,
+                    5 -
+                      Math.floor((Date.now() - team.countdownStartTime) / 1000)
+                  )}
+                </div>
+              </div>
+            )}
+
+          {team.state === "game_over" && (
+            <div
+              style={{
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                transform: "translate(-50%, -50%)",
+                fontFamily: "Courier New",
+                fontSize: 24,
+                fontWeight: "bold",
+                color: "white",
+              }}
+            >
+              GAME OVER
+            </div>
+          )}
+
+          <PlayerSprite {...player} />
+          {player.obstacles.map((obstacle, index) => (
+            <ObstacleSprite key={index} {...obstacle} />
+          ))}
+        </div>
       </div>
 
-      {/* Game content */}
-      <div style={{ flex: 1, position: "relative" }}>
-        {player.isGameOver && (
-          <div
-            style={{
-              position: "absolute",
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-              fontFamily: "Courier New",
-              fontSize: 24,
-              fontWeight: "bold",
-              color: "white",
-            }}
-          >
-            GAME OVER
-          </div>
-        )}
-        <PlayerSprite {...player} />
-        {obstacles.map((obstacle, index) => (
-          <ObstacleSprite key={index} {...obstacle} />
-        ))}
+      {/* Color bar */}
+      <div
+        style={{
+          width: GAME_WIDTH,
+          height: 32,
+          backgroundColor: player.color,
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          font: "14px Arvo",
+          // border: `1px solid ${player.color}`,
+        }}
+      >
+        {player.name}
       </div>
     </div>
+  );
+};
 
-    {/* Color bar */}
-    <div
-      style={{
-        width: GAME_WIDTH,
-        height: 32,
-        backgroundColor: player.color,
-        display: "flex",
-        justifyContent: "center",
-        alignItems: "center",
-        font: "14px Arvo",
-        // border: `1px solid ${player.color}`,
-      }}
-    >
-      {player.name}
-    </div>
-  </div>
-);
 //
 // Constants
 //
@@ -339,70 +383,78 @@ const ANIMATIONS = {
   },
 };
 
-const DEFAULT_PLAYERS: Player[] = [
+const DEFAULT_TEAMS: NinjaTeam[] = [
   {
-    name: "Player 1",
-    color: Color.Blue,
-    teamId: "1",
-    x: 0,
-    y: GAME_HEIGHT * 0.6,
-    vx: 0,
-    score: 0,
-    obstacles: DEFAULT_OBSTACLES,
-    isGameOver: false,
-    currentAnimation: "run",
-    msPerFrame: ANIMATIONS.run.msPerFrame,
-    wall: "left",
-    currentFrame: 3,
-    lastFrameUpdate: Date.now(),
-  },
-  {
+    id: "1",
     name: "Lizard Wizard",
-    color: Color.Green,
-    teamId: "2",
-    x: 0,
-    y: GAME_HEIGHT * 0.6,
-    vx: 0,
-    score: 0,
-    obstacles: DEFAULT_OBSTACLES,
-    isGameOver: false,
-    currentAnimation: "run",
-    msPerFrame: ANIMATIONS.run.msPerFrame,
-    wall: "left",
-    currentFrame: 3,
-    lastFrameUpdate: Date.now(),
+    color: Color.Blue,
+    currentPlayerIndex: 0,
+    state: "not_started",
+    players: [
+      {
+        id: "hp_0sdf79",
+        name: "Harry Potter",
+        color: Color.Blue,
+        teamId: "1",
+        avatar: Avatar.Icecream,
+        x: 0,
+        y: GAME_HEIGHT * 0.6,
+        vx: 0,
+        score: 0,
+        obstacles: DEFAULT_OBSTACLES,
+        isGameOver: false,
+        currentAnimation: "run",
+        msPerFrame: ANIMATIONS.run.msPerFrame,
+        wall: "left",
+        currentFrame: 3, // 3 looks nicest
+        lastFrameUpdate: Date.now(),
+      },
+      {
+        id: "g_n9o87as",
+        name: "Gandalf",
+        color: Color.Blue,
+        teamId: "1",
+        avatar: Avatar.Tree,
+        x: 0,
+        y: GAME_HEIGHT * 0.6,
+        vx: 0,
+        score: 0,
+        obstacles: DEFAULT_OBSTACLES,
+        isGameOver: false,
+        currentAnimation: "run",
+        msPerFrame: ANIMATIONS.run.msPerFrame,
+        wall: "left",
+        currentFrame: 3, // 3 looks nicest
+        lastFrameUpdate: Date.now(),
+      },
+    ],
   },
   {
-    name: "Surprise Entrant",
+    id: "2",
+    name: "Surprise entrant",
     color: Color.Red,
-    teamId: "3",
-    x: 0,
-    y: GAME_HEIGHT * 0.6,
-    vx: 0,
-    score: 0,
-    obstacles: DEFAULT_OBSTACLES,
-    isGameOver: false,
-    currentAnimation: "run",
-    msPerFrame: ANIMATIONS.run.msPerFrame,
-    wall: "left",
-    currentFrame: 3,
-    lastFrameUpdate: Date.now(),
-  },
-  {
-    name: "Bonk",
-    color: Color.Yellow,
-    teamId: "4",
-    x: 0,
-    y: GAME_HEIGHT * 0.6,
-    vx: 0,
-    score: 0,
-    obstacles: DEFAULT_OBSTACLES,
-    isGameOver: false,
-    currentAnimation: "run",
-    msPerFrame: ANIMATIONS.run.msPerFrame,
-    wall: "left",
-    currentFrame: 3, // 3 looks nicest
-    lastFrameUpdate: Date.now(),
+    currentPlayerIndex: 0,
+    state: "not_started",
+    players: [
+      {
+        id: "blam_9dg",
+        name: "Blam",
+        color: Color.Red,
+        teamId: "2",
+        avatar: Avatar.Spikyball,
+        x: 0,
+        y: GAME_HEIGHT * 0.6,
+        vx: 0,
+        score: 0,
+        obstacles: DEFAULT_OBSTACLES,
+        isGameOver: false,
+        currentAnimation: "run",
+        msPerFrame: ANIMATIONS.run.msPerFrame,
+        wall: "left",
+        currentFrame: 3,
+        lastFrameUpdate: Date.now(),
+      },
+    ],
   },
 ];
 
@@ -416,14 +468,11 @@ const NinjaRun = () => {
   const playSound = useWebAudio();
   const [, setRenderTrigger] = useState({});
   const [loadingPlayers, setLoadingPlayers] = useState(true);
-  const [playerIdToTeamId, setPlayerIdToTeamId] = useState<
-    Record<string, string>
-  >({});
 
   const gameState = useRef<GameState>({
-    players: [],
-    // Same obstacles used for all players. player.obstacles is usually a reference to the list in the pool
-    obstaclePool: new ObstaclePool(0),
+    // Same obstacles used for all teams. team.obstacles is usually a reference to the list in the pool
+    teams: [],
+    obstaclePoolsByPlayerIndex: [],
     speed: 0.15,
     // Ensure we don't choose the same side for new obstacles too many times in a row
     obstacleBag: [...OBSTACLE_BAG_DEFAULT],
@@ -432,6 +481,7 @@ const NinjaRun = () => {
     // Set when start game button is pressed
     gameStartTime: 0,
     speedUpdateAccumulator: 0,
+    playerIdToTeamIdMap: {},
   });
 
   // Get teams from backend
@@ -439,19 +489,81 @@ const NinjaRun = () => {
     const state = gameState.current;
 
     if (DEBUG) {
-      state.players = structuredClone(DEFAULT_PLAYERS);
+      state.teams = structuredClone(DEFAULT_TEAMS);
+      state.playerIdToTeamIdMap = {
+        hp_0sdf79: "1",
+        g_n9o87as: "1",
+        blam_9dg: "2",
+      };
       setLoadingPlayers(false);
       return;
     }
 
     Promise.all([apiFetch(APIRoute.ListTeams), apiFetch(APIRoute.ListPlayers)])
-      .then(([{ teams }, { players: ps }]) => {
-        state.players = teams.map((team) => ({
-          teamId: team.id,
-          color: team.color,
-          name: team.name,
-          y: GAME_HEIGHT * 0.6,
+      .then(([{ teams: ts }, { players: ps }]) => {
+        const teamIdToPlayerMap: Record<string, Player[]> = {};
+        for (const player of ps) {
+          if (!(player.teamId in teamIdToPlayerMap)) {
+            teamIdToPlayerMap[player.teamId] = [];
+          }
+          teamIdToPlayerMap[player.teamId].push(player);
+        }
+
+        for (const team of ts) {
+          const teamPlayers = teamIdToPlayerMap[team.id];
+          state.teams.push({
+            id: team.id,
+            name: team.name,
+            color: team.color,
+            currentPlayerIndex: 0,
+            state: "not_started",
+            players: teamPlayers.map((player) => ({
+              id: player.id,
+              name: player.name,
+              color: team.color,
+              teamId: team.id,
+              avatar: player.avatar,
+              x: 0,
+              y: GAME_HEIGHT * 0.6,
+              vx: 0,
+              score: 0,
+              obstacles: [],
+              isGameOver: false,
+              currentAnimation: "run",
+              msPerFrame: ANIMATIONS.run.msPerFrame,
+              wall: "left",
+              currentFrame: 0,
+              lastFrameUpdate: Date.now(),
+            })),
+          });
+        }
+
+        const playerIdToTeamIdMap: Record<string, string> = {};
+        for (const player of ps) {
+          playerIdToTeamIdMap[player.id] = player.teamId;
+        }
+        state.playerIdToTeamIdMap = playerIdToTeamIdMap;
+
+        setLoadingPlayers(false);
+      })
+      .catch((err: any) => console.error(err));
+  }, []);
+
+  const start = useCallback(() => {
+    // Calculate max players across all teams to know how many obstacle pools we need
+    const maxPlayersInAnyTeam = Math.max(
+      ...gameState.current.teams.map((team) => team.players.length)
+    );
+
+    gameState.current = {
+      teams: gameState.current.teams.map((team) => ({
+        ...team,
+        currentPlayerIndex: 0,
+        state: "playing",
+        players: team.players.map((player) => ({
+          ...player,
           x: 0,
+          y: GAME_HEIGHT * 0.6,
           vx: 0,
           score: 0,
           obstacles: [],
@@ -461,42 +573,18 @@ const NinjaRun = () => {
           wall: "left",
           currentFrame: 0,
           lastFrameUpdate: Date.now(),
-        }));
-
-        const map: Record<string, string> = {};
-        for (const player of ps) {
-          map[player.id] = player.teamId;
-        }
-        setPlayerIdToTeamId(map);
-
-        setLoadingPlayers(false);
-      })
-      .catch((err: any) => console.error(err));
-  }, []);
-
-  const start = useCallback(() => {
-    gameState.current = {
-      players: gameState.current.players.map((player) => ({
-        ...player,
-        y: GAME_HEIGHT * 0.6,
-        x: 0,
-        vx: 0,
-        score: 0,
-        obstacles: [],
-        isGameOver: false,
-        currentAnimation: "run",
-        msPerFrame: ANIMATIONS.run.msPerFrame,
-        wall: "left",
-        currentFrame: 0,
-        lastFrameUpdate: Date.now(),
+        })),
       })),
-      obstaclePool: new ObstaclePool(20),
+      obstaclePoolsByPlayerIndex: Array(maxPlayersInAnyTeam)
+        .fill(null)
+        .map(() => new ObstaclePool(20)),
       speed: 0.15,
       obstacleBag: [...OBSTACLE_BAG_DEFAULT],
       lastTick: 0,
       phase: "in_progress",
       gameStartTime: Date.now(),
       speedUpdateAccumulator: 0,
+      playerIdToTeamIdMap: gameState.current.playerIdToTeamIdMap,
     };
 
     playSound("ninja");
@@ -525,7 +613,13 @@ const NinjaRun = () => {
       state.speed *= Math.pow(1.015, intervals);
       state.speedUpdateAccumulator -= intervals * 500;
 
-      for (const player of state.players) {
+      for (const team of state.teams) {
+        // Only update teams that are currently playing
+        if (team.state !== "playing") {
+          continue;
+        }
+
+        const player = team.players[team.currentPlayerIndex];
         // Increase running speed
         player.msPerFrame -= 0.15;
       }
@@ -541,10 +635,10 @@ const NinjaRun = () => {
       return;
     }
 
-    // Don't update obstacles if all players are game over
+    // Don't update obstacles if all teams are game over
     let isGameOverForAll = true;
-    for (const player of state.players) {
-      if (!player.isGameOver) {
+    for (const team of state.teams) {
+      if (team.state === "playing" || team.state === "countdown") {
         isGameOverForAll = false;
         break;
       }
@@ -559,37 +653,50 @@ const NinjaRun = () => {
       return;
     }
 
-    state.obstaclePool.updateActiveObstacles(deltaTime, state.speed);
-    const activeObstacles = state.obstaclePool.getActiveObstacles();
-
-    if (
-      activeObstacles.length === 0 ||
-      activeObstacles[activeObstacles.length - 1].y > OBSTACLE_MIN_GAP
-    ) {
-      const x = state.obstacleBag.pop()! * (GAME_WIDTH - OBSTACLE_SIZE);
-      if (state.obstacleBag.length === 0) {
-        state.obstacleBag = shuffle([...OBSTACLE_BAG_DEFAULT]);
+    // Get set of currently active player indices across all teams
+    const activePlayerIndices = new Set<number>();
+    for (const team of state.teams) {
+      if (team.state === "playing") {
+        activePlayerIndices.add(team.currentPlayerIndex);
       }
-
-      state.obstaclePool.getObstacle(
-        x,
-        -Math.random() * OBSTACLE_MIN_GAP * 0.6
-      );
     }
 
-    // Update animation frame
-    for (const obstacle of activeObstacles) {
-      if (obstacle.lastFrameUpdate + ANIMATIONS.bat.msPerFrame < now) {
-        obstacle.currentFrame =
-          (obstacle.currentFrame + 1) % ANIMATIONS.bat.frames;
-        obstacle.lastFrameUpdate = now;
+    // Only update obstacle pools that are currently being used by active players
+    for (const playerIndex of activePlayerIndices) {
+      const pool = state.obstaclePoolsByPlayerIndex[playerIndex];
+      pool.updateActiveObstacles(deltaTime, state.speed);
+      const activeObstacles = pool.getActiveObstacles();
+
+      if (
+        activeObstacles.length === 0 ||
+        activeObstacles[activeObstacles.length - 1].y > OBSTACLE_MIN_GAP
+      ) {
+        const x = state.obstacleBag.pop()! * (GAME_WIDTH - OBSTACLE_SIZE);
+        if (state.obstacleBag.length === 0) {
+          state.obstacleBag = shuffle([...OBSTACLE_BAG_DEFAULT]);
+        }
+
+        pool.getObstacle(x, -Math.random() * OBSTACLE_MIN_GAP * 0.6);
+      }
+
+      // Update animation frame
+      for (const obstacle of activeObstacles) {
+        if (obstacle.lastFrameUpdate + ANIMATIONS.bat.msPerFrame < now) {
+          obstacle.currentFrame =
+            (obstacle.currentFrame + 1) % ANIMATIONS.bat.frames;
+          obstacle.lastFrameUpdate = now;
+        }
       }
     }
 
     // Live players reference the same obstacles list to reduce memory allocations and GC pauses
-    for (const player of state.players) {
-      if (!player.isGameOver) {
-        player.obstacles = activeObstacles;
+    for (const team of state.teams) {
+      const player = team.players[team.currentPlayerIndex];
+      if (team.state === "playing" && !player.isGameOver) {
+        player.obstacles =
+          state.obstaclePoolsByPlayerIndex[
+            team.currentPlayerIndex
+          ].getActiveObstacles();
       } else {
         // Keep animating the obstacles for the game over players
         for (const obstacle of player.obstacles) {
@@ -603,160 +710,212 @@ const NinjaRun = () => {
     }
   }, []);
 
-  const updatePlayers = useCallback((deltaTime: number) => {
-    const state = gameState.current;
-    const now = Date.now();
+  const handlePlayerDeath = useCallback(
+    (team: NinjaTeam, deadPlayer: NinjaPlayer) => {
+      // Check if there are more players available
+      if (team.currentPlayerIndex + 1 < team.players.length) {
+        // index will be incremented in updateCountdowns
+        const nextPlayer = team.players[team.currentPlayerIndex + 1];
+        team.state = "countdown";
+        team.countdownStartTime = Date.now();
+        team.countdownMessage = `${deadPlayer.name} has perished. ${nextPlayer.name} will begin in`;
+      } else {
+        // No more players - team is game over
+        team.state = "game_over";
+      }
+    },
+    []
+  );
 
-    // Don't update players if game hasn't started
-    // 'game_over' phase is handle implicitly
-    if (state.phase === "not_started") {
-      return;
-    }
+  const updatePlayers = useCallback(
+    (deltaTime: number) => {
+      const state = gameState.current;
+      const now = Date.now();
 
-    for (const player of state.players) {
-      if (player.isGameOver) {
-        // Player has fallen off the screen
-        if (player.y > GAME_HEIGHT) {
+      // Don't update players if game hasn't started
+      // 'game_over' phase is handle implicitly
+      if (state.phase === "not_started") {
+        return;
+      }
+
+      for (const team of state.teams) {
+        // Only update teams that are currently playing, in countdown, or game over (for death animations)
+        if (team.state === "not_started") {
           continue;
         }
 
-        if (
-          player.currentAnimation === "hit" &&
-          player.currentFrame < ANIMATIONS.hit.frames - 1
-        ) {
-          const targetX = (GAME_WIDTH - PLAYER_SIZE) / 2;
-          const moveDistance = deltaTime * 0.2;
-          if (player.x < targetX) {
-            player.x = Math.min(player.x + moveDistance, targetX);
-          } else if (player.x > targetX) {
-            player.x = Math.max(player.x - moveDistance, targetX);
+        const player = team.players[team.currentPlayerIndex];
+
+        if (player.isGameOver) {
+          // NinjaPlayer has fallen off the screen
+          if (player.y > GAME_HEIGHT) {
+            continue;
           }
 
-          // Update hit animation frame
-          if (now - player.lastFrameUpdate > ANIMATIONS.hit.msPerFrame) {
-            player.currentFrame++;
-            player.lastFrameUpdate = now;
+          if (
+            player.currentAnimation === "hit" &&
+            player.currentFrame < ANIMATIONS.hit.frames - 1
+          ) {
+            const targetX = (GAME_WIDTH - PLAYER_SIZE) / 2;
+            const moveDistance = deltaTime * 0.2;
+            if (player.x < targetX) {
+              player.x = Math.min(player.x + moveDistance, targetX);
+            } else if (player.x > targetX) {
+              player.x = Math.max(player.x - moveDistance, targetX);
+            }
+
+            // Update hit animation frame
+            if (now - player.lastFrameUpdate > ANIMATIONS.hit.msPerFrame) {
+              player.currentFrame++;
+              player.lastFrameUpdate = now;
+            }
+          }
+
+          // Switch to fall animation when hit animation is done
+          if (
+            player.currentAnimation === "hit" &&
+            player.currentFrame === ANIMATIONS.hit.frames - 1
+          ) {
+            player.currentAnimation = "fall";
+            player.currentFrame = 0;
+            player.lastFrameUpdate = Date.now();
+          }
+
+          // Fall animation
+          if (player.currentAnimation === "fall") {
+            player.y += 0.15 * deltaTime;
+
+            // Update fall animation frame
+            const now = Date.now();
+            if (now - player.lastFrameUpdate > ANIMATIONS.fall.msPerFrame) {
+              player.currentFrame =
+                (player.currentFrame + 1) %
+                ANIMATIONS[player.currentAnimation].frames;
+              player.lastFrameUpdate = now;
+            }
+          }
+
+          continue;
+        }
+
+        // Skip gameplay updates if team is in countdown or game over state
+        if (team.state === "countdown" || team.state === "game_over") {
+          continue;
+        }
+
+        // Calculate the new position
+        let newX = Math.round(player.x + player.vx * deltaTime);
+
+        // Check for collisions with left and right walls
+        if (newX < 0) {
+          newX = 0;
+          player.vx = 0; // Stop the player at the left wall
+        } else if (newX + PLAYER_SIZE > GAME_WIDTH) {
+          newX = GAME_WIDTH - PLAYER_SIZE;
+          player.vx = 0; // Stop the player at the right wall
+        }
+
+        // Check for collisions with obstacles
+        let isColliding = false;
+        for (const obstacle of player.obstacles) {
+          const { xb, xf, yb, yt } = ANIMATIONS[player.currentAnimation].hitbox;
+          const oBox = ANIMATIONS.bat.hitbox;
+          if (
+            // right edge of player is to the right of the left edge of obstacle
+            player.x + PLAYER_SIZE - xb > obstacle.x + oBox.xb &&
+            // left edge of player is to the left of the right edge of obstacle
+            player.x + xf < obstacle.x + OBSTACLE_SIZE - oBox.xf &&
+            // bottom edge of player is below the top edge of obstacle
+            player.y + PLAYER_SIZE - yb > obstacle.y + oBox.yt &&
+            // top edge of player is above the bottom edge of obstacle
+            player.y + yt < obstacle.y + OBSTACLE_SIZE - oBox.yb
+          ) {
+            isColliding = true;
+            break;
           }
         }
 
-        // Switch to fall animation when hit animation is done
-        if (
-          player.currentAnimation === "hit" &&
-          player.currentFrame === ANIMATIONS.hit.frames - 1
-        ) {
-          player.currentAnimation = "fall";
+        if (isColliding) {
+          // Copy a snapshot of the obstacles list
+          player.obstacles = structuredClone(
+            state.obstaclePoolsByPlayerIndex[
+              team.currentPlayerIndex
+            ].getActiveObstacles()
+          );
+          player.isGameOver = true;
+          player.currentAnimation = "hit";
           player.currentFrame = 0;
           player.lastFrameUpdate = Date.now();
+          player.vx = 0; // Stop horizontal movement
+
+          // Handle relay transition
+          handlePlayerDeath(team, player);
+          continue;
         }
 
-        // Fall animation
-        if (player.currentAnimation === "fall") {
-          player.y += 0.15 * deltaTime;
+        // Update player position
+        player.x = newX;
 
-          // Update fall animation frame
-          const now = Date.now();
-          if (now - player.lastFrameUpdate > ANIMATIONS.fall.msPerFrame) {
-            player.currentFrame =
-              (player.currentFrame + 1) %
-              ANIMATIONS[player.currentAnimation].frames;
-            player.lastFrameUpdate = now;
-          }
+        if (player.x === 0) {
+          player.wall = "left";
+          player.currentAnimation = "run";
+        } else if (player.x + PLAYER_SIZE === GAME_WIDTH) {
+          player.wall = "right";
+          player.currentAnimation = "run";
+        } else {
+          player.wall = "none";
+          player.currentAnimation = "roll";
         }
 
-        continue;
-      }
+        // Update animation frame
+        if (player.lastFrameUpdate + player.msPerFrame < now) {
+          const currentFrame =
+            (player.currentFrame + 1) %
+            ANIMATIONS[player.currentAnimation].frames;
 
-      // Calculate the new position
-      let newX = Math.round(player.x + player.vx * deltaTime);
-
-      // Check for collisions with left and right walls
-      if (newX < 0) {
-        newX = 0;
-        player.vx = 0; // Stop the player at the left wall
-      } else if (newX + PLAYER_SIZE > GAME_WIDTH) {
-        newX = GAME_WIDTH - PLAYER_SIZE;
-        player.vx = 0; // Stop the player at the right wall
-      }
-
-      // Check for collisions with obstacles
-      let isColliding = false;
-      for (const obstacle of player.obstacles) {
-        const { xb, xf, yb, yt } = ANIMATIONS[player.currentAnimation].hitbox;
-        const oBox = ANIMATIONS.bat.hitbox;
-        if (
-          // right edge of player is to the right of the left edge of obstacle
-          player.x + PLAYER_SIZE - xb > obstacle.x + oBox.xb &&
-          // left edge of player is to the left of the right edge of obstacle
-          player.x + xf < obstacle.x + OBSTACLE_SIZE - oBox.xf &&
-          // bottom edge of player is below the top edge of obstacle
-          player.y + PLAYER_SIZE - yb > obstacle.y + oBox.yt &&
-          // top edge of player is above the bottom edge of obstacle
-          player.y + yt < obstacle.y + OBSTACLE_SIZE - oBox.yb
-        ) {
-          isColliding = true;
-          break;
+          // Also update the score here to avoid another date.now call
+          player.score += Math.round(
+            Math.max(0, now - player.lastFrameUpdate) / 100
+          );
+          player.currentFrame = currentFrame;
+          player.lastFrameUpdate = now;
         }
       }
-
-      if (isColliding) {
-        // Copy a snapshot of the obstacles list
-        player.obstacles = structuredClone(
-          state.obstaclePool.getActiveObstacles()
-        );
-        player.isGameOver = true;
-        player.currentAnimation = "hit";
-        player.currentFrame = 0;
-        player.lastFrameUpdate = Date.now();
-        player.vx = 0; // Stop horizontal movement
-        continue;
-      }
-
-      // Update player position
-      player.x = newX;
-
-      if (player.x === 0) {
-        player.wall = "left";
-        player.currentAnimation = "run";
-      } else if (player.x + PLAYER_SIZE === GAME_WIDTH) {
-        player.wall = "right";
-        player.currentAnimation = "run";
-      } else {
-        player.wall = "none";
-        player.currentAnimation = "roll";
-      }
-
-      // Update animation frame
-      if (player.lastFrameUpdate + player.msPerFrame < now) {
-        const currentFrame =
-          (player.currentFrame + 1) %
-          ANIMATIONS[player.currentAnimation].frames;
-
-        // Also update the score here to avoid another date.now call
-        player.score += Math.round(
-          Math.max(0, now - player.lastFrameUpdate) / 100
-        );
-        player.currentFrame = currentFrame;
-        player.lastFrameUpdate = now;
-      }
-    }
-  }, []);
+    },
+    [handlePlayerDeath]
+  );
 
   // On button press, change the player's direction
-  const handleJump = useCallback((teamId: string) => {
-    let player: Player | null = null;
-    for (const p of gameState.current.players) {
-      if (p.teamId === teamId) {
-        player = p;
+  const handleJump = useCallback((playerId: string) => {
+    const teamId = gameState.current.playerIdToTeamIdMap[playerId];
+    console.log("teamId", teamId);
+    let team: NinjaTeam | null = null;
+    for (const t of gameState.current.teams) {
+      if (t.id === teamId) {
+        team = t;
         break;
       }
     }
-    if (!player) {
+    if (!team) {
       return;
     }
 
+    // if team is not in playing state, do nothing
+    if (team.state !== "playing") {
+      return;
+    }
+
+    // if this player is not the active player, do nothing
+    const playerIndex = team.players.findIndex((p) => p.id === playerId);
+    if (playerIndex !== team.currentPlayerIndex) {
+      return;
+    }
+
+    const player = team.players[team.currentPlayerIndex];
+
     // if game over, do nothing
     if (player.isGameOver) {
-      return player;
+      return;
     }
 
     let newVx = 0;
@@ -785,31 +944,27 @@ const NinjaRun = () => {
 
     subscribe(Channel.BUZZER, (message: WebSocketMessage) => {
       if (message.messageType === MessageType.BUZZ) {
-        const { playerId } = message.payload;
-        handleJump(playerIdToTeamId[playerId]);
+        handleJump(message.payload.playerId);
       }
     });
 
     return () => {
       unsubscribe(Channel.BUZZER);
     };
-  }, [handleJump, playerIdToTeamId, subscribe, unsubscribe]);
+  }, [handleJump, subscribe, unsubscribe]);
 
   // Button press event listener
   useEffect(() => {
     const keydownHandler = (event: KeyboardEvent) => {
       switch (event.code) {
         case "KeyA":
-          handleJump("1");
+          handleJump("hp_0sdf79");
+          break;
+        case "KeyQ":
+          handleJump("g_n9o87as");
           break;
         case "KeyS":
-          handleJump("2");
-          break;
-        case "KeyD":
-          handleJump("3");
-          break;
-        case "KeyF":
-          handleJump("4");
+          handleJump("blam_9dg");
           break;
       }
     };
@@ -820,14 +975,53 @@ const NinjaRun = () => {
     };
   }, [handleJump]);
 
+  const updateCountdowns = useCallback(() => {
+    const state = gameState.current;
+    const now = Date.now();
+
+    for (const team of state.teams) {
+      if (team.state === "countdown" && team.countdownStartTime) {
+        const elapsed = now - team.countdownStartTime;
+        if (elapsed >= 5000) {
+          // Countdown finished - switch to next player
+          team.currentPlayerIndex++;
+          team.state = "playing";
+
+          // Reset game speed to initial value for the new player
+          state.speed = 0.15;
+          state.speedUpdateAccumulator = 0;
+
+          // Reset the new player
+          const newPlayer = team.players[team.currentPlayerIndex];
+          newPlayer.x = 0;
+          newPlayer.y = GAME_HEIGHT * 0.6;
+          newPlayer.vx = 0;
+          newPlayer.score = 0;
+          newPlayer.obstacles = [];
+          newPlayer.isGameOver = false;
+          newPlayer.currentAnimation = "run";
+          newPlayer.msPerFrame = ANIMATIONS.run.msPerFrame;
+          newPlayer.wall = "left";
+          newPlayer.currentFrame = 3;
+          newPlayer.lastFrameUpdate = Date.now();
+
+          // Clear countdown data
+          team.countdownStartTime = undefined;
+          team.countdownMessage = undefined;
+        }
+      }
+    }
+  }, []);
+
   // Game loop, runs every frame
   const gameLoop = useCallback(
     (deltaTime: number) => {
       updateGameSpeed(deltaTime);
       updateObstacles(deltaTime);
       updatePlayers(deltaTime);
+      updateCountdowns();
     },
-    [updateGameSpeed, updatePlayers, updateObstacles]
+    [updateGameSpeed, updatePlayers, updateObstacles, updateCountdowns]
   );
 
   // Scaffolding for the game loop
@@ -860,12 +1054,8 @@ const NinjaRun = () => {
         bg-[url('/images/ninja/darkclouds.png')] bg-no-repeat bg-cover bg-center"
     >
       <div className="flex">
-        {gameState.current.players.map((player, index) => (
-          <GameScreen
-            key={index}
-            player={player}
-            obstacles={player.obstacles}
-          />
+        {gameState.current.teams.map((team, index) => (
+          <GameScreen key={index} team={team} />
         ))}
       </div>
       <div>

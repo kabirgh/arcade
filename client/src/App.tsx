@@ -13,6 +13,7 @@ import { WebSocketProvider } from "./contexts/WebSocketContext";
 import Join from "./join";
 import Joystick from "./joystick";
 import Lobby from "./lobby";
+import Ninja from "./ninja";
 import Pong from "./pong";
 
 export function App() {
@@ -46,6 +47,9 @@ export function App() {
             </Route>
             <Route path={HostScreen.Boat}>
               <Boat />
+            </Route>
+            <Route path={HostScreen.Ninja}>
+              <Ninja />
             </Route>
             <Route path="/admin">
               <Admin />

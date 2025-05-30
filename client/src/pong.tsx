@@ -11,7 +11,7 @@ import { useListenNavigate } from "./hooks/useListenNavigate";
 import useWebAudio from "./hooks/useWebAudio";
 import { apiFetch } from "./util/apiFetch";
 
-const DEBUG = false;
+const DEBUG = true;
 
 // ============================================================================
 // TYPES

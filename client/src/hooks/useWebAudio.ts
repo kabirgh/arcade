@@ -21,6 +21,7 @@ const useWebAudio = () => {
     loadSound("/audio/pong/wall.wav", "wall");
     loadSound("/audio/pong/score.wav", "score");
     loadSound("/audio/bell.mp3", "bell");
+    loadSound("/audio/ninja/bg2.mp3", "ninja");
 
     return () => {
       if (audioContextRef.current) {

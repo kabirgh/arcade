@@ -312,6 +312,13 @@ const AdminPage: React.FC = () => {
             >
               Boat
             </button>
+            <button
+              className="bg-blue-700 text-white p-2 w-32 rounded-md cursor-pointer hover:bg-blue-600
+                       transition duration-100 ease-in-out active:bg-blue-800"
+              onClick={() => handleNavigateHostScreen(HostScreen.Ninja)}
+            >
+              Ninja
+            </button>
             <h4 className="text-lg font-bold mt-8">Player navigation</h4>
             <button
               className="bg-green-700 text-white p-2 w-32 rounded-md cursor-pointer hover:bg-green-600

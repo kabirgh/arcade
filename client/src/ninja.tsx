@@ -248,7 +248,7 @@ const GameScreen = ({ team }: { team: NinjaTeam }) => {
             zIndex: 100,
           }}
         >
-          {player.score}
+          {team.players.reduce((total, player) => total + player.score, 0)}
         </div>
 
         {/* Game content */}

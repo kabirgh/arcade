@@ -50,9 +50,9 @@ const TeamSection = ({
   const teamPlayers = players.filter((player) => player.teamId === team.id);
 
   return (
-    <div className="flex flex-col justify-center w-[300px] h-full">
+    <div className="flex flex-col justify-center w-[85%] h-full">
       <div
-        className="w-full h-[240px] flex flex-wrap items-center justify-center gap-2 p-4 shadow-md"
+        className="w-full h-[70%] flex flex-wrap items-center justify-center gap-2 p-4 shadow-md"
         style={{ border: `8px solid ${team.color}` }}
       >
         {teamPlayers.map((player) => (
@@ -73,7 +73,7 @@ const TeamSection = ({
           </div>
         ))}
         {teamPlayers.length === 0 && (
-          <div className="text-gray-400 text-center">No players assigned</div>
+          <div className="text-gray-400 text-center">No players here</div>
         )}
       </div>
       <div className="flex items-center mt-2">
@@ -92,7 +92,7 @@ const TeamSection = ({
         />
         <button
           onClick={isEditing ? handleConfirm : handleEdit}
-          className="ml-2 px-2 py-1 bg-gray-100 rounded-md hover:bg-white cursor-pointer"
+          className="ml-2 px-2 py-1 bg-gray-50 rounded-md hover:bg-white cursor-pointer"
           aria-label={isEditing ? "Confirm name change" : "Edit name"}
         >
           {isEditing ? "✔️" : "✏️"}
@@ -206,13 +206,13 @@ export default function Home() {
             style={{ gridArea: "left" }}
           >
             <div className="flex flex-col items-center justify-center w-[300px]">
-              <img src="/qr-wifi.png" width="200px" height="auto" />
+              <img src="/qr-wifi.png" width="85%" height="auto" />
               <p className="text-lg mt-3 text-center">
                 1. Connect to the wifi network
               </p>
             </div>
             <div className="flex flex-col items-center justify-center w-[300px]">
-              <img src="/qr-joinurl.png" width="200px" height="auto" />
+              <img src="/qr-joinurl.png" width="85%" height="auto" />
               <p className="text-lg mt-3 text-center">2. Join the game</p>
             </div>
           </div>

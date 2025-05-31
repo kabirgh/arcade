@@ -214,7 +214,7 @@ const BuzzerHost: React.FC = () => {
               <div
                 id={id}
                 key={id}
-                className="team-row"
+                className="team-row shadow-sm"
                 style={{
                   gridArea: `${2 * i} / 2 / ${2 * i + 1} / 3`,
                   backgroundColor: `${team.color}`,

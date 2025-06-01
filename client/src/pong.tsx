@@ -633,14 +633,10 @@ const Quadrapong = () => {
         return;
       }
 
-      // Apply cubic response curve for more precise control
-      // Small movements become more precise, large movements remain responsive
-      const cubicForce = force * force * force;
-
       // Convert polar coordinates to velocity
       // Angle of 0 = right
-      player.dx = cubicForce * Math.cos(angle) * JOYSTICK_SENSITIVITY;
-      player.dy = cubicForce * Math.sin(angle) * JOYSTICK_SENSITIVITY;
+      player.dx = force * Math.cos(angle) * JOYSTICK_SENSITIVITY;
+      player.dy = force * Math.sin(angle) * JOYSTICK_SENSITIVITY;
     });
 
     return () => unsubscribe(Channel.JOYSTICK);
@@ -1037,8 +1033,7 @@ const Quadrapong = () => {
 
         // Pause before firing ball again
         setTimeout(() => {
-          // TODO: Make this random again after testing
-          const randomAngle = 0; // straight down for testing
+          const randomAngle = Math.random() * Math.PI * 2;
           ball.x = CANVAS_SIZE / 2;
           ball.y = CANVAS_SIZE / 2;
           ball.dx = INITIAL_BALL_SPEED * Math.sin(randomAngle);

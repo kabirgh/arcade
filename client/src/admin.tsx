@@ -73,6 +73,25 @@ const getBroadcastTemplates = (): Record<string, any> => {
   return templates;
 };
 
+const Button = ({
+  color,
+  onClick,
+  text,
+}: {
+  color: string;
+  onClick: () => void;
+  text: string;
+}) => {
+  return (
+    <button
+      className={`bg-${color}-700 text-white p-2 w-32 rounded-md cursor-pointer hover:bg-${color}-600 active:bg-${color}-800`}
+      onClick={onClick}
+    >
+      {text}
+    </button>
+  );
+};
+
 const AdminPage: React.FC = () => {
   const { publish } = useWebSocketContext();
   const [selectedAPI, setSelectedAPI] = useState<string>(
@@ -256,8 +275,6 @@ const AdminPage: React.FC = () => {
     }
   };
 
-  // TODO: add a button to set player screen
-
   return (
     <div className="h-screen relative overflow-hidden">
       <PastelBackground />
@@ -270,70 +287,55 @@ const AdminPage: React.FC = () => {
         <div className="grid grid-cols-7 h-full w-full gap-4">
           <div className="col-start-1 col-span-1 flex flex-col items-center justify-center h-full gap-4">
             <button
-              className="bg-red-600 text-white p-2 w-32 rounded-md cursor-pointer hover:bg-red-500
-                       transition duration-100 ease-in-out active:bg-red-700"
+              className="bg-red-600 text-white p-2 w-32 rounded-md cursor-pointer hover:bg-red-500 active:bg-red-700"
               onClick={handleResetBuzzers}
             >
               Reset buzzers
             </button>
+
             <h4 className="text-lg font-bold mt-8">Host navigation</h4>
-            <button
-              className="bg-blue-700 text-white p-2 w-32 rounded-md cursor-pointer hover:bg-blue-600
-                       transition duration-100 ease-in-out active:bg-blue-800"
+            <Button
+              color="blue"
               onClick={() => handleNavigateHostScreen(HostScreen.Lobby)}
-            >
-              Home
-            </button>
-            <button
-              className="bg-blue-700 text-white p-2 w-32 rounded-md cursor-pointer hover:bg-blue-600
-                       transition duration-100 ease-in-out active:bg-blue-800"
+              text="Lobby"
+            />
+            <Button
+              color="blue"
               onClick={() => handleNavigateHostScreen(HostScreen.BuzzerHost)}
-            >
-              Buzzer host
-            </button>
-            <button
-              className="bg-blue-700 text-white p-2 w-32 rounded-md cursor-pointer hover:bg-blue-600
-                       transition duration-100 ease-in-out active:bg-blue-800"
+              text="Buzzer host"
+            />
+            <Button
+              color="blue"
               onClick={() => handleNavigateHostScreen(HostScreen.Pong)}
-            >
-              Pong
-            </button>
-            <button
-              className="bg-blue-700 text-white p-2 w-32 rounded-md cursor-pointer hover:bg-blue-600
-                       transition duration-100 ease-in-out active:bg-blue-800"
-              onClick={() => handleNavigateHostScreen(HostScreen.Codenames)}
-            >
-              Codenames
-            </button>
-            <button
-              className="bg-blue-700 text-white p-2 w-32 rounded-md cursor-pointer hover:bg-blue-600
-                       transition duration-100 ease-in-out active:bg-blue-800"
+              text="Pong"
+            />
+            <Button
+              color="blue"
               onClick={() => handleNavigateHostScreen(HostScreen.Boat)}
-            >
-              Boat
-            </button>
-            <button
-              className="bg-blue-700 text-white p-2 w-32 rounded-md cursor-pointer hover:bg-blue-600
-                       transition duration-100 ease-in-out active:bg-blue-800"
+              text="Boat"
+            />
+            <Button
+              color="blue"
+              onClick={() => handleNavigateHostScreen(HostScreen.Boat)}
+              text="Ninja"
+            />
+            <Button
+              color="blue"
               onClick={() => handleNavigateHostScreen(HostScreen.Ninja)}
-            >
-              Ninja
-            </button>
+              text="Codenames"
+            />
+
             <h4 className="text-lg font-bold mt-8">Player navigation</h4>
-            <button
-              className="bg-green-700 text-white p-2 w-32 rounded-md cursor-pointer hover:bg-green-600
-                       transition duration-100 ease-in-out active:bg-green-800"
+            <Button
+              color="green"
               onClick={() => handleNavigatePlayerScreen(PlayerScreen.Buzzer)}
-            >
-              Buzzer
-            </button>
-            <button
-              className="bg-green-700 text-white p-2 w-32 rounded-md cursor-pointer hover:bg-green-600
-                       transition duration-100 ease-in-out active:bg-green-800"
-              onClick={() => handleNavigatePlayerScreen(PlayerScreen.Joystick)}
-            >
-              Joystick
-            </button>
+              text="Buzzer"
+            />
+            <Button
+              color="green"
+              onClick={() => handleNavigatePlayerScreen(PlayerScreen.Buzzer)}
+              text="Buzzer"
+            />
           </div>
           <div className="col-start-2 col-span-3 text-gray-900 flex flex-col h-full p-6">
             <form onSubmit={handleSubmit} className="flex flex-col h-full">

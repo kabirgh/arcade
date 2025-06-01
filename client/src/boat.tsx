@@ -416,7 +416,7 @@ const BoatGame = () => {
       stateRef.current.players = DEFAULT_TEAMS.map((team) => ({
         id: `player_${team.id}_debug`,
         name: `Debug Player ${team.id}`,
-        avatar: Avatar.Icecream, // TODO: Use a valid avatar
+        avatar: Avatar.Icecream,
         teamId: team.id,
         dx: 0,
         dy: 0,

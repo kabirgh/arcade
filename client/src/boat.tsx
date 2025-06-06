@@ -84,14 +84,14 @@ const BORDER_TILE_SIZE = 64; // Size of each border tile
 const BORDER_THICKNESS = BORDER_TILE_SIZE; // How thick the border should be
 
 // Game mechanics
-const JOYSTICK_SENSITIVITY = 0.0008;
+const JOYSTICK_SENSITIVITY = 1;
 const BOAT_MAX_SPEED = 0.3;
 const BOAT_ACCELERATION = 0.0002;
 const BOAT_DRAG = 0.98; // Friction/drag coefficient
 const BOAT_ANGULAR_DRAG = 0.9;
 const ROTATION_SPEED = 0.003;
 const BOUNCE_DAMPING = 0.5;
-const WINNING_SCORE = 5;
+const DEFAULT_GAME_DURATION = 2 * 60 * 1000; // 2 minutes in milliseconds
 
 // Object sizes
 const BOAT_WIDTH = 44;
@@ -383,6 +383,7 @@ const BoatGame = () => {
   const [loading, setLoading] = useState(true);
   const [numActiveTeams, setNumActiveTeams] = useState(0);
   const [, setRenderTrigger] = useState({});
+  const [gameDuration, setGameDuration] = useState(DEFAULT_GAME_DURATION);
   const hasStartedGameRef = useRef(false); // Track if we've started a game before
   const stateRef = useRef<State>({
     lastTick: 0,
@@ -549,12 +550,9 @@ const BoatGame = () => {
           return;
         }
 
-        // Apply cubic response curve for more precise control
-        const cubicForce = force * force * force;
-
         // Convert polar coordinates to velocity components
-        player.dx = cubicForce * Math.cos(angle);
-        player.dy = cubicForce * Math.sin(angle);
+        player.dx = JOYSTICK_SENSITIVITY * force * Math.cos(angle);
+        player.dy = JOYSTICK_SENSITIVITY * force * Math.sin(angle);
       }
     );
 
@@ -667,12 +665,6 @@ const BoatGame = () => {
           duck.collected = true;
           team.score++;
           playSound("score");
-
-          // Check for winner
-          if (team.score >= WINNING_SCORE) {
-            stateRef.current.phase = "game_over";
-            stateRef.current.winner = team;
-          }
 
           return;
         }
@@ -919,6 +911,20 @@ const BoatGame = () => {
       // Update game time
       stateRef.current.currentTime =
         Date.now() - stateRef.current.gameStartTime;
+
+      // Check if time is up
+      if (stateRef.current.currentTime >= gameDuration) {
+        stateRef.current.phase = "game_over";
+        // Find team with highest score as winner
+        const activeTeams = stateRef.current.teams.filter(
+          (t) => t.type === "active"
+        );
+        const maxScore = Math.max(...activeTeams.map((t) => t.score));
+        const winners = activeTeams.filter((t) => t.score === maxScore);
+        // If there's a tie, pick the first one (could be enhanced to handle ties differently)
+        stateRef.current.winner = winners[0] || null;
+        return;
+      }
 
       moveBoats(deltaTime);
       handleBoatDuckCollision();
@@ -1196,16 +1202,40 @@ const BoatGame = () => {
       </div>
 
       {/* Game Controls - Top Right Overlay */}
-      <div className="absolute top-4 right-4 bg-black/80 rounded-lg p-4 flex flex-col items-center gap-3">
+      <div className="absolute top-4 right-4 bg-black/80 rounded-lg p-4 flex flex-col items-center gap-3 min-w-[200px]">
         {stateRef.current.phase === "in_progress" && (
           <div className="text-center">
             <div className="text-white text-sm font-semibold">
-              Time: {formatTime(stateRef.current.currentTime)}
+              Time: {formatTime(gameDuration - stateRef.current.currentTime)}
+            </div>
+            <div className="text-gray-300 text-xs">
+              {formatTime(stateRef.current.currentTime)} /{" "}
+              {formatTime(gameDuration)}
             </div>
           </div>
         )}
+
+        {stateRef.current.phase !== "in_progress" && (
+          <div className="text-center w-full">
+            <label className="text-white text-sm font-semibold block mb-2">
+              Game Duration
+            </label>
+            <select
+              className="bg-gray-700 text-white text-sm px-3 py-1 rounded w-full mb-3"
+              value={gameDuration}
+              onChange={(e) => setGameDuration(parseInt(e.target.value))}
+            >
+              <option value={60 * 1000}>1 minute</option>
+              <option value={2 * 60 * 1000}>2 minutes</option>
+              <option value={3 * 60 * 1000}>3 minutes</option>
+              <option value={5 * 60 * 1000}>5 minutes</option>
+              <option value={10 * 60 * 1000}>10 minutes</option>
+            </select>
+          </div>
+        )}
+
         <button
-          className="bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2 rounded disabled:opacity-50 whitespace-nowrap cursor-pointer"
+          className="bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2 rounded disabled:opacity-50 whitespace-nowrap cursor-pointer w-full"
           disabled={loading || stateRef.current.phase === "in_progress"}
           onClick={() => start()}
         >
@@ -1232,11 +1262,29 @@ const BoatGame = () => {
               {stateRef.current.winner.name} Wins!
             </h1>
             <p className="text-white text-xl mb-2">
-              Score: {stateRef.current.winner.score} ducks
+              Final Score: {stateRef.current.winner.score} ducks
             </p>
-            <p className="text-white text-xl mb-6">
-              Time: {formatTime(stateRef.current.currentTime)}
-            </p>
+            <div className="text-white text-lg mb-4">
+              <h3 className="font-semibold mb-2">Final Standings:</h3>
+              {stateRef.current.teams
+                .filter((t) => t.type === "active")
+                .sort((a, b) => b.score - a.score)
+                .map((team, index) => (
+                  <div
+                    key={team.id}
+                    className="flex justify-between items-center px-4 py-1"
+                  >
+                    <span
+                      style={{ color: team.color }}
+                      className="font-semibold"
+                    >
+                      #{index + 1} {team.name}
+                    </span>
+                    <span>{team.score} ducks</span>
+                  </div>
+                ))}
+            </div>
+            <p className="text-gray-300 text-sm">Click anywhere to continue</p>
           </div>
         </div>
       )}

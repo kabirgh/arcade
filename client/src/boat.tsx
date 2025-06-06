@@ -16,7 +16,7 @@ const DEBUG = true;
 // TYPES
 // ============================================================================
 
-type Position = "left" | "right" | "top" | "bottom";
+type Position = "position1" | "position2" | "position3" | "position4";
 
 type BoatPlayer = {
   id: string;
@@ -121,9 +121,9 @@ const DEFAULT_TEAMS: BoatTeam[] = [
     color: Color.Red,
     score: 0,
     type: "active",
-    position: "left",
+    position: "position1",
     x: BORDER_THICKNESS + 100,
-    y: CANVAS_HEIGHT / 2,
+    y: (CANVAS_HEIGHT / 5) * 1,
     vx: 0,
     vy: 0,
     rotation: -Math.PI / 2,
@@ -135,12 +135,12 @@ const DEFAULT_TEAMS: BoatTeam[] = [
     color: Color.Blue,
     score: 0,
     type: "active",
-    position: "right",
-    x: CANVAS_WIDTH - BORDER_THICKNESS - 100,
-    y: CANVAS_HEIGHT / 2,
+    position: "position2",
+    x: BORDER_THICKNESS + 100,
+    y: (CANVAS_HEIGHT / 5) * 2,
     vx: 0,
     vy: 0,
-    rotation: Math.PI / 2,
+    rotation: -Math.PI / 2,
     angularVelocity: 0,
   },
   {
@@ -149,12 +149,12 @@ const DEFAULT_TEAMS: BoatTeam[] = [
     color: Color.Green,
     score: 0,
     type: "active",
-    position: "top",
-    x: CANVAS_WIDTH / 2,
-    y: BORDER_THICKNESS + 100,
+    position: "position3",
+    x: BORDER_THICKNESS + 100,
+    y: (CANVAS_HEIGHT / 5) * 3,
     vx: 0,
     vy: 0,
-    rotation: 0,
+    rotation: -Math.PI / 2,
     angularVelocity: 0,
   },
   {
@@ -163,12 +163,12 @@ const DEFAULT_TEAMS: BoatTeam[] = [
     color: Color.Yellow,
     score: 0,
     type: "active",
-    position: "bottom",
-    x: CANVAS_WIDTH / 2,
-    y: CANVAS_HEIGHT - BORDER_THICKNESS - 100,
+    position: "position4",
+    x: BORDER_THICKNESS + 100,
+    y: (CANVAS_HEIGHT / 5) * 4,
     vx: 0,
     vy: 0,
-    rotation: Math.PI,
+    rotation: -Math.PI / 2,
     angularVelocity: 0,
   },
 ];

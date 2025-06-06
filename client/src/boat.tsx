@@ -437,23 +437,33 @@ const BoatGame = () => {
       .then(({ teams }) => {
         state.teams = [];
 
-        // Assign teams to positions
-        for (let i = 0; i < teams.length && i < DEFAULT_TEAMS.length; i++) {
-          const team = teams[i];
+        // Create all default teams, but only mark the first numActiveTeams as active
+        for (let i = 0; i < DEFAULT_TEAMS.length; i++) {
           const defaultTeam = DEFAULT_TEAMS[i];
-          state.teams.push({
-            ...defaultTeam,
-            id: team.id,
-            name: team.name,
-            color: team.color,
-            type: "active",
-          });
+          if (i < teams.length) {
+            // Active team with real data
+            const team = teams[i];
+            state.teams.push({
+              ...defaultTeam,
+              id: team.id,
+              name: team.name,
+              color: team.color,
+              type: "active",
+            });
+          } else {
+            // Dummy team (inactive)
+            state.teams.push({
+              ...defaultTeam,
+              type: "dummy",
+            });
+          }
         }
         setNumActiveTeams(teams.length);
 
-        // Generate game objects
-        state.ducks = generateDucks(state.teams);
-        state.rocks = generateRocks(state.teams, state.ducks);
+        // Generate game objects based only on active teams
+        const activeTeams = state.teams.filter((t) => t.type === "active");
+        state.ducks = generateDucks(activeTeams);
+        state.rocks = generateRocks(activeTeams, state.ducks);
 
         console.log("Loaded teams", state.teams);
       })
@@ -484,23 +494,23 @@ const BoatGame = () => {
     const unsubscribe = subscribe(
       Channel.JOYSTICK,
       (message: WebSocketMessage) => {
-      if (message.messageType !== MessageType.MOVE) {
-        return;
-      }
+        if (message.messageType !== MessageType.MOVE) {
+          return;
+        }
 
-      const { playerId, angle, force } = message.payload;
-      const player = stateRef.current.players.find((p) => p.id === playerId);
-      if (!player) {
-        console.error(`Player ${playerId} not found`);
-        return;
-      }
+        const { playerId, angle, force } = message.payload;
+        const player = stateRef.current.players.find((p) => p.id === playerId);
+        if (!player) {
+          console.error(`Player ${playerId} not found`);
+          return;
+        }
 
-      // Apply cubic response curve for more precise control
-      const cubicForce = force * force * force;
+        // Apply cubic response curve for more precise control
+        const cubicForce = force * force * force;
 
-      // Convert polar coordinates to velocity components
-      player.dx = cubicForce * Math.cos(angle);
-      player.dy = cubicForce * Math.sin(angle);
+        // Convert polar coordinates to velocity components
+        player.dx = cubicForce * Math.cos(angle);
+        player.dy = cubicForce * Math.sin(angle);
       }
     );
 
@@ -520,12 +530,6 @@ const BoatGame = () => {
       );
 
       if (firstTeamPlayer) {
-        // Check if this player is already controlled by a joystick
-        const isJoystickControlled =
-          Math.abs(firstTeamPlayer.dx) > 0 || Math.abs(firstTeamPlayer.dy) > 0;
-        // Simple check: if joystick is active, maybe ignore keyboard? Or let keyboard override?
-        // For now, let keyboard override/combine.
-
         switch (event.key.toLowerCase()) {
           case "w":
             firstTeamPlayer.dy = -KEYBOARD_INPUT_FORCE;
@@ -733,7 +737,7 @@ const BoatGame = () => {
     for (const team of teams) {
       if (team.type === "dummy") continue;
 
-      // Sum up all player inputs for this team
+      // Average all player inputs for this team
       let totalDx = 0;
       let totalDy = 0;
       const teamPlayers = players.filter((p) => p.teamId === team.id);
@@ -748,9 +752,13 @@ const BoatGame = () => {
         totalDy += player.dy;
       }
 
-      // Apply acceleration based on summed input
-      team.vx += totalDx * BOAT_ACCELERATION * deltaTime;
-      team.vy += totalDy * BOAT_ACCELERATION * deltaTime;
+      // Calculate average input (avoid division by zero)
+      const avgDx = teamPlayers.length > 0 ? totalDx / teamPlayers.length : 0;
+      const avgDy = teamPlayers.length > 0 ? totalDy / teamPlayers.length : 0;
+
+      // Apply acceleration based on averaged input
+      team.vx += avgDx * BOAT_ACCELERATION * deltaTime;
+      team.vy += avgDy * BOAT_ACCELERATION * deltaTime;
 
       // Apply drag
       team.vx *= BOAT_DRAG;
@@ -839,7 +847,6 @@ const BoatGame = () => {
       drawRocks(ctx, rocks);
       drawDucks(ctx, ducks);
       drawBoats(ctx, teams);
-      drawUI(ctx, stateRef.current);
     };
 
     // Render helper functions
@@ -972,11 +979,6 @@ const BoatGame = () => {
       }
     };
 
-    const drawUI = (ctx: CanvasRenderingContext2D, state: State) => {
-      // UI is now handled in HTML, this function is kept for any future canvas-specific UI needs
-      // Currently empty as scores, timer, and game over screen are handled in the React component
-    };
-
     const loop = (time: DOMHighResTimeStamp) => {
       if (stateRef.current.lastTick === 0) {
         stateRef.current.lastTick = time;
@@ -1028,18 +1030,25 @@ const BoatGame = () => {
       newRocks = generateRocks(state.teams, newDucks);
     }
 
-    // Reset game state
-    stateRef.current = {
-      lastTick: 0,
-      phase: "in_progress",
-      teams: state.teams.map((t) => ({
-        ...DEFAULT_TEAMS.find((dt) => dt.position === t.position)!,
+    // Reset game state, preserving active/dummy team types
+    const resetTeams: BoatTeam[] = state.teams.map((t, index) => {
+      const defaultTeam = DEFAULT_TEAMS.find(
+        (dt) => dt.position === t.position
+      )!;
+      return {
+        ...defaultTeam,
         id: t.id,
         name: t.name,
         color: t.color,
-        type: t.type,
+        type: index < numActiveTeams ? "active" : "dummy",
         score: 0,
-      })),
+      };
+    });
+
+    stateRef.current = {
+      lastTick: 0,
+      phase: "in_progress",
+      teams: resetTeams,
       players: state.players,
       ducks: newDucks,
       rocks: newRocks,
@@ -1058,6 +1067,7 @@ const BoatGame = () => {
           <div className="flex justify-between items-center text-white">
             {stateRef.current.teams
               .filter((t) => t.type === "active")
+              .slice(0, numActiveTeams)
               .map((team) => (
                 <div key={team.id} className="text-center">
                   <div

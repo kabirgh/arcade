@@ -466,6 +466,16 @@ const Quadrapong = () => {
     stateRef.current.walls.push(newWall);
   }, []);
 
+  const createWallsForMissingTeams = useCallback(() => {
+    const teamPositions = stateRef.current.teams.map((t) => t.position);
+    const missingPositions = POSITIONS.filter(
+      (pos) => !teamPositions.includes(pos)
+    );
+    for (const position of missingPositions) {
+      makeWall(position);
+    }
+  }, [makeWall]);
+
   const setPaddleLengthsAndCoordinates = useCallback(
     (playersArr: PongPlayer[]): PongPlayer[] => {
       const updatedPlayers = structuredClone(playersArr);
@@ -519,6 +529,9 @@ const Quadrapong = () => {
         structuredClone(DEFAULT_PLAYERS)
       );
       loadAvatarImages(stateRef.current.players);
+
+      // Create walls for positions that don't have teams
+      createWallsForMissingTeams();
 
       setNumActiveTeams(DEFAULT_TEAMS.length);
       setLoading(false);
@@ -607,7 +620,12 @@ const Quadrapong = () => {
       .catch((err) => {
         console.error("Failed to load teams/players:", err);
       });
-  }, [setPaddleLengthsAndCoordinates, makeWall, loadAvatarImages]);
+  }, [
+    setPaddleLengthsAndCoordinates,
+    makeWall,
+    loadAvatarImages,
+    createWallsForMissingTeams,
+  ]);
 
   // =================== GAME STATE MANAGEMENT ===================
   // Update team lives when starting lives changes
@@ -1247,37 +1265,51 @@ const Quadrapong = () => {
   ]);
 
   // =================== GAME CONTROL ===================
-  const start = useCallback(() => {
+  const resetGameState = useCallback(() => {
     const state = stateRef.current;
 
-    // Reset game state
-    stateRef.current = {
-      lastTick: 0,
-      phase: "in_progress",
-      walls: structuredClone(DEFAULT_WALLS),
-      teams: state.teams.map((t) => ({
-        ...t,
-        lives: startingLives,
-      })),
-      // Reset players to their initial positions
-      players: setPaddleLengthsAndCoordinates(state.players),
-      ball: {
-        x: CANVAS_SIZE / 2,
-        y: CANVAS_SIZE / 2,
-        dx: INITIAL_BALL_SPEED * Math.sin(initialAngle),
-        dy: INITIAL_BALL_SPEED * Math.cos(initialAngle),
-      },
-      winner: null,
-      gameOverText: "",
-    };
+    // Only update the game state properties, preserve teams/players setup
+    state.lastTick = 0;
+    state.phase = "in_progress";
+    state.walls = structuredClone(DEFAULT_WALLS);
+    state.winner = null;
+    state.gameOverText = "";
 
-    // Create walls for dummy teams
+    // Reset team lives
+    for (const team of state.teams) {
+      team.lives = startingLives;
+    }
+
+    // Reset players to their initial positions and recalculate paddle positions
+    state.players = setPaddleLengthsAndCoordinates(state.players);
+
+    // Reset ball
+    state.ball = {
+      x: CANVAS_SIZE / 2,
+      y: CANVAS_SIZE / 2,
+      dx: INITIAL_BALL_SPEED * Math.sin(initialAngle),
+      dy: INITIAL_BALL_SPEED * Math.cos(initialAngle),
+    };
+  }, [setPaddleLengthsAndCoordinates, initialAngle, startingLives]);
+
+  const setupWalls = useCallback(() => {
+    // Create walls for any missing team positions
+    // This handles both DEBUG mode (where teams are simply missing)
+    // and non-DEBUG mode (where dummy teams might not be created properly)
+    createWallsForMissingTeams();
+
+    // Also create walls for any dummy teams that do exist
     for (const team of stateRef.current.teams) {
       if (team.type === "dummy") {
         makeWall(team.position);
       }
     }
-  }, [setPaddleLengthsAndCoordinates, initialAngle, startingLives, makeWall]);
+  }, [makeWall, createWallsForMissingTeams]);
+
+  const start = useCallback(() => {
+    resetGameState();
+    setupWalls();
+  }, [resetGameState, setupWalls]);
 
   // =================== RENDER ===================
   return (

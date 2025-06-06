@@ -10,7 +10,7 @@ import { useListenNavigate } from "./hooks/useListenNavigate";
 import useWebAudio from "./hooks/useWebAudio";
 import { apiFetch } from "./util/apiFetch";
 
-const DEBUG = false;
+const DEBUG = true;
 
 // ============================================================================
 // TYPES
@@ -94,10 +94,10 @@ const BOUNCE_DAMPING = 0.5;
 const WINNING_SCORE = 5;
 
 // Object sizes
-const BOAT_WIDTH = 40;
-const BOAT_HEIGHT = 80;
+const BOAT_WIDTH = 44;
+const BOAT_HEIGHT = BOAT_WIDTH * 1.71;
 const BOAT_COLLISION_RADIUS = 25;
-const DUCK_SIZE = 30;
+const DUCK_SIZE = 36;
 const DUCK_COLLISION_RADIUS = 15;
 const ROCK_BASE_SIZES = {
   rock_1: 40,
@@ -106,20 +106,13 @@ const ROCK_BASE_SIZES = {
 };
 
 // Game objects configuration
-const MAX_DUCKS = 24;
+const MAX_DUCKS = 16;
 const NUM_ROCKS = 15;
 const MIN_SPAWN_DISTANCE = 100; // Minimum distance from boats when spawning objects
-
-// UI configuration
-const UI_PADDING = 20;
-const SCORE_HEIGHT = 60;
-const TIMER_HEIGHT = 40;
 
 // ============================================================================
 // CONSTANTS - GAME DATA
 // ============================================================================
-
-const POSITIONS: Array<Position> = ["left", "right", "top", "bottom"] as const;
 
 const DEFAULT_TEAMS: BoatTeam[] = [
   {
@@ -215,9 +208,86 @@ const checkCircleCollision = (
 };
 
 /**
- * Generate random position avoiding existing objects
+ * Generate random position for ducks across the entire map
  */
-const generateRandomPosition = (
+const generateDuckPosition = (
+  existingObjects: Array<{ x: number; y: number }>,
+  rocks: Rock[],
+  margin: number = 50
+): { x: number; y: number } => {
+  let x: number = 0;
+  let y: number = 0;
+  let attempts = 0;
+  const maxAttempts = 100;
+  let positionFound = false;
+
+  while (!positionFound && attempts < maxAttempts) {
+    x =
+      BORDER_THICKNESS +
+      margin +
+      Math.random() * (CANVAS_WIDTH - 2 * BORDER_THICKNESS - 2 * margin);
+    y =
+      BORDER_THICKNESS +
+      margin +
+      Math.random() * (CANVAS_HEIGHT - 2 * BORDER_THICKNESS - 2 * margin);
+    attempts++;
+
+    // Check collision with teams (boats)
+    const tooCloseToTeam = existingObjects.some((obj) => {
+      const dx = obj.x - x;
+      const dy = obj.y - y;
+      return (
+        Math.sqrt(dx * dx + dy * dy) <
+        BOAT_COLLISION_RADIUS + DUCK_COLLISION_RADIUS + 20
+      ); // 20px buffer
+    });
+
+    // Check collision with rocks using proper radii
+    const tooCloseToRock = rocks.some((rock) => {
+      const dx = rock.x - x;
+      const dy = rock.y - y;
+      return (
+        Math.sqrt(dx * dx + dy * dy) < rock.radius + DUCK_COLLISION_RADIUS + 10
+      ); // 10px buffer
+    });
+
+    if (!tooCloseToTeam && !tooCloseToRock) {
+      positionFound = true;
+    }
+  }
+
+  return { x, y };
+};
+
+/**
+ * Generate initial ducks
+ */
+const generateDucks = (teams: BoatTeam[], rocks: Rock[]): Duck[] => {
+  const ducks: Duck[] = [];
+  const existingPositions: Array<{ x: number; y: number }> = [
+    ...teams,
+    ...rocks,
+  ];
+
+  // Generate all ducks randomly and evenly spread across the map
+  for (let i = 0; i < MAX_DUCKS; i++) {
+    const pos = generateDuckPosition(existingPositions, rocks);
+    ducks.push({
+      id: `duck_${i}`,
+      x: pos.x,
+      y: pos.y,
+      collected: false,
+    });
+    existingPositions.push(pos);
+  }
+
+  return ducks;
+};
+
+/**
+ * Generate random position for rocks (avoiding only teams)
+ */
+const generateRockPosition = (
   existingObjects: Array<{ x: number; y: number }>,
   minDistance: number,
   margin: number = 50
@@ -250,51 +320,25 @@ const generateRandomPosition = (
     }
   }
 
-  // If maxAttempts is reached and no suitable position is found,
-  // the last generated position will be returned.
-  // This maintains similar behavior to the original loop.
   return { x, y };
 };
 
 /**
- * Generate initial ducks
+ * Generate initial rocks - evenly distributed across the entire map
  */
-const generateDucks = (teams: BoatTeam[]): Duck[] => {
-  const ducks: Duck[] = [];
-  const existingPositions: Array<{ x: number; y: number }> = [...teams];
-
-  for (let i = 0; i < MAX_DUCKS; i++) {
-    const pos = generateRandomPosition(existingPositions, MIN_SPAWN_DISTANCE);
-    ducks.push({
-      id: `duck_${i}`,
-      x: pos.x,
-      y: pos.y,
-      collected: false,
-    });
-    existingPositions.push(pos);
-  }
-
-  return ducks;
-};
-
-/**
- * Generate initial rocks
- */
-const generateRocks = (teams: BoatTeam[], ducks: Duck[]): Rock[] => {
+const generateRocks = (teams: BoatTeam[]): Rock[] => {
   const rocks: Rock[] = [];
-  const existingPositions: Array<{ x: number; y: number }> = [
-    ...teams,
-    ...ducks,
-  ];
+  const existingPositions: Array<{ x: number; y: number }> = [...teams];
   const rockVariants: Array<"rock_1" | "rock_2" | "rock_3"> = [
     "rock_1",
     "rock_2",
     "rock_3",
   ];
 
+  // Generate rocks evenly spread across the entire playable area
   for (let i = 0; i < NUM_ROCKS; i++) {
     const variant = rockVariants[i % rockVariants.length];
-    const pos = generateRandomPosition(existingPositions, MIN_SPAWN_DISTANCE);
+    const pos = generateRockPosition(existingPositions, MIN_SPAWN_DISTANCE);
     const rock: Rock = {
       id: `rock_${i}`,
       x: pos.x,
@@ -421,10 +465,10 @@ const BoatGame = () => {
         dx: 0,
         dy: 0,
       }));
-      stateRef.current.ducks = generateDucks(stateRef.current.teams);
-      stateRef.current.rocks = generateRocks(
+      stateRef.current.rocks = generateRocks(stateRef.current.teams);
+      stateRef.current.ducks = generateDucks(
         stateRef.current.teams,
-        stateRef.current.ducks
+        stateRef.current.rocks
       );
       setNumActiveTeams(DEFAULT_TEAMS.length);
       return;
@@ -462,8 +506,8 @@ const BoatGame = () => {
 
         // Generate game objects based only on active teams
         const activeTeams = state.teams.filter((t) => t.type === "active");
-        state.ducks = generateDucks(activeTeams);
-        state.rocks = generateRocks(activeTeams, state.ducks);
+        state.rocks = generateRocks(activeTeams);
+        state.ducks = generateDucks(activeTeams, state.rocks);
 
         console.log("Loaded teams", state.teams);
       })
@@ -804,22 +848,66 @@ const BoatGame = () => {
     }
   }, []);
 
+  // =================== CANVAS SIZING ===================
+  const canvasScaleRef = useRef({
+    scaleX: 1,
+    scaleY: 1,
+    displayWidth: CANVAS_WIDTH,
+    displayHeight: CANVAS_HEIGHT,
+  });
+
+  const updateCanvasSize = useCallback(() => {
+    if (!canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+
+    // Get the actual displayed size of the canvas (set by CSS)
+    const rect = canvas.getBoundingClientRect();
+    const displayWidth = rect.width;
+    const displayHeight = rect.height;
+
+    const dpr = window.devicePixelRatio || 1;
+
+    // Set the internal canvas resolution to match display size for crisp rendering
+    canvas.width = displayWidth * dpr;
+    canvas.height = displayHeight * dpr;
+
+    // Store scale values for coordinate system transformation
+    canvasScaleRef.current = {
+      scaleX: displayWidth / CANVAS_WIDTH,
+      scaleY: displayHeight / CANVAS_HEIGHT,
+      displayWidth,
+      displayHeight,
+    };
+  }, []);
+
+  useEffect(() => {
+    updateCanvasSize();
+
+    const handleResize = () => {
+      updateCanvasSize();
+    };
+
+    window.addEventListener("resize", handleResize);
+    document.addEventListener("fullscreenchange", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      document.removeEventListener("fullscreenchange", handleResize);
+    };
+  }, [updateCanvasSize]);
+
   // =================== MAIN GAME LOOP ===================
   useEffect(() => {
     if (canvasRef.current === null || loading) {
       return;
     }
 
+    // Ensure canvas is properly sized when the game loop starts
+    updateCanvasSize();
+
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d")!;
-    const dpr = window.devicePixelRatio || 1;
-
-    // Set canvas size
-    canvas.style.width = `${CANVAS_WIDTH}px`;
-    canvas.style.height = `${CANVAS_HEIGHT}px`;
-    canvas.width = CANVAS_WIDTH * dpr;
-    canvas.height = CANVAS_HEIGHT * dpr;
-    ctx.scale(dpr, dpr);
 
     let animationFrameId: number;
 
@@ -840,6 +928,15 @@ const BoatGame = () => {
 
     const render = () => {
       const { teams, ducks, rocks } = stateRef.current;
+      const { scaleX, scaleY } = canvasScaleRef.current;
+      const dpr = window.devicePixelRatio || 1;
+
+      // Apply proper scaling for this frame
+      ctx.save();
+      ctx.scale(dpr, dpr);
+      ctx.scale(scaleX, scaleY);
+
+      // Clear with the virtual canvas dimensions
       ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
       drawBackground(ctx);
@@ -847,6 +944,8 @@ const BoatGame = () => {
       drawRocks(ctx, rocks);
       drawDucks(ctx, ducks);
       drawBoats(ctx, teams);
+
+      ctx.restore();
     };
 
     // Render helper functions
@@ -1007,6 +1106,7 @@ const BoatGame = () => {
     handleBoatDuckCollision,
     handleBoatRockCollision,
     handleBoatBoatCollision,
+    updateCanvasSize,
   ]);
 
   // =================== GAME CONTROL ===================
@@ -1026,8 +1126,8 @@ const BoatGame = () => {
       newRocks = state.rocks;
     } else {
       // Subsequent games: generate completely new map
-      newDucks = generateDucks(state.teams);
-      newRocks = generateRocks(state.teams, newDucks);
+      newRocks = generateRocks(state.teams);
+      newDucks = generateDucks(state.teams, newRocks);
     }
 
     // Reset game state, preserving active/dummy team types
@@ -1056,80 +1156,90 @@ const BoatGame = () => {
       gameStartTime: Date.now(),
       currentTime: 0,
     };
-  }, []);
+  }, [numActiveTeams]);
 
   // =================== RENDER ===================
   return (
-    <div className="min-h-screen bg-gray-950 p-4">
-      <div className="flex flex-col items-center">
-        {/* Score Display - Always visible above canvas */}
-        <div className="w-full max-w-[1200px] bg-black/70 rounded-lg p-4 mb-4">
-          <div className="flex justify-between items-center text-white">
-            {stateRef.current.teams
-              .filter((t) => t.type === "active")
-              .slice(0, numActiveTeams)
-              .map((team) => (
-                <div key={team.id} className="text-center">
-                  <div
-                    className="text-xl font-bold"
-                    style={{ color: team.color }}
-                  >
-                    {team.name}
-                  </div>
-                  <div className="text-2xl font-bold">{team.score}</div>
-                </div>
-              ))}
-          </div>
-          {stateRef.current.phase === "in_progress" && (
-            <div className="text-center mt-2">
-              <div className="text-white text-lg">
-                Time: {formatTime(stateRef.current.currentTime)}
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Game Canvas */}
+    <div className="h-screen w-screen bg-gray-950 overflow-hidden relative">
+      {/* Game Canvas - Full screen with overlays */}
+      <div className="absolute inset-0 flex items-center justify-center">
         <canvas
           ref={canvasRef}
-          width={CANVAS_WIDTH}
-          height={CANVAS_HEIGHT}
           className="border-2 border-gray-600 rounded-lg"
+          style={{
+            aspectRatio: `${CANVAS_WIDTH}/${CANVAS_HEIGHT}`,
+            width: "min(90vw, 90vh * 1.5)", // Take 90% of viewport, respecting aspect ratio
+            height: "auto",
+          }}
         />
+      </div>
 
-        {/* Game Controls - Always visible below canvas */}
-        <div className="flex flex-row items-center justify-center mt-4">
-          <button
-            className="bg-blue-500 hover:bg-blue-600 text-white text-lg px-6 py-2 rounded disabled:opacity-50"
-            disabled={loading || stateRef.current.phase === "in_progress"}
-            onClick={() => start()}
-          >
-            {stateRef.current.phase === "not_started"
-              ? "Start Game"
-              : "Play Again"}
-          </button>
+      {/* Score Display - Top Left Overlay */}
+      <div className="absolute top-4 left-4 rounded-lg p-4 min-w-[140px]">
+        <div className="flex flex-col gap-2 text-white">
+          <h2 className="text-lg font-bold text-center mb-1">Scores</h2>
+          {stateRef.current.teams
+            .filter((t) => t.type === "active")
+            .slice(0, numActiveTeams)
+            .map((team) => (
+              <div key={team.id} className="text-center">
+                <div
+                  className="text-sm font-bold"
+                  style={{ color: team.color }}
+                >
+                  {team.name}
+                </div>
+                <div className="text-xl font-bold">{team.score}</div>
+              </div>
+            ))}
         </div>
+      </div>
 
-        {/* Game Over Overlay */}
-        {stateRef.current.phase === "game_over" && stateRef.current.winner && (
-          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
-            <div className="bg-gray-900 p-8 rounded-lg text-center">
-              <h1
-                className="text-4xl font-bold mb-4"
-                style={{ color: stateRef.current.winner.color }}
-              >
-                {stateRef.current.winner.name} Wins!
-              </h1>
-              <p className="text-white text-xl mb-2">
-                Score: {stateRef.current.winner.score} ducks
-              </p>
-              <p className="text-white text-xl">
-                Time: {formatTime(stateRef.current.currentTime)}
-              </p>
+      {/* Game Controls - Top Right Overlay */}
+      <div className="absolute top-4 right-4 bg-black/80 rounded-lg p-4 flex flex-col items-center gap-3">
+        {stateRef.current.phase === "in_progress" && (
+          <div className="text-center">
+            <div className="text-white text-sm font-semibold">
+              Time: {formatTime(stateRef.current.currentTime)}
             </div>
           </div>
         )}
+        <button
+          className="bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2 rounded disabled:opacity-50 whitespace-nowrap cursor-pointer"
+          disabled={loading || stateRef.current.phase === "in_progress"}
+          onClick={() => start()}
+        >
+          {stateRef.current.phase === "not_started"
+            ? "Start game"
+            : "Play again"}
+        </button>
       </div>
+
+      {/* Game Over Overlay */}
+      {stateRef.current.phase === "game_over" && stateRef.current.winner && (
+        <div
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 cursor-pointer"
+          onClick={() => {
+            stateRef.current.phase = "not_started";
+            setRenderTrigger({});
+          }}
+        >
+          <div className="bg-gray-900 p-8 rounded-lg text-center">
+            <h1
+              className="text-4xl font-bold mb-4"
+              style={{ color: stateRef.current.winner.color }}
+            >
+              {stateRef.current.winner.name} Wins!
+            </h1>
+            <p className="text-white text-xl mb-2">
+              Score: {stateRef.current.winner.score} ducks
+            </p>
+            <p className="text-white text-xl mb-6">
+              Time: {formatTime(stateRef.current.currentTime)}
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

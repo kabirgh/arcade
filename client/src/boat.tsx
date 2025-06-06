@@ -69,6 +69,7 @@ type State = {
   rocks: Rock[];
   gameStartTime: number;
   currentTime: number;
+  lastDuckSpawnTime: number;
 };
 
 // ============================================================================
@@ -92,6 +93,7 @@ const BOAT_ANGULAR_DRAG = 0.9;
 const ROTATION_SPEED = 0.003;
 const BOUNCE_DAMPING = 0.5;
 const DEFAULT_GAME_DURATION = 2 * 60 * 1000; // 2 minutes in milliseconds
+const DUCK_SPAWN_INTERVAL = 5 * 1000; // 5 seconds in milliseconds
 
 // Object sizes
 const BOAT_WIDTH = 44;
@@ -285,6 +287,30 @@ const generateDucks = (teams: BoatTeam[], rocks: Rock[]): Duck[] => {
 };
 
 /**
+ * Spawn a single new duck during gameplay
+ */
+const spawnNewDuck = (state: State): void => {
+  const { teams, rocks, ducks } = state;
+
+  // Get all current positions (teams, rocks, and uncollected ducks)
+  const existingPositions: Array<{ x: number; y: number }> = [
+    ...teams.filter((t) => t.type === "active"),
+    ...rocks,
+    ...ducks.filter((d) => !d.collected),
+  ];
+
+  const pos = generateDuckPosition(existingPositions, rocks);
+  const newDuckId = `duck_${Date.now()}_${Math.random()}`;
+
+  ducks.push({
+    id: newDuckId,
+    x: pos.x,
+    y: pos.y,
+    collected: false,
+  });
+};
+
+/**
  * Generate random position for rocks (avoiding only teams)
  */
 const generateRockPosition = (
@@ -395,6 +421,7 @@ const BoatGame = () => {
     rocks: [],
     gameStartTime: 0,
     currentTime: 0,
+    lastDuckSpawnTime: 0,
   });
 
   // Load images
@@ -926,6 +953,17 @@ const BoatGame = () => {
         return;
       }
 
+      // Check if it's time to spawn a new duck
+      const currentTime = Date.now();
+      if (
+        currentTime - stateRef.current.lastDuckSpawnTime >=
+        DUCK_SPAWN_INTERVAL
+      ) {
+        spawnNewDuck(stateRef.current);
+        stateRef.current.lastDuckSpawnTime = currentTime;
+        playSound("score"); // Play a sound when a new duck spawns
+      }
+
       moveBoats(deltaTime);
       handleBoatDuckCollision();
       handleBoatRockCollision();
@@ -1161,6 +1199,7 @@ const BoatGame = () => {
       winner: null,
       gameStartTime: Date.now(),
       currentTime: 0,
+      lastDuckSpawnTime: Date.now(),
     };
   }, [numActiveTeams]);
 

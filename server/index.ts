@@ -37,6 +37,7 @@ function broadcast(message: WebSocketMessage): void {
   for (const ws of db.wsPlayerMap.keys()) {
     ws.send(JSON.stringify(message));
   }
+  db.hostWs?.send(JSON.stringify(message));
 }
 
 function broadcastAllPlayers(): PlayerListAllMessage {

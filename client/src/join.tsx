@@ -50,7 +50,7 @@ const TeamCircle = ({
 
 export default function JoinScreen() {
   const [, setLocation] = useLocation();
-  const { subscribe, unsubscribe, readyState } = useWebSocketContext();
+  const { subscribe, readyState } = useWebSocketContext();
   const { sessionPlayer, setSessionPlayer, clearSessionPlayer } =
     usePlayerContext();
   const [playerName, setPlayerName] = useState("");
@@ -137,16 +137,19 @@ export default function JoinScreen() {
 
   // Subscribe to taken player updates
   useEffect(() => {
-    subscribe(Channel.PLAYER, (message: WebSocketMessage) => {
-      console.log("Received message on player channel:", message);
-      if (message.messageType === MessageType.LIST) {
-        console.log("Updating existing players:", message.payload);
-        setExistingPlayers(message.payload);
+    const unsubscribe = subscribe(
+      Channel.PLAYER,
+      (message: WebSocketMessage) => {
+        console.log("Received message on player channel:", message);
+        if (message.messageType === MessageType.LIST) {
+          console.log("Updating existing players:", message.payload);
+          setExistingPlayers(message.payload);
+        }
       }
-    });
+    );
 
-    return () => unsubscribe(Channel.PLAYER);
-  }, [subscribe, unsubscribe]);
+    return unsubscribe;
+  }, [subscribe]);
 
   // If the selected avatar is taken by another player, deselect it.
   useEffect(() => {

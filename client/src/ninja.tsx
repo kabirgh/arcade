@@ -464,7 +464,7 @@ const DEFAULT_TEAMS: NinjaTeam[] = [
 const NinjaRun = () => {
   useListenNavigate("host");
   useAdminAuth({ claimHost: true });
-  const { subscribe, unsubscribe } = useWebSocketContext();
+  const { subscribe } = useWebSocketContext();
   const playSound = useWebAudio();
   const [, setRenderTrigger] = useState({});
   const [loadingPlayers, setLoadingPlayers] = useState(true);
@@ -942,16 +942,17 @@ const NinjaRun = () => {
       return;
     }
 
-    subscribe(Channel.BUZZER, (message: WebSocketMessage) => {
-      if (message.messageType === MessageType.BUZZ) {
-        handleJump(message.payload.playerId);
+    const unsubscribe = subscribe(
+      Channel.BUZZER,
+      (message: WebSocketMessage) => {
+        if (message.messageType === MessageType.BUZZ) {
+          handleJump(message.payload.playerId);
+        }
       }
-    });
+    );
 
-    return () => {
-      unsubscribe(Channel.BUZZER);
-    };
-  }, [handleJump, subscribe, unsubscribe]);
+    return unsubscribe;
+  }, [handleJump, subscribe]);
 
   // Button press event listener
   useEffect(() => {

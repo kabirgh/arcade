@@ -113,7 +113,7 @@ const hopAnimationStyle = `
 export default function Home() {
   useListenNavigate("host");
   const { isAuthenticated } = useAdminAuth({ claimHost: true });
-  const { subscribe, unsubscribe } = useWebSocketContext();
+  const { subscribe } = useWebSocketContext();
   const [players, setPlayers] = useState<Player[]>([]);
   const [buzzingPlayers, setBuzzingPlayers] = useState<Set<string>>(new Set());
   const [teams, setTeams] = useState<Team[]>([
@@ -134,36 +134,42 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    subscribe(Channel.PLAYER, (message: WebSocketMessage) => {
-      if (message.messageType === MessageType.LIST) {
-        setPlayers(message.payload);
+    const unsubscribe = subscribe(
+      Channel.PLAYER,
+      (message: WebSocketMessage) => {
+        if (message.messageType === MessageType.LIST) {
+          setPlayers(message.payload);
+        }
       }
-    });
+    );
 
-    return () => unsubscribe(Channel.PLAYER);
-  }, [subscribe, unsubscribe]);
+    return unsubscribe;
+  }, [subscribe]);
 
   useEffect(() => {
-    subscribe(Channel.BUZZER, (message: WebSocketMessage) => {
-      if (message.messageType === MessageType.BUZZ) {
-        const { playerId } = message.payload;
+    const unsubscribe = subscribe(
+      Channel.BUZZER,
+      (message: WebSocketMessage) => {
+        if (message.messageType === MessageType.BUZZ) {
+          const { playerId } = message.payload;
 
-        // Add player to buzzing set
-        setBuzzingPlayers((prev) => new Set([...prev, playerId]));
+          // Add player to buzzing set
+          setBuzzingPlayers((prev) => new Set([...prev, playerId]));
 
-        // Remove player from buzzing set after animation completes
-        setTimeout(() => {
-          setBuzzingPlayers((prev) => {
-            const newSet = new Set(prev);
-            newSet.delete(playerId);
-            return newSet;
-          });
-        }, 300); // Animation duration
+          // Remove player from buzzing set after animation completes
+          setTimeout(() => {
+            setBuzzingPlayers((prev) => {
+              const newSet = new Set(prev);
+              newSet.delete(playerId);
+              return newSet;
+            });
+          }, 300); // Animation duration
+        }
       }
-    });
+    );
 
-    return () => unsubscribe(Channel.BUZZER);
-  }, [subscribe, unsubscribe]);
+    return unsubscribe;
+  }, [subscribe]);
 
   const handleTeamNameChange = (teamId: string, name: string) => {
     apiFetch(APIRoute.SetTeamName, { teamId, name }).then(() => {

@@ -5,11 +5,11 @@ import { Channel, MessageType } from "../../../shared/types/domain/websocket";
 import { useWebSocketContext } from "../contexts/WebSocketContext";
 
 export const useListenNavigate = (pageType: "host" | "player") => {
-  const { subscribe, unsubscribe } = useWebSocketContext();
+  const { subscribe } = useWebSocketContext();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
-    subscribe(Channel.ADMIN, (message) => {
+    const unsubscribe = subscribe(Channel.ADMIN, (message) => {
       if (
         message.messageType === MessageType.HOST_NAVIGATE &&
         pageType === "host"
@@ -23,8 +23,6 @@ export const useListenNavigate = (pageType: "host" | "player") => {
       }
     });
 
-    return () => {
-      unsubscribe(Channel.ADMIN);
-    };
-  }, [subscribe, unsubscribe, setLocation, pageType]);
+    return unsubscribe;
+  }, [pageType, setLocation, subscribe]);
 };

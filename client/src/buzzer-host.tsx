@@ -47,7 +47,7 @@ const getPlayersWithDistinctTeams = (
 const BuzzerHost: React.FC = () => {
   useListenNavigate("host");
   const { isAuthenticated } = useAdminAuth({ claimHost: true });
-  const { subscribe, unsubscribe } = useWebSocketContext();
+  const { subscribe } = useWebSocketContext();
   const playSound = useWebAudio();
   const [expandedPlayers, setExpandedPlayers] = useState<
     Record<string, ExpandedPlayer>
@@ -108,23 +108,22 @@ const BuzzerHost: React.FC = () => {
 
   // Listen to buzzer presses & reset commands
   useEffect(() => {
-    subscribe(Channel.BUZZER, (message: WebSocketMessage) => {
-      if (message.messageType === MessageType.BUZZ) {
-        handlePlayerBuzzerPress(
-          message.payload.playerId,
-          message.payload.timestamp
-        );
-      } else if (message.messageType === MessageType.RESET) {
-        setBuzzes([]);
+    const unsubscribe = subscribe(
+      Channel.BUZZER,
+      (message: WebSocketMessage) => {
+        if (message.messageType === MessageType.BUZZ) {
+          handlePlayerBuzzerPress(
+            message.payload.playerId,
+            message.payload.timestamp
+          );
+        } else if (message.messageType === MessageType.RESET) {
+          setBuzzes([]);
+        }
       }
-    });
+    );
 
-    return () => {
-      if (unsubscribe) {
-        unsubscribe(Channel.BUZZER);
-      }
-    };
-  }, [handlePlayerBuzzerPress, subscribe, unsubscribe]);
+    return unsubscribe;
+  }, [handlePlayerBuzzerPress, subscribe]);
 
   useEffect(() => {}, [teams]);
 

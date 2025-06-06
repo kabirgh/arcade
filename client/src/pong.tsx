@@ -414,7 +414,7 @@ const Quadrapong = () => {
   useListenNavigate("host");
   // TODO: use value of isAuthenticated?
   useAdminAuth({ claimHost: true });
-  const { subscribe, unsubscribe } = useWebSocketContext();
+  const { subscribe } = useWebSocketContext();
   const playSound = useWebAudio();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const avatarImagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
@@ -621,26 +621,29 @@ const Quadrapong = () => {
   // =================== INPUT HANDLING ===================
   // Subscribe to joystick move updates from WebSocket
   useEffect(() => {
-    subscribe(Channel.JOYSTICK, (message: WebSocketMessage) => {
-      if (message.messageType !== MessageType.MOVE) {
-        return;
+    const unsubscribe = subscribe(
+      Channel.JOYSTICK,
+      (message: WebSocketMessage) => {
+        if (message.messageType !== MessageType.MOVE) {
+          return;
+        }
+
+        const { playerId, angle, force } = message.payload;
+        const player = stateRef.current.players.find((p) => p.id === playerId);
+        if (!player) {
+          console.error(`Player ${playerId} not found`);
+          return;
+        }
+
+        // Convert polar coordinates to velocity
+        // Angle of 0 = right
+        player.dx = force * Math.cos(angle) * JOYSTICK_SENSITIVITY;
+        player.dy = force * Math.sin(angle) * JOYSTICK_SENSITIVITY;
       }
+    );
 
-      const { playerId, angle, force } = message.payload;
-      const player = stateRef.current.players.find((p) => p.id === playerId);
-      if (!player) {
-        console.error(`Player ${playerId} not found`);
-        return;
-      }
-
-      // Convert polar coordinates to velocity
-      // Angle of 0 = right
-      player.dx = force * Math.cos(angle) * JOYSTICK_SENSITIVITY;
-      player.dy = force * Math.sin(angle) * JOYSTICK_SENSITIVITY;
-    });
-
-    return () => unsubscribe(Channel.JOYSTICK);
-  }, [subscribe, unsubscribe]);
+    return unsubscribe;
+  }, [subscribe]);
 
   // Debug keyboard controls
   useEffect(() => {

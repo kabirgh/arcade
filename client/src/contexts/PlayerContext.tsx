@@ -27,7 +27,7 @@ const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 export const PlayerProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
-  const { publish, readyState, subscribe, unsubscribe } = useWebSocketContext();
+  const { publish, readyState, subscribe } = useWebSocketContext();
   const [player, setPlayer] = useState<Player | null>(null);
 
   // Function to update player state and localStorage
@@ -87,18 +87,14 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({
 
   // Remove player if kicked by server
   useEffect(() => {
-    subscribe(Channel.PLAYER, (message) => {
+    const unsubscribe = subscribe(Channel.PLAYER, (message) => {
       if (message.messageType === MessageType.KICK) {
         clearSessionPlayer();
       }
     });
 
-    return () => {
-      if (unsubscribe) {
-        unsubscribe(Channel.PLAYER);
-      }
-    };
-  }, [clearSessionPlayer, subscribe, unsubscribe]);
+    return unsubscribe;
+  }, [clearSessionPlayer, subscribe]);
 
   return (
     <PlayerContext.Provider

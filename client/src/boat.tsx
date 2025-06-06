@@ -332,7 +332,7 @@ const formatTime = (milliseconds: number): string => {
 const BoatGame = () => {
   useListenNavigate("host");
   useAdminAuth({ claimHost: true });
-  const { subscribe, unsubscribe } = useWebSocketContext();
+  const { subscribe } = useWebSocketContext();
   const playSound = useWebAudio();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const imagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
@@ -481,7 +481,9 @@ const BoatGame = () => {
   // =================== INPUT HANDLING ===================
   // Subscribe to joystick move updates from WebSocket
   useEffect(() => {
-    subscribe(Channel.JOYSTICK, (message: WebSocketMessage) => {
+    const unsubscribe = subscribe(
+      Channel.JOYSTICK,
+      (message: WebSocketMessage) => {
       if (message.messageType !== MessageType.MOVE) {
         return;
       }
@@ -499,10 +501,11 @@ const BoatGame = () => {
       // Convert polar coordinates to velocity components
       player.dx = cubicForce * Math.cos(angle);
       player.dy = cubicForce * Math.sin(angle);
-    });
+      }
+    );
 
-    return () => unsubscribe(Channel.JOYSTICK);
-  }, [subscribe, unsubscribe]);
+    return unsubscribe;
+  }, [subscribe]);
 
   // Keyboard controls for the first team (WASD)
   useEffect(() => {

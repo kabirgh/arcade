@@ -17,8 +17,7 @@ type WebSocketCallback = (message: WebSocketMessage) => void;
 
 // Define the context type
 interface WebSocketContextType {
-  subscribe: (channel: Channel, callback: WebSocketCallback) => void;
-  unsubscribe: (channel: Channel) => void;
+  subscribe: (channel: Channel, callback: WebSocketCallback) => () => void; // Returns unsubscribe function
   publish: (message: WebSocketMessage) => void;
   readyState: ReadyState;
 }
@@ -109,14 +108,21 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
         channels.current.set(channel, new Set());
       }
       channels.current.get(channel)!.add(callback);
+
+      // Return an unsubscribe function for this specific callback
+      return () => {
+        const callbacks = channels.current.get(channel);
+        if (callbacks) {
+          callbacks.delete(callback);
+          // If no more callbacks for this channel, remove the channel entirely
+          if (callbacks.size === 0) {
+            channels.current.delete(channel);
+          }
+        }
+      };
     },
     []
   );
-
-  // Unsubscribe from a channel
-  const unsubscribe = useCallback((channel: Channel) => {
-    channels.current.delete(channel);
-  }, []);
 
   // Send a message to the server
   const publish = useCallback(
@@ -137,7 +143,6 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
     <WebSocketContext.Provider
       value={{
         subscribe,
-        unsubscribe,
         publish,
         readyState,
       }}

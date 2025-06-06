@@ -178,6 +178,33 @@ export default function Home() {
     });
   };
 
+  // Dynamic layout calculation based on number of teams
+  const getTeamsGridLayout = (teamCount: number) => {
+    switch (teamCount) {
+      case 2:
+        return {
+          gridTemplateColumns: "1fr",
+          gridTemplateRows: "1fr 1fr",
+          maxWidth: "800px",
+        };
+      case 3:
+        return {
+          gridTemplateColumns: "1fr",
+          gridTemplateRows: "1fr 1fr 1fr",
+          maxWidth: "800px",
+        };
+      case 4:
+      default:
+        return {
+          gridTemplateColumns: "1fr 1fr",
+          gridTemplateRows: "1fr 1fr",
+          maxWidth: "1000px",
+        };
+    }
+  };
+
+  const teamsGridStyle = getTeamsGridLayout(teams.length);
+
   return (
     <div className="w-full h-full relative overflow-hidden">
       {/* Parent needs to be relative to keep the pastel background in view */}
@@ -189,22 +216,9 @@ export default function Home() {
         </div>
       )}
       {isAuthenticated && (
-        <div
-          className="grid w-full h-full"
-          style={{
-            gridTemplateAreas: `
-          "left center right last"
-          "left center right last"
-      `,
-            gridTemplateColumns: "40% auto auto 5%",
-            gridTemplateRows: "50% auto",
-          }}
-        >
+        <div className="flex w-full h-full">
           {/* QR codes */}
-          <div
-            className="flex flex-col items-center justify-evenly w-full h-full"
-            style={{ gridArea: "left" }}
-          >
+          <div className="flex flex-col items-center justify-evenly w-[35%] h-full">
             <div className="flex flex-col items-center justify-center w-[300px]">
               <img src="/qr-wifi.png" width="85%" height="auto" />
               <p className="text-lg mt-3 text-center">
@@ -217,56 +231,34 @@ export default function Home() {
             </div>
           </div>
 
-          {/* Team sections */}
-          <div
-            className="flex flex-col justify-evenly items-center"
-            style={{ gridArea: "center" }}
-          >
-            {teams[0] && (
-              <TeamSection
-                team={teams[0]}
-                onTeamNameConfirm={(name) => {
-                  handleTeamNameChange(teams[0].id, name);
-                }}
-                players={players}
-                buzzingPlayers={buzzingPlayers}
-              />
-            )}
-            {teams[1] && (
-              <TeamSection
-                team={teams[1]}
-                onTeamNameConfirm={(name) => {
-                  handleTeamNameChange(teams[1].id, name);
-                }}
-                players={players}
-                buzzingPlayers={buzzingPlayers}
-              />
-            )}
-          </div>
-          <div
-            className="flex flex-col justify-around items-center"
-            style={{ gridArea: "right" }}
-          >
-            {teams[2] && (
-              <TeamSection
-                team={teams[2]}
-                onTeamNameConfirm={(name) => {
-                  handleTeamNameChange(teams[2].id, name);
-                }}
-                players={players}
-                buzzingPlayers={buzzingPlayers}
-              />
-            )}
-            {teams[3] && (
-              <TeamSection
-                team={teams[3]}
-                onTeamNameConfirm={(name) => {
-                  handleTeamNameChange(teams[3].id, name);
-                }}
-                players={players}
-                buzzingPlayers={buzzingPlayers}
-              />
-            )}
+          {/* Teams grid - responsive layout */}
+          <div className="flex-1 flex items-center justify-center p-8">
+            <div
+              className="grid gap-6 w-full h-full"
+              style={{
+                gridTemplateColumns: teamsGridStyle.gridTemplateColumns,
+                gridTemplateRows: teamsGridStyle.gridTemplateRows,
+                maxWidth: teamsGridStyle.maxWidth,
+              }}
+            >
+              {teams.map((team) => {
+                return (
+                  <div
+                    key={team.id}
+                    className="flex items-center justify-center"
+                  >
+                    <TeamSection
+                      team={team}
+                      onTeamNameConfirm={(name) => {
+                        handleTeamNameChange(team.id, name);
+                      }}
+                      players={players}
+                      buzzingPlayers={buzzingPlayers}
+                    />
+                  </div>
+                );
+              })}
+            </div>
           </div>
         </div>
       )}

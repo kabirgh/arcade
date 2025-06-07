@@ -7,6 +7,7 @@ import React, {
   useState,
 } from "react";
 import { ReadyState } from "react-use-websocket";
+import { useLocation } from "wouter";
 
 import { PlayerScreen } from "../../../shared/types/domain/misc";
 import type { Player } from "../../../shared/types/domain/player";
@@ -28,6 +29,7 @@ const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 export const PlayerProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
+  const [, setLocation] = useLocation();
   const { publish, readyState, subscribe } = useWebSocketContext();
   const [player, setPlayer] = useState<Player | null>(null);
   // Function to update player state and localStorage
@@ -43,6 +45,8 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({
   }, []);
 
   const clearSessionPlayer = useCallback(() => {
+    // Always clear the player state, regardless of localStorage or WebSocket state
+    setPlayer(null);
     const storedPlayer = localStorage.getItem("player");
 
     if (storedPlayer && readyState === ReadyState.OPEN) {
@@ -88,11 +92,12 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({
     const unsubscribe = subscribe(Channel.PLAYER, (message) => {
       if (message.messageType === MessageType.KICK) {
         clearSessionPlayer();
+        setLocation(PlayerScreen.Join);
       }
     });
 
     return unsubscribe;
-  }, [clearSessionPlayer, subscribe]);
+  }, [clearSessionPlayer, subscribe, setLocation]);
 
   return (
     <PlayerContext.Provider

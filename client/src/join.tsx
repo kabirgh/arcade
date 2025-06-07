@@ -282,7 +282,7 @@ export default function JoinScreen() {
             autoFocus
             autoComplete="off"
             data-1p-ignore="true"
-            className={`w-full p-2 text-md bg-gray-50 border-2 border-gray-300 rounded-lg focus:outline-none focus:ring-2 ${
+            className={`w-full p-2 text-md bg-gray-50 border-1 border-gray-300 rounded-lg focus:outline-none focus:ring-2 ${
               nameError ? "ring-red-300" : "focus:ring-sky-200"
             }`}
           />

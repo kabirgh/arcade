@@ -1,61 +1,48 @@
 import { useCallback, useEffect, useRef } from "react";
 
-const useWebAudio = () => {
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const audioBuffersRef = useRef<{ [key: string]: AudioBuffer }>({});
-  const currentSourceRef = useRef<AudioBufferSourceNode | null>(null);
+/* ---------- singletons shared by every component that imports this file ---------- */
+const audioCtx = new AudioContext();
+const buffers: Record<string, AudioBuffer> = {};
+
+// preload once per page-load
+async function loadAll() {
+  const sounds: [string, string][] = [
+    ["paddle", "/audio/pong/paddle.wav"],
+    ["wall", "/audio/pong/wall.wav"],
+    ["score", "/audio/pong/score.wav"],
+    ["bell", "/audio/bell.mp3"],
+    ["ninja", "/audio/ninja/bg2.mp3"],
+  ];
+
+  await Promise.all(
+    sounds.map(async ([name, url]) => {
+      if (buffers[name]) return; // already decoded
+      const data = await fetch(url).then((r) => r.arrayBuffer());
+      buffers[name] = await audioCtx.decodeAudioData(data);
+    })
+  );
+}
+
+/* ----------------------------------- hook --------------------------------------- */
+export function useWebAudio() {
+  const current = useRef<AudioBufferSourceNode | null>(null);
 
   useEffect(() => {
-    audioContextRef.current = new window.AudioContext();
-
-    const loadSound = async (url: string, name: string) => {
-      const response = await fetch(url);
-      const arrayBuffer = await response.arrayBuffer();
-      const audioBuffer = await audioContextRef.current!.decodeAudioData(
-        arrayBuffer
-      );
-      audioBuffersRef.current[name] = audioBuffer;
-    };
-
-    loadSound("/audio/pong/paddle.wav", "paddle");
-    loadSound("/audio/pong/wall.wav", "wall");
-    loadSound("/audio/pong/score.wav", "score");
-    loadSound("/audio/bell.mp3", "bell");
-    loadSound("/audio/ninja/bg2.mp3", "ninja");
-
-    return () => {
-      if (audioContextRef.current) {
-        audioContextRef.current.close();
-      }
-    };
+    // fire-and-forget; errors will surface in the console
+    loadAll();
   }, []);
 
-  const playSound = useCallback((sound: string) => {
-    if (audioContextRef.current && audioBuffersRef.current[sound]) {
-      // Stop currently playing sound if any
-      if (currentSourceRef.current) {
-        try {
-          currentSourceRef.current.stop();
-        } catch {
-          // Ignore errors if source is already stopped
-        }
-      }
+  /* playSound(name) — same API as before */
+  return useCallback((name: string) => {
+    const buf = buffers[name];
+    if (!buf) return; // still loading or bad key
 
-      const source = audioContextRef.current.createBufferSource();
-      source.buffer = audioBuffersRef.current[sound];
-      source.connect(audioContextRef.current.destination);
-
-      // Clear the reference when the sound ends
-      source.onended = () => {
-        currentSourceRef.current = null;
-      };
-
-      source.start(0);
-      currentSourceRef.current = source;
-    }
+    const src = audioCtx.createBufferSource();
+    src.buffer = buf;
+    src.connect(audioCtx.destination);
+    src.start();
+    current.current = src;
   }, []);
-
-  return playSound;
-};
+}
 
 export default useWebAudio;

@@ -67,6 +67,9 @@ const BuzzerHost: React.FC = () => {
         if (prev.some((b) => b.teamId === team.id)) {
           return prev;
         }
+
+        playSound("bell");
+
         const newBuzzes = [
           ...prev,
           { playerId, teamId: team.id, timestamp },
@@ -74,8 +77,6 @@ const BuzzerHost: React.FC = () => {
           // Sort by timestamp, oldest first
           return a.timestamp - b.timestamp;
         });
-
-        playSound("bell");
 
         return newBuzzes;
       });

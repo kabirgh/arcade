@@ -262,9 +262,9 @@ export default function JoinScreen() {
   };
 
   return (
-    <div className="h-screen relative overflow-hidden">
+    <div className="h-screen relative">
       <PastelBackground />
-      <div className="text-gray-900 flex flex-col h-full max-w-[400px] p-6 mx-auto">
+      <div className="text-gray-900 flex flex-col h-full max-w-[400px] p-6 mx-auto overflow-y-auto">
         {/* Name Input */}
         <div className="mb-4">
           <p className="text-left text-md font-bold mb-1">NAME</p>
@@ -304,7 +304,7 @@ export default function JoinScreen() {
         {/* Avatar grid */}
         <p className="text-left text-md font-bold mb-1">AVATAR</p>
         {/* self-center switches the grid's cross‑axis alignment from stretch to center, so width is now "shrink‑to‑fit" and aspect-[2/3] can decide it. */}
-        <div className="grid flex-1 self-center aspect-[2/3] grid-cols-4 grid-rows-6 gap-2 max-w-full">
+        <div className="grid flex-1 self-center aspect-[2/3] grid-cols-4 grid-rows-6 gap-2 max-w-full min-h-0">
           {Object.values(Avatar).map((avatar) => {
             const isTaken = existingPlayers.some(
               (player) => player.avatar === avatar

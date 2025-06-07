@@ -193,7 +193,7 @@ const BuzzerHost: React.FC = () => {
             height: "100vh",
             width: "100vw",
             display: "grid",
-            gridTemplateColumns: "1fr 8fr 1fr",
+            gridTemplateColumns: "1fr 5fr 1fr",
             gridTemplateRows: `${spacerSize}fr ${teams
               .map(() => `${cardSize}fr ${spacerSize}fr`)
               .join(" ")}`,
@@ -225,36 +225,61 @@ const BuzzerHost: React.FC = () => {
                   fontSize: rect === null ? 0 : 0.25 * rect.height,
                   paddingLeft: "20px",
                   paddingRight: "20px",
+                  position: "relative",
                 }}
               >
-                <span>{team.name}</span>
-                <div
+                {/* Left spacer for balance */}
+                <div style={{ flex: "1" }}></div>
+
+                {/* Centered team name */}
+                <span
                   style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    textAlign: "center",
-                    gap: "5px",
+                    textShadow: "0 0 12px rgba(255,255,255,.3)",
+                    flex: "0 0 auto",
                   }}
                 >
-                  <img
-                    src={avatarToPath(player.avatar)}
-                    alt={`${player.name}'s avatar`}
+                  {team.name}
+                </span>
+
+                {/* Right-aligned avatar section */}
+                <div
+                  style={{
+                    flex: "1",
+                    display: "flex",
+                    justifyContent: "flex-end",
+                    alignItems: "center",
+                  }}
+                >
+                  <div
                     style={{
-                      height: rect === null ? 0 : 0.3 * rect.height,
-                      width: rect === null ? 0 : 0.3 * rect.height,
-                      borderRadius: "50%",
-                    }}
-                  />
-                  <span
-                    style={{
-                      fontSize: rect === null ? 0 : 0.12 * rect.height,
-                      fontFamily: "sans-serif",
-                      fontWeight: "bold",
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      textAlign: "center",
+                      gap: "5px",
+                      marginRight: "6%",
                     }}
                   >
-                    {player.name}
-                  </span>
+                    <img
+                      src={avatarToPath(player.avatar)}
+                      alt={`${player.name}'s avatar`}
+                      style={{
+                        height: rect === null ? 0 : 0.3 * rect.height,
+                        width: rect === null ? 0 : 0.3 * rect.height,
+                        filter: "drop-shadow(0 0 12px rgba(255,255,255,.3))",
+                      }}
+                    />
+                    <span
+                      style={{
+                        fontSize: rect === null ? 0 : 0.085 * rect.height,
+                        fontFamily: "Arvo",
+                        fontWeight: "bold",
+                        textShadow: "0 0 8px rgba(255,255,255,.3)",
+                      }}
+                    >
+                      {player.name}
+                    </span>
+                  </div>
                 </div>
               </div>
             );

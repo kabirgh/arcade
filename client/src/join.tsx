@@ -262,7 +262,7 @@ export default function JoinScreen() {
   };
 
   return (
-    <div className="h-screen relative">
+    <div className="h-screen relative overflow-hidden">
       <PastelBackground />
       <div className="text-gray-900 flex flex-col h-full max-w-[400px] p-6 mx-auto overflow-y-auto">
         {/* Name Input */}

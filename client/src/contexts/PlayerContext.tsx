@@ -8,6 +8,7 @@ import React, {
 } from "react";
 import { ReadyState } from "react-use-websocket";
 
+import { PlayerScreen } from "../../../shared/types/domain/misc";
 import type { Player } from "../../../shared/types/domain/player";
 import { MessageType } from "../../../shared/types/domain/websocket";
 import { Channel } from "../../../shared/types/domain/websocket";
@@ -29,61 +30,58 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({
 }) => {
   const { publish, readyState, subscribe } = useWebSocketContext();
   const [player, setPlayer] = useState<Player | null>(null);
-
   // Function to update player state and localStorage
-  // Assumes ReadyState is OPEN
-  const setSessionPlayer = useCallback(
-    (newPlayer: Player) => {
-      setPlayer(newPlayer);
-      try {
-        localStorage.setItem("player", JSON.stringify(newPlayer));
-        // Notify the server that the player has joined
-        publish({
-          channel: Channel.PLAYER,
-          messageType: MessageType.JOIN,
-          payload: newPlayer,
-        });
-      } catch (error) {
-        console.error("Failed to save player data to localStorage", error);
-      }
-    },
-    [publish]
-  );
+  // Another useEffect sends the JOIN message to the server when readyState is OPEN
+  const setSessionPlayer = useCallback((newPlayer: Player) => {
+    setPlayer(newPlayer);
+    try {
+      localStorage.setItem("player", JSON.stringify(newPlayer));
+    } catch (error) {
+      // TODO: show error to user
+      console.error("Failed to save player data to localStorage", error);
+    }
+  }, []);
 
   const clearSessionPlayer = useCallback(() => {
     const storedPlayer = localStorage.getItem("player");
-    if (!storedPlayer) {
-      return;
-    }
 
-    localStorage.removeItem("player");
-    publish({
-      channel: Channel.PLAYER,
-      messageType: MessageType.LEAVE,
-    });
-  }, [publish]);
+    if (storedPlayer && readyState === ReadyState.OPEN) {
+      localStorage.removeItem("player");
+      publish({
+        channel: Channel.PLAYER,
+        messageType: MessageType.LEAVE,
+      });
+    }
+  }, [publish, readyState]);
 
   // Load player from localStorage on initial mount
   useEffect(() => {
     try {
       const storedPlayer = localStorage.getItem("player");
-      if (!storedPlayer || readyState !== ReadyState.OPEN) {
-        return;
+      if (storedPlayer) {
+        setPlayer(JSON.parse(storedPlayer));
       }
-
-      setPlayer(JSON.parse(storedPlayer));
-      // When the client disconnects, the server will remove the player from the list
-      // so we need to send a JOIN message to the server to re-add the player to the list
-      publish({
-        channel: Channel.PLAYER,
-        messageType: MessageType.JOIN,
-        payload: JSON.parse(storedPlayer),
-      });
     } catch (error) {
       console.error("Failed to parse player data from localStorage", error);
       localStorage.removeItem("player"); // Clear corrupted data
     }
-  }, [publish, readyState]);
+  }, []);
+
+  // Handles:
+  // 1. setSessionPlayer - sends JOIN message to server.
+  // 2. Page refresh - sends JOIN message to server if there's a player in localStorage.
+  //    We need to do this because when the client disconnects, the server will
+  //    remove the player from the list so we need to send a JOIN message to the
+  //    server to re-add the player to the list
+  useEffect(() => {
+    if (readyState === ReadyState.OPEN && player) {
+      publish({
+        channel: Channel.PLAYER,
+        messageType: MessageType.JOIN,
+        payload: player,
+      });
+    }
+  }, [player, publish, readyState]);
 
   // Remove player if kicked by server
   useEffect(() => {
@@ -111,6 +109,5 @@ export const usePlayerContext = () => {
   if (context === undefined) {
     throw new Error("usePlayerContext must be used within a PlayerProvider");
   }
-  console.log("usePlayerContext sessionPlayer", context.sessionPlayer);
   return context;
 };

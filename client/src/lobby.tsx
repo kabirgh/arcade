@@ -63,7 +63,7 @@ const TeamSection = ({
               className="w-[64px] h-[64px] object-cover"
               style={{
                 animation: buzzingPlayers.has(player.id)
-                  ? "hop 0.1s ease-out"
+                  ? "hop 0.3s ease-out"
                   : undefined,
               }}
             />
@@ -106,7 +106,8 @@ const TeamSection = ({
 const hopAnimationStyle = `
 @keyframes hop {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-8px); }
+  35% { transform: translateY(-8px); }
+  70% { transform: translateY(3px); }
 }
 `;
 

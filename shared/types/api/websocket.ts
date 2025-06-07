@@ -88,6 +88,17 @@ const NavigateHostMessageType = t.Object({
 });
 export type NavigateHostMessage = Static<typeof NavigateHostMessageType>;
 
+const SetDuckSpawnIntervalMessageType = t.Object({
+  channel: t.Literal(Channel.GAME),
+  messageType: t.Literal(MessageType.DUCK_SPAWN_INTERVAL),
+  payload: t.Object({
+    intervalMs: t.Number(),
+  }),
+});
+export type SetDuckSpawnIntervalMessage = Static<
+  typeof SetDuckSpawnIntervalMessageType
+>;
+
 export const WebSocketMessageType = t.Union([
   PlayerListAllMessageType,
   PlayerJoinMessageType,
@@ -99,6 +110,7 @@ export const WebSocketMessageType = t.Union([
   ClaimHostMessageType,
   NavigatePlayerMessageType,
   NavigateHostMessageType,
+  SetDuckSpawnIntervalMessageType,
 ]);
 export type WebSocketMessage = Static<typeof WebSocketMessageType>;
 

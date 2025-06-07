@@ -3,6 +3,7 @@ export enum Channel {
   BUZZER = "BUZZER",
   JOYSTICK = "JOYSTICK",
   ADMIN = "ADMIN",
+  GAME = "GAME",
 }
 
 export enum MessageType {
@@ -20,4 +21,6 @@ export enum MessageType {
   CLAIM_HOST = "CLAIM_HOST",
   HOST_NAVIGATE = "HOST_NAVIGATE",
   PLAYER_NAVIGATE = "PLAYER_NAVIGATE",
+  // Game
+  DUCK_SPAWN_INTERVAL = "DUCK_SPAWN_INTERVAL",
 }

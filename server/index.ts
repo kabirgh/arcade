@@ -145,6 +145,14 @@ const handleWebSocketMessage = (ws: ElysiaWS, message: WebSocketMessage) => {
           break;
       }
       break;
+
+    case Channel.GAME:
+      switch (message.messageType) {
+        case MessageType.DUCK_SPAWN_INTERVAL:
+          sendHostMessage(message);
+          break;
+      }
+      break;
   }
 };
 
@@ -243,13 +251,17 @@ const app = new Elysia()
   .post(
     APIRoute.SendWebSocketMessage,
     ({ body }) => {
-      const ws = [...db.wsPlayerMap.keys()].find((ws) => ws.id === body.id);
+      const ws =
+        body.id === "host"
+          ? db.hostWs
+          : [...db.wsPlayerMap.keys()].find((ws) => ws.id === body.id);
+
       if (!ws) {
         return {
           ok: false as const,
           error: {
             status: 404,
-            message: "Client not found",
+            message: `WebSocket ${body.id} not found`,
           },
         };
       }

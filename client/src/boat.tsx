@@ -10,7 +10,7 @@ import { useListenNavigate } from "./hooks/useListenNavigate";
 import useWebAudio from "./hooks/useWebAudio";
 import { apiFetch } from "./util/apiFetch";
 
-const DEBUG = true;
+const DEBUG = false;
 
 // ============================================================================
 // TYPES
@@ -70,6 +70,7 @@ type State = {
   gameStartTime: number;
   currentTime: number;
   lastDuckSpawnTime: number;
+  duckSpawnInterval: number;
 };
 
 // ============================================================================
@@ -84,6 +85,12 @@ const CANVAS_HEIGHT = 800;
 const BORDER_TILE_SIZE = 64; // Size of each border tile
 const BORDER_THICKNESS = BORDER_TILE_SIZE; // How thick the border should be
 
+// Calculated playable area bounds
+const BOAT_COLLISION_RADIUS = 25;
+const MIN_Y_PLAYABLE = BORDER_THICKNESS + BOAT_COLLISION_RADIUS;
+const MAX_Y_PLAYABLE = CANVAS_HEIGHT - BORDER_THICKNESS - BOAT_COLLISION_RADIUS;
+const PLAYABLE_HEIGHT = MAX_Y_PLAYABLE - MIN_Y_PLAYABLE;
+
 // Game mechanics
 const JOYSTICK_SENSITIVITY = 1;
 const BOAT_MAX_SPEED = 0.3;
@@ -93,12 +100,10 @@ const BOAT_ANGULAR_DRAG = 0.9;
 const ROTATION_SPEED = 0.003;
 const BOUNCE_DAMPING = 0.5;
 const DEFAULT_GAME_DURATION = 2 * 60 * 1000; // 2 minutes in milliseconds
-const DUCK_SPAWN_INTERVAL = 5 * 1000; // 5 seconds in milliseconds
 
 // Object sizes
 const BOAT_WIDTH = 44;
 const BOAT_HEIGHT = BOAT_WIDTH * 1.71;
-const BOAT_COLLISION_RADIUS = 25;
 const DUCK_SIZE = 36;
 const DUCK_COLLISION_RADIUS = 15;
 const ROCK_BASE_SIZES = {
@@ -422,6 +427,7 @@ const BoatGame = () => {
     gameStartTime: 0,
     currentTime: 0,
     lastDuckSpawnTime: 0,
+    duckSpawnInterval: 5 * 1000, // Initialize here
   });
 
   // Load images
@@ -509,18 +515,25 @@ const BoatGame = () => {
       .then(({ teams }) => {
         state.teams = [];
 
+        const activeTeamsCount = teams.length;
+
         // Create all default teams, but only mark the first numActiveTeams as active
         for (let i = 0; i < DEFAULT_TEAMS.length; i++) {
           const defaultTeam = DEFAULT_TEAMS[i];
-          if (i < teams.length) {
-            // Active team with real data
+
+          if (i < activeTeamsCount) {
+            // Active team with real data - calculate new y position for even spacing
             const team = teams[i];
+            const spacing = PLAYABLE_HEIGHT / (activeTeamsCount + 1);
+            const teamY = MIN_Y_PLAYABLE + (i + 1) * spacing;
+
             state.teams.push({
               ...defaultTeam,
               id: team.id,
               name: team.name,
               color: team.color,
               type: "active",
+              y: teamY, // Override with calculated y
             });
           } else {
             // Dummy team (inactive)
@@ -559,6 +572,17 @@ const BoatGame = () => {
         console.error("Failed to load teams/players:", err);
       });
   }, [loadImages]);
+
+  // Subscribe to duck spawn interval updates from WebSocket
+  useEffect(() => {
+    const unsubscribe = subscribe(Channel.GAME, (message: WebSocketMessage) => {
+      if (message.messageType === MessageType.DUCK_SPAWN_INTERVAL) {
+        stateRef.current.duckSpawnInterval = message.payload.intervalMs;
+      }
+    });
+
+    return unsubscribe;
+  }, [subscribe]);
 
   // =================== INPUT HANDLING ===================
   // Subscribe to joystick move updates from WebSocket
@@ -957,7 +981,7 @@ const BoatGame = () => {
       const currentTime = Date.now();
       if (
         currentTime - stateRef.current.lastDuckSpawnTime >=
-        DUCK_SPAWN_INTERVAL
+        stateRef.current.duckSpawnInterval
       ) {
         spawnNewDuck(stateRef.current);
         stateRef.current.lastDuckSpawnTime = currentTime;
@@ -1151,6 +1175,7 @@ const BoatGame = () => {
     handleBoatRockCollision,
     handleBoatBoatCollision,
     updateCanvasSize,
+    gameDuration,
   ]);
 
   // =================== GAME CONTROL ===================
@@ -1179,14 +1204,33 @@ const BoatGame = () => {
       const defaultTeam = DEFAULT_TEAMS.find(
         (dt) => dt.position === t.position
       )!;
-      return {
-        ...defaultTeam,
-        id: t.id,
-        name: t.name,
-        color: t.color,
-        type: index < numActiveTeams ? "active" : "dummy",
-        score: 0,
-      };
+
+      if (index < numActiveTeams) {
+        // Active team: apply evenly spaced Y position
+        const activeTeamsCount = numActiveTeams;
+        const spacing = PLAYABLE_HEIGHT / (activeTeamsCount + 1);
+        const teamY = MIN_Y_PLAYABLE + (index + 1) * spacing;
+
+        return {
+          ...defaultTeam,
+          id: t.id,
+          name: t.name,
+          color: t.color,
+          type: "active",
+          score: 0,
+          y: teamY, // Override with calculated y
+        };
+      } else {
+        // Dummy team: use default position and type
+        return {
+          ...defaultTeam,
+          id: t.id,
+          name: t.name,
+          color: t.color,
+          type: "dummy",
+          score: 0,
+        };
+      }
     });
 
     stateRef.current = {
@@ -1200,6 +1244,7 @@ const BoatGame = () => {
       gameStartTime: Date.now(),
       currentTime: 0,
       lastDuckSpawnTime: Date.now(),
+      duckSpawnInterval: state.duckSpawnInterval, // Preserve current interval
     };
   }, [numActiveTeams]);
 

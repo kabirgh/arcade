@@ -1,5 +1,9 @@
 import "./buzzer.css";
 
+import { useEffect } from "react";
+import { useLocation } from "wouter";
+
+import { PlayerScreen } from "../../shared/types/domain/misc";
 import { Channel, MessageType } from "../../shared/types/domain/websocket";
 import ConnectionStatusPill from "./components/ConnectionStatusPill";
 import PastelBackground from "./components/PastelBackground";
@@ -8,9 +12,18 @@ import { useWebSocketContext } from "./contexts/WebSocketContext";
 import { useListenNavigate } from "./hooks/useListenNavigate";
 
 export default function Buzzer() {
+  const [, setLocation] = useLocation();
   useListenNavigate("player");
   const { publish } = useWebSocketContext();
   const { sessionPlayer } = usePlayerContext();
+
+  useEffect(() => {
+    if (!sessionPlayer) {
+      console.warn("No session player found");
+      setLocation(PlayerScreen.Join);
+      return;
+    }
+  }, [sessionPlayer, setLocation]);
 
   const handlePress = () => {
     if (!sessionPlayer) {

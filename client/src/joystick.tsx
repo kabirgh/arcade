@@ -2,7 +2,9 @@ import "./buzzer.css";
 
 import nipplejs from "nipplejs";
 import { useEffect, useRef, useState } from "react";
+import { useLocation } from "wouter";
 
+import { PlayerScreen } from "../../shared/types/domain/misc";
 import { Channel, MessageType } from "../../shared/types/domain/websocket";
 import ConnectionStatusPill from "./components/ConnectionStatusPill";
 import PastelBackground from "./components/PastelBackground";
@@ -30,6 +32,7 @@ const vminToPixels = (vmin: number): number => {
 };
 
 export default function Joystick() {
+  const [, setLocation] = useLocation();
   useListenNavigate("player");
   const { publish } = useWebSocketContext();
   const { sessionPlayer } = usePlayerContext();
@@ -53,6 +56,14 @@ export default function Joystick() {
   const deltaSizePx = vminToPixels(10);
   const containerExtraSizePx = vminToPixels(CONTAINER_PADDING_TOTAL_VMIN);
   const joystickContainerDimension = joystickSize + containerExtraSizePx;
+
+  useEffect(() => {
+    if (!sessionPlayer) {
+      console.warn("No session player found");
+      setLocation(PlayerScreen.Join);
+      return;
+    }
+  }, [sessionPlayer, setLocation]);
 
   const increaseSize = () => {
     setJoystickSize((prev) => Math.min(prev + deltaSizePx, maxSizePx));

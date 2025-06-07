@@ -80,7 +80,12 @@ export default function JoinScreen() {
         localStorage.removeItem("playerJoinInfo"); // Clear invalid item
       }
     }
-  }, []);
+
+    // Check if the user is already logged in. If so, redirect to buzzer screen.
+    if (sessionPlayer) {
+      setLocation(PlayerScreen.Buzzer);
+    }
+  }, [sessionPlayer, setLocation]);
 
   useEffect(() => {
     // First check what the server thinks the current screen should be.

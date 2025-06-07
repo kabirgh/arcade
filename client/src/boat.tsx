@@ -603,7 +603,7 @@ const BoatGame = () => {
 
         // Convert polar coordinates to velocity components
         player.dx = JOYSTICK_SENSITIVITY * force * Math.cos(angle);
-        player.dy = JOYSTICK_SENSITIVITY * force * Math.sin(angle);
+        player.dy = -JOYSTICK_SENSITIVITY * force * Math.sin(angle);
       }
     );
 

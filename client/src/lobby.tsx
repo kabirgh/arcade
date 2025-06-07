@@ -52,7 +52,7 @@ const TeamSection = ({
   return (
     <div className="flex flex-col justify-center w-[85%] h-full">
       <div
-        className="w-full h-[70%] flex flex-wrap items-center justify-center gap-2 p-4 shadow-md"
+        className="w-full h-[85%] flex flex-wrap items-center justify-center gap-2 p-4 shadow-md"
         style={{ border: `8px solid ${team.color}` }}
       >
         {teamPlayers.map((player) => (
@@ -60,14 +60,14 @@ const TeamSection = ({
             <img
               src={avatarToPath(player.avatar)}
               alt={`${player.name}'s avatar`}
-              className="w-12 h-12 rounded-full object-cover"
+              className="w-[64px] h-[64px] object-cover"
               style={{
                 animation: buzzingPlayers.has(player.id)
                   ? "hop 0.1s ease-out"
                   : undefined,
               }}
             />
-            <span className="text-xs font-medium mt-1 text-center max-w-[60px] truncate">
+            <span className="text-xs font-medium mt-1 text-center w-[144px]">
               {player.name}
             </span>
           </div>

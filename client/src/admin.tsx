@@ -301,27 +301,39 @@ const AdminPage: React.FC = () => {
             />
             <Button
               color="blue"
-              onClick={() => handleNavigateHostScreen(HostScreen.BuzzerHost)}
+              onClick={() => {
+                handleNavigateHostScreen(HostScreen.BuzzerHost);
+                handleNavigatePlayerScreen(PlayerScreen.Buzzer);
+              }}
               text="Buzzer host"
             />
             <Button
               color="blue"
-              onClick={() => handleNavigateHostScreen(HostScreen.Pong)}
+              onClick={() => {
+                handleNavigateHostScreen(HostScreen.Pong);
+                handleNavigatePlayerScreen(PlayerScreen.Joystick);
+              }}
               text="Pong"
             />
             <Button
               color="blue"
-              onClick={() => handleNavigateHostScreen(HostScreen.Boat)}
+              onClick={() => {
+                handleNavigateHostScreen(HostScreen.Boat);
+                handleNavigatePlayerScreen(PlayerScreen.Joystick);
+              }}
               text="Boat"
             />
             <Button
               color="blue"
-              onClick={() => handleNavigateHostScreen(HostScreen.Boat)}
+              onClick={() => {
+                handleNavigateHostScreen(HostScreen.Ninja);
+                handleNavigatePlayerScreen(PlayerScreen.Buzzer);
+              }}
               text="Ninja"
             />
             <Button
               color="blue"
-              onClick={() => handleNavigateHostScreen(HostScreen.Ninja)}
+              onClick={() => handleNavigateHostScreen(HostScreen.Codenames)}
               text="Codenames"
             />
 
@@ -333,8 +345,8 @@ const AdminPage: React.FC = () => {
             />
             <Button
               color="green"
-              onClick={() => handleNavigatePlayerScreen(PlayerScreen.Buzzer)}
-              text="Buzzer"
+              onClick={() => handleNavigatePlayerScreen(PlayerScreen.Joystick)}
+              text="Joystick"
             />
           </div>
           <div className="col-start-2 col-span-3 text-gray-900 flex flex-col h-full p-6">

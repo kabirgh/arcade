@@ -62,10 +62,13 @@ type GameState = {
   lastTick: number;
   // not_started is only at before the first game starts
   phase: "not_started" | "in_progress" | "game_over";
-  gameStartTime: number;
   speedUpdateAccumulator: number;
   playerIdToTeamIdMap: Record<string, string>;
 };
+
+type CommonPlayerState = Required<
+  Omit<NinjaPlayer, "id" | "name" | "avatar" | "color" | "teamId">
+>;
 
 class ObstaclePool {
   private pool: Obstacle[] = [];
@@ -217,7 +220,7 @@ const GameScreen = ({ team }: { team: NinjaTeam }) => {
   const player = team.players[team.currentPlayerIndex];
 
   return (
-    <div style={{ margin: 24 }}>
+    <div style={{ margin: "24px" }}>
       <div
         style={{
           width: GAME_WIDTH,
@@ -248,7 +251,7 @@ const GameScreen = ({ team }: { team: NinjaTeam }) => {
             zIndex: 100,
           }}
         >
-          {team.players.reduce((total, player) => total + player.score, 0)}
+          {player.score}
         </div>
 
         {/* Game content */}
@@ -321,6 +324,31 @@ const GameScreen = ({ team }: { team: NinjaTeam }) => {
       >
         {player.name}
       </div>
+
+      {/* Player scores */}
+      <div
+        style={{
+          width: GAME_WIDTH,
+          backgroundColor: "rgba(0, 0, 0, 0.8)",
+          padding: "2px 8px",
+          fontSize: "12px",
+          color: "white",
+          fontFamily: "Courier New",
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gap: "0 40px",
+        }}
+      >
+        {team.players.map((p, index) => (
+          <div
+            key={index}
+            style={{ display: "flex", justifyContent: "space-between" }}
+          >
+            <span>{p.name}</span>
+            <span>{p.score}</span>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
@@ -338,7 +366,7 @@ const OBSTACLE_BAG_DEFAULT = shuffle([0, 0, 1, 1]);
 const DEFAULT_OBSTACLES: Obstacle[] = [
   {
     x: 0,
-    y: -2 * OBSTACLE_SIZE,
+    y: -6 * OBSTACLE_SIZE,
     currentFrame: 0,
     lastFrameUpdate: 0,
   },
@@ -383,6 +411,20 @@ const ANIMATIONS = {
   },
 };
 
+const STANDARD_PLAYER_STATE: CommonPlayerState = {
+  x: 0,
+  y: GAME_HEIGHT * 0.6,
+  vx: 0,
+  score: 0,
+  obstacles: DEFAULT_OBSTACLES,
+  isGameOver: false,
+  currentAnimation: "run",
+  msPerFrame: ANIMATIONS.run.msPerFrame,
+  wall: "left",
+  currentFrame: 3, // 3 looks nicest
+  lastFrameUpdate: Date.now(),
+};
+
 const DEFAULT_TEAMS: NinjaTeam[] = [
   {
     id: "1",
@@ -397,17 +439,7 @@ const DEFAULT_TEAMS: NinjaTeam[] = [
         color: Color.Blue,
         teamId: "1",
         avatar: Avatar.Icecream,
-        x: 0,
-        y: GAME_HEIGHT * 0.6,
-        vx: 0,
-        score: 0,
-        obstacles: DEFAULT_OBSTACLES,
-        isGameOver: false,
-        currentAnimation: "run",
-        msPerFrame: ANIMATIONS.run.msPerFrame,
-        wall: "left",
-        currentFrame: 3, // 3 looks nicest
-        lastFrameUpdate: Date.now(),
+        ...STANDARD_PLAYER_STATE,
       },
       {
         id: "g_n9o87as",
@@ -415,17 +447,7 @@ const DEFAULT_TEAMS: NinjaTeam[] = [
         color: Color.Blue,
         teamId: "1",
         avatar: Avatar.Tree,
-        x: 0,
-        y: GAME_HEIGHT * 0.6,
-        vx: 0,
-        score: 0,
-        obstacles: DEFAULT_OBSTACLES,
-        isGameOver: false,
-        currentAnimation: "run",
-        msPerFrame: ANIMATIONS.run.msPerFrame,
-        wall: "left",
-        currentFrame: 3, // 3 looks nicest
-        lastFrameUpdate: Date.now(),
+        ...STANDARD_PLAYER_STATE,
       },
     ],
   },
@@ -442,17 +464,57 @@ const DEFAULT_TEAMS: NinjaTeam[] = [
         color: Color.Red,
         teamId: "2",
         avatar: Avatar.Spikyball,
-        x: 0,
-        y: GAME_HEIGHT * 0.6,
-        vx: 0,
-        score: 0,
-        obstacles: DEFAULT_OBSTACLES,
-        isGameOver: false,
-        currentAnimation: "run",
-        msPerFrame: ANIMATIONS.run.msPerFrame,
-        wall: "left",
-        currentFrame: 3,
-        lastFrameUpdate: Date.now(),
+        ...STANDARD_PLAYER_STATE,
+      },
+    ],
+  },
+  {
+    id: "3",
+    name: "Triple Threat",
+    color: Color.Green,
+    currentPlayerIndex: 0,
+    state: "not_started",
+    players: [
+      {
+        id: "tt_p1",
+        name: "Player 1",
+        color: Color.Green,
+        teamId: "3",
+        avatar: Avatar.Carrot,
+        ...STANDARD_PLAYER_STATE,
+      },
+      {
+        id: "tt_p2",
+        name: "Player 2",
+        color: Color.Green,
+        teamId: "3",
+        avatar: Avatar.Palette,
+        ...STANDARD_PLAYER_STATE,
+      },
+      {
+        id: "tt_p3",
+        name: "Player 3",
+        color: Color.Green,
+        teamId: "3",
+        avatar: Avatar.Apple,
+        ...STANDARD_PLAYER_STATE,
+      },
+    ],
+  },
+  {
+    id: "4",
+    name: "Underdog",
+    color: Color.Yellow,
+    currentPlayerIndex: 0,
+    state: "not_started",
+    players: [
+      {
+        id: "st_p1",
+        name: "Player A",
+        color: Color.Yellow,
+        teamId: "4",
+        avatar: Avatar.Cloud,
+        ...STANDARD_PLAYER_STATE,
       },
     ],
   },
@@ -479,8 +541,6 @@ const NinjaRun = () => {
     obstacleBag: [...OBSTACLE_BAG_DEFAULT],
     lastTick: 0,
     phase: "not_started",
-    // Set when start game button is pressed
-    gameStartTime: 0,
     speedUpdateAccumulator: 0,
     playerIdToTeamIdMap: {},
   });
@@ -495,6 +555,15 @@ const NinjaRun = () => {
         hp_0sdf79: "1",
         g_n9o87as: "1",
         blam_9dg: "2",
+        tt_p1: "3",
+        tt_p2: "3",
+        tt_p3: "3",
+        st_p1: "4",
+        st_p2: "4",
+        st_p3: "4",
+        st_p4: "4",
+        st_p5: "4",
+        st_p6: "4",
       };
       setLoadingPlayers(false);
       return;
@@ -535,6 +604,7 @@ const NinjaRun = () => {
               wall: "left",
               currentFrame: 0,
               lastFrameUpdate: Date.now(),
+              startTime: null,
             })),
           });
         }
@@ -585,7 +655,6 @@ const NinjaRun = () => {
       obstacleBag: [...OBSTACLE_BAG_DEFAULT],
       lastTick: 0,
       phase: "in_progress",
-      gameStartTime: Date.now(),
       speedUpdateAccumulator: 0,
       playerIdToTeamIdMap: gameState.current.playerIdToTeamIdMap,
     };
@@ -655,11 +724,6 @@ const NinjaRun = () => {
     }
     if (isGameOverForAll) {
       state.phase = "game_over";
-      return;
-    }
-
-    // Don't spawn or update obstacles for the first few seconds
-    if (now - state.gameStartTime < 1500) {
       return;
     }
 

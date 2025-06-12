@@ -101,7 +101,7 @@ export function useWebAudio() {
       name: string,
       options: { loop?: boolean; volume?: number } = {
         loop: false,
-        volume: 100,
+        volume: 1,
       }
     ) => {
       if (!isLoading) {

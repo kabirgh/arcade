@@ -10,7 +10,7 @@ import { useListenNavigate } from "./hooks/useListenNavigate";
 import useWebAudio from "./hooks/useWebAudio";
 import { apiFetch } from "./util/apiFetch";
 
-const DEBUG = false;
+const DEBUG = true;
 
 // ============================================================================
 // TYPES
@@ -622,6 +622,8 @@ const BoatGame = () => {
     const KEYBOARD_INPUT_FORCE = 1; // Similar to max joystick force before cubic curve
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (!DEBUG) return;
+
       const firstTeam = stateRef.current.teams.find((t) => t.type === "active");
       if (!firstTeam || stateRef.current.phase !== "in_progress") return;
 
@@ -722,7 +724,7 @@ const BoatGame = () => {
         ) {
           duck.collected = true;
           team.score++;
-          playSound("boat/quack", { volume: 0.6 });
+          playSound("boat/quack", { volume: 0.7 });
 
           return;
         }

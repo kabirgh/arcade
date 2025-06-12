@@ -483,6 +483,13 @@ const BoatGame = () => {
   }, []);
 
   // =================== INITIALIZATION ===================
+  // Play background music
+  useEffect(() => {
+    console.log("Playing boat/bg");
+    const stopSound = playSound("boat/bg", { loop: true });
+    return stopSound;
+  }, [playSound]);
+
   // Load teams & players from backend
   useEffect(() => {
     loadImages();
@@ -715,7 +722,7 @@ const BoatGame = () => {
         ) {
           duck.collected = true;
           team.score++;
-          playSound("score");
+          playSound("boat/quack", { volume: 0.6 });
 
           return;
         }
@@ -1084,7 +1091,7 @@ const BoatGame = () => {
       // Draw bottom border
       const bottomImg = imagesRef.current.get("/boat/landborder_bottom_1.png");
       if (bottomImg) {
-          ctx.drawImage(
+        ctx.drawImage(
           imagesRef.current.get("/boat/landborder_bottomleft.png")!,
           0,
           CANVAS_HEIGHT - BORDER_TILE_SIZE,
@@ -1106,11 +1113,11 @@ const BoatGame = () => {
         }
         ctx.drawImage(
           imagesRef.current.get("/boat/landborder_bottomright.png")!,
-            CANVAS_WIDTH - BORDER_TILE_SIZE,
+          CANVAS_WIDTH - BORDER_TILE_SIZE,
           CANVAS_HEIGHT - BORDER_TILE_SIZE,
-            BORDER_TILE_SIZE,
-            BORDER_TILE_SIZE
-          );
+          BORDER_TILE_SIZE,
+          BORDER_TILE_SIZE
+        );
       }
     };
 

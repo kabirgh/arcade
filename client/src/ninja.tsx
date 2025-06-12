@@ -466,6 +466,7 @@ const NinjaRun = () => {
   useAdminAuth({ claimHost: true });
   const { subscribe } = useWebSocketContext();
   const playSound = useWebAudio();
+  const stopSound = useRef<() => void>(() => {});
   const [, setRenderTrigger] = useState({});
   const [loadingPlayers, setLoadingPlayers] = useState(true);
 
@@ -550,6 +551,8 @@ const NinjaRun = () => {
   }, []);
 
   const start = useCallback(() => {
+    stopSound.current();
+
     // Calculate max players across all teams to know how many obstacle pools we need
     const maxPlayersInAnyTeam = Math.max(
       ...gameState.current.teams.map((team) => team.players.length)
@@ -587,7 +590,7 @@ const NinjaRun = () => {
       playerIdToTeamIdMap: gameState.current.playerIdToTeamIdMap,
     };
 
-    playSound("ninja");
+    stopSound.current = playSound("ninja/bg", { loop: true });
   }, [playSound]);
 
   useEffect(() => {
@@ -596,6 +599,13 @@ const NinjaRun = () => {
       const img = new Image();
       img.src = animation.url;
     }
+  }, []);
+
+  // Stop background music on unmount
+  useEffect(() => {
+    return () => {
+      stopSound.current();
+    };
   }, []);
 
   const updateGameSpeed = useCallback((deltaTime: number) => {

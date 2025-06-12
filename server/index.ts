@@ -167,7 +167,7 @@ const app = new Elysia()
     },
     close(ws) {
       console.log("Client disconnected:", ws.id);
-      // Don't remove player from db.wsPlayerMap because they may reconnect.
+      db.wsPlayerMap.delete(ws);
       // Handle reconnections in the JOIN message handler.
     },
   })

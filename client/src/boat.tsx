@@ -82,7 +82,7 @@ const CANVAS_WIDTH = 1200;
 const CANVAS_HEIGHT = 800;
 
 // Land border configuration
-const BORDER_TILE_SIZE = 64; // Size of each border tile
+const BORDER_TILE_SIZE = 40; // Size of each border tile
 const BORDER_THICKNESS = BORDER_TILE_SIZE; // How thick the border should be
 
 // Calculated playable area bounds
@@ -450,13 +450,13 @@ const BoatGame = () => {
       "/boat/ship_yellow.png",
       // Land border tiles
       "/boat/landborder_top_1.png",
-      "/boat/landborder_top_2.png",
       "/boat/landborder_bottom_1.png",
-      "/boat/landborder_bottom_2.png",
       "/boat/landborder_left_1.png",
-      "/boat/landborder_left_2.png",
       "/boat/landborder_right_1.png",
-      "/boat/landborder_right_2.png",
+      "/boat/landborder_topleft.png",
+      "/boat/landborder_topright.png",
+      "/boat/landborder_bottomleft.png",
+      "/boat/landborder_bottomright.png",
     ];
 
     let loadedCount = 0;
@@ -757,12 +757,11 @@ const BoatGame = () => {
           team.vx -= 2 * dotProduct * nx * BOUNCE_DAMPING;
           team.vy -= 2 * dotProduct * ny * BOUNCE_DAMPING;
 
-          playSound("wall");
           return;
         }
       }
     }
-  }, [playSound]);
+  }, []);
 
   const handleBoatBoatCollision = useCallback(() => {
     const { teams } = stateRef.current;
@@ -811,12 +810,11 @@ const BoatGame = () => {
           team2.vx = v1n * nx - v2t * ny;
           team2.vy = v1n * ny + v2t * nx;
 
-          playSound("paddle");
           return;
         }
       }
     }
-  }, [playSound]);
+  }, []);
 
   const moveBoats = useCallback((deltaTime: number) => {
     const { teams, players } = stateRef.current;
@@ -985,7 +983,6 @@ const BoatGame = () => {
       ) {
         spawnNewDuck(stateRef.current);
         stateRef.current.lastDuckSpawnTime = currentTime;
-        playSound("score"); // Play a sound when a new duck spawns
       }
 
       moveBoats(deltaTime);
@@ -1032,60 +1029,88 @@ const BoatGame = () => {
     };
 
     const drawLandBorders = (ctx: CanvasRenderingContext2D) => {
-      // Draw top border
-      const topImg1 = imagesRef.current.get("/boat/landborder_top_1.png");
-      const topImg2 = imagesRef.current.get("/boat/landborder_top_2.png");
-      if (topImg1 && topImg2) {
-        for (let x = 0; x < CANVAS_WIDTH; x += BORDER_TILE_SIZE) {
-          const tileIndex = Math.floor(x / BORDER_TILE_SIZE);
-          const img = tileIndex % 2 === 0 ? topImg1 : topImg2;
-          ctx.drawImage(img, x, 0, BORDER_TILE_SIZE, BORDER_TILE_SIZE);
-        }
-      }
-
-      // Draw bottom border
-      const bottomImg1 = imagesRef.current.get("/boat/landborder_bottom_1.png");
-      const bottomImg2 = imagesRef.current.get("/boat/landborder_bottom_2.png");
-      if (bottomImg1 && bottomImg2) {
-        for (let x = 0; x < CANVAS_WIDTH; x += BORDER_TILE_SIZE) {
-          const tileIndex = Math.floor(x / BORDER_TILE_SIZE);
-          const img = tileIndex % 2 === 0 ? bottomImg1 : bottomImg2;
-          ctx.drawImage(
-            img,
-            x,
-            CANVAS_HEIGHT - BORDER_TILE_SIZE,
-            BORDER_TILE_SIZE,
-            BORDER_TILE_SIZE
-          );
-        }
-      }
-
       // Draw left border
-      const leftImg1 = imagesRef.current.get("/boat/landborder_left_1.png");
-      const leftImg2 = imagesRef.current.get("/boat/landborder_left_2.png");
-      if (leftImg1 && leftImg2) {
-        for (let y = 0; y < CANVAS_HEIGHT; y += BORDER_TILE_SIZE) {
-          const tileIndex = Math.floor(y / BORDER_TILE_SIZE);
-          const img = tileIndex % 2 === 0 ? leftImg1 : leftImg2;
-          ctx.drawImage(img, 0, y, BORDER_TILE_SIZE, BORDER_TILE_SIZE);
+      const leftImg = imagesRef.current.get("/boat/landborder_left_1.png");
+      if (leftImg) {
+        for (
+          let y = BORDER_TILE_SIZE;
+          y < CANVAS_HEIGHT - BORDER_TILE_SIZE;
+          y += BORDER_TILE_SIZE
+        ) {
+          ctx.drawImage(leftImg, 0, y, BORDER_TILE_SIZE, BORDER_TILE_SIZE);
         }
       }
 
       // Draw right border
-      const rightImg1 = imagesRef.current.get("/boat/landborder_right_1.png");
-      const rightImg2 = imagesRef.current.get("/boat/landborder_right_2.png");
-      if (rightImg1 && rightImg2) {
+      const rightImg = imagesRef.current.get("/boat/landborder_right_1.png");
+      if (rightImg) {
         for (let y = 0; y < CANVAS_HEIGHT; y += BORDER_TILE_SIZE) {
-          const tileIndex = Math.floor(y / BORDER_TILE_SIZE);
-          const img = tileIndex % 2 === 0 ? rightImg1 : rightImg2;
           ctx.drawImage(
-            img,
+            rightImg,
             CANVAS_WIDTH - BORDER_TILE_SIZE,
             y,
             BORDER_TILE_SIZE,
             BORDER_TILE_SIZE
           );
         }
+      }
+
+      // Draw top border
+      const topImg = imagesRef.current.get("/boat/landborder_top_1.png");
+      if (topImg) {
+        ctx.drawImage(
+          imagesRef.current.get("/boat/landborder_topleft.png")!,
+          0,
+          0,
+          BORDER_TILE_SIZE,
+          BORDER_TILE_SIZE
+        );
+        for (
+          let x = BORDER_TILE_SIZE;
+          x < CANVAS_WIDTH - BORDER_TILE_SIZE;
+          x += BORDER_TILE_SIZE
+        ) {
+          ctx.drawImage(topImg, x, 0, BORDER_TILE_SIZE, BORDER_TILE_SIZE);
+        }
+        ctx.drawImage(
+          imagesRef.current.get("/boat/landborder_topright.png")!,
+          CANVAS_WIDTH - BORDER_TILE_SIZE,
+          0,
+          BORDER_TILE_SIZE,
+          BORDER_TILE_SIZE
+        );
+      }
+
+      // Draw bottom border
+      const bottomImg = imagesRef.current.get("/boat/landborder_bottom_1.png");
+      if (bottomImg) {
+          ctx.drawImage(
+          imagesRef.current.get("/boat/landborder_bottomleft.png")!,
+          0,
+          CANVAS_HEIGHT - BORDER_TILE_SIZE,
+          BORDER_TILE_SIZE,
+          BORDER_TILE_SIZE
+        );
+        for (
+          let x = BORDER_TILE_SIZE;
+          x < CANVAS_WIDTH - BORDER_TILE_SIZE;
+          x += BORDER_TILE_SIZE
+        ) {
+          ctx.drawImage(
+            bottomImg,
+            x,
+            CANVAS_HEIGHT - BORDER_TILE_SIZE,
+            BORDER_TILE_SIZE,
+            BORDER_TILE_SIZE
+          );
+        }
+        ctx.drawImage(
+          imagesRef.current.get("/boat/landborder_bottomright.png")!,
+            CANVAS_WIDTH - BORDER_TILE_SIZE,
+          CANVAS_HEIGHT - BORDER_TILE_SIZE,
+            BORDER_TILE_SIZE,
+            BORDER_TILE_SIZE
+          );
       }
     };
 
@@ -1112,15 +1137,27 @@ const BoatGame = () => {
       const duckImg = imagesRef.current.get("/boat/duck.png");
       if (!duckImg) return;
 
+      const now = performance.now();
       for (const duck of ducks) {
         if (!duck.collected) {
+          // Waggle: oscillate rotation based on time and duck id
+          const waggleSpeed = 0.003; // radians/ms
+          const waggleAmount = 0.15; // max radians
+          // Use duck id to offset phase for each duck
+          const phase = parseInt(duck.id.replace(/\D/g, "")) || 0;
+          const angle = Math.sin(now * waggleSpeed + phase) * waggleAmount;
+
+          ctx.save();
+          ctx.translate(duck.x, duck.y);
+          ctx.rotate(angle);
           ctx.drawImage(
             duckImg,
-            duck.x - DUCK_SIZE / 2,
-            duck.y - DUCK_SIZE / 2,
+            -DUCK_SIZE / 2,
+            -DUCK_SIZE / 2,
             DUCK_SIZE,
             DUCK_SIZE
           );
+          ctx.restore();
         }
       }
     };
@@ -1255,7 +1292,7 @@ const BoatGame = () => {
       <div className="absolute inset-0 flex items-center justify-center">
         <canvas
           ref={canvasRef}
-          className="border-2 border-gray-600 rounded-lg"
+          className="rounded-lg"
           style={{
             aspectRatio: `${CANVAS_WIDTH}/${CANVAS_HEIGHT}`,
             width: "min(90vw, 90vh * 1.5)", // Take 90% of viewport, respecting aspect ratio

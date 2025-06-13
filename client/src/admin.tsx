@@ -403,16 +403,16 @@ const AdminPage: React.FC = () => {
                 </div>
                 <div className="flex justify-center gap-2 mb-2">
                   <button
-                    className="bg-white/80 rounded-full font-bold font-mono py-1 px-3 text-xl cursor-pointer"
+                    className="bg-white/80 hover:bg-white/85 rounded-full font-bold font-mono w-8 h-8 flex items-center justify-center text-xl cursor-pointer"
                     onClick={() => handleUpdateTeamScore(team.id, -1)}
                   >
                     –
                   </button>
-                  <div className="text-center text-2xl font-bold mx-2">
+                  <div className="text-center text-3xl font-bold mx-2">
                     {team.score}
                   </div>
                   <button
-                    className="bg-white/80 rounded-full font-bold font-mono py-1 px-3 text-xl cursor-pointer"
+                    className="bg-white/80 hover:bg-white/85 rounded-full font-bold font-mono w-8 h-8 flex items-center justify-center text-xl cursor-pointer"
                     onClick={() => handleUpdateTeamScore(team.id, 1)}
                   >
                     +

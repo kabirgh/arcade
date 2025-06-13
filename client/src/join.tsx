@@ -117,13 +117,23 @@ export default function JoinScreen() {
 
   useEffect(() => {
     // Get existing players from server
-    apiFetch(APIRoute.ListPlayers).then((data) => {
-      setExistingPlayers(data.players as Player[]);
-    });
+    apiFetch(APIRoute.ListPlayers)
+      .then((data) => {
+        setExistingPlayers(data.players as Player[]);
+      })
+      .catch((error) => {
+        console.error("Failed to load players:", error);
+        // Maybe show an error message to user
+      });
     // Get existing teams from server
-    apiFetch(APIRoute.ListTeams).then((data) => {
-      setTeams(data.teams);
-    });
+    apiFetch(APIRoute.ListTeams)
+      .then((data) => {
+        setTeams(data.teams);
+      })
+      .catch((error) => {
+        console.error("Failed to load teams:", error);
+        // Maybe show an error message to user
+      });
   }, []);
 
   // Save draft join info to localStorage whenever it changes
@@ -149,6 +159,17 @@ export default function JoinScreen() {
         if (message.messageType === MessageType.LIST) {
           console.log("Updating existing players:", message.payload);
           setExistingPlayers(message.payload);
+        } else if (message.messageType === MessageType.JOIN_ERROR) {
+          console.log("Join error:", message.payload);
+          // Handle server-side validation errors
+          if (message.payload.error === "NAME_TAKEN") {
+            setNameError(message.payload.message);
+          } else if (message.payload.error === "AVATAR_TAKEN") {
+            // Deselect the avatar that was taken
+            setSelectedAvatar(null);
+            // Could also show a toast or other notification here
+            console.warn("Avatar was taken:", message.payload.message);
+          }
         }
       }
     );
@@ -163,26 +184,10 @@ export default function JoinScreen() {
     const avatarIsTakenByOther = existingPlayers.some(
       (player) => player.avatar === selectedAvatar
     );
-    console.log("Avatar is taken by other:", avatarIsTakenByOther);
 
     if (avatarIsTakenByOther) {
+      console.log("Avatar is taken by other:", avatarIsTakenByOther);
       setSelectedAvatar(null);
-      // Also clear the draft avatar from localStorage if deselected due to conflict
-      const storedJoinInfo = localStorage.getItem("playerJoinInfo");
-      if (storedJoinInfo) {
-        try {
-          const joinInfo = JSON.parse(storedJoinInfo);
-          if (joinInfo.avatar === selectedAvatar) {
-            // Check if the stored one matches the one causing conflict
-            localStorage.setItem(
-              "playerJoinInfo",
-              JSON.stringify({ ...joinInfo, avatar: null })
-            );
-          }
-        } catch (error) {
-          console.error("Failed to update draft avatar in localStorage", error);
-        }
-      }
     }
   }, [existingPlayers, selectedAvatar]);
 
@@ -201,7 +206,7 @@ export default function JoinScreen() {
     // nameError will be updated by the useEffect below
   };
 
-  // Validate playerName against existingPlayers, considering selectedAvatar
+  // Validate playerName against existingPlayers
   useEffect(() => {
     if (playerName.trim().length === 0) {
       setNameError(null); // No error if name is empty
@@ -214,18 +219,12 @@ export default function JoinScreen() {
 
     if (conflictingPlayerEntry) {
       // Name found in existingPlayers
-      // If this name is tied to an avatar, and that avatar is NOT our selectedAvatar, then it's a name conflict.
-      if (
-        conflictingPlayerEntry.avatar &&
-        conflictingPlayerEntry.avatar !== selectedAvatar
-      ) {
-        setNameError("This name has been taken by another player");
-      }
+      setNameError("This name has been taken by another player");
     } else {
       // Name not found in existingPlayers
       setNameError(null);
     }
-  }, [playerName, existingPlayers, selectedAvatar]);
+  }, [playerName, existingPlayers]);
 
   const handleAvatarSelect = (avatar: Avatar) => {
     // If this avatar is already taken, don't select it

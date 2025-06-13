@@ -72,7 +72,7 @@ const handleWebSocketMessage = (ws: ElysiaWS, message: WebSocketMessage) => {
     case Channel.PLAYER:
       console.log("Received player message:", message);
       switch (message.messageType) {
-        case MessageType.JOIN:
+        case MessageType.JOIN: {
           if (db.kickedPlayerIds.has(message.payload.id)) {
             // Don't allow kicked players to join again
             // Emit a message to the client to clear localstorage so they stop
@@ -89,6 +89,8 @@ const handleWebSocketMessage = (ws: ElysiaWS, message: WebSocketMessage) => {
             return;
           }
 
+          // Check for existing player with same ID (reconnection handling)
+          let isReconnection = false;
           for (const [otherWs, player] of db.wsPlayerMap.entries()) {
             if (otherWs === ws) {
               continue;
@@ -99,17 +101,65 @@ const handleWebSocketMessage = (ws: ElysiaWS, message: WebSocketMessage) => {
               // Remove the old player and add the new one
               db.wsPlayerMap.delete(otherWs);
               db.wsPlayerMap.set(ws, message.payload);
+              isReconnection = true;
               // Don't need to broadcast player list because only the websocket
               // id changed, which the client doesn't need to know. Return early
               return;
             }
           }
-          // Didn't find a player with the same id, so add this player to the list
+
+          // If not a reconnection, validate that name and avatar are unique
+          if (!isReconnection) {
+            // Check for duplicate name
+            const existingPlayerWithName = db.players.find(
+              (player) => player.name === message.payload.name
+            );
+            if (existingPlayerWithName) {
+              // Send error message back to client
+              ws.send(
+                JSON.stringify({
+                  channel: Channel.PLAYER,
+                  messageType: MessageType.JOIN_ERROR,
+                  payload: {
+                    error: "NAME_TAKEN",
+                    message: "This name has been taken by another player",
+                  },
+                })
+              );
+              return;
+            }
+
+            // Check for duplicate avatar
+            const existingPlayerWithAvatar = db.players.find(
+              (player) => player.avatar === message.payload.avatar
+            );
+            if (existingPlayerWithAvatar) {
+              // Send error message back to client
+              ws.send(
+                JSON.stringify({
+                  channel: Channel.PLAYER,
+                  messageType: MessageType.JOIN_ERROR,
+                  payload: {
+                    error: "AVATAR_TAKEN",
+                    message: "This avatar has been taken by another player",
+                  },
+                })
+              );
+              return;
+            }
+          }
+
+          // All validation passed, add the player
           db.wsPlayerMap.set(ws, message.payload);
           break;
+        }
 
         case MessageType.LEAVE:
           db.wsPlayerMap.delete(ws);
+          break;
+
+        case MessageType.JOIN_ERROR:
+          // Client message
           break;
 
         case MessageType.KICK:
@@ -168,6 +218,7 @@ const app = new Elysia()
     close(ws) {
       console.log("Client disconnected:", ws.id);
       db.wsPlayerMap.delete(ws);
+      broadcastAllPlayers();
       // Handle reconnections in the JOIN message handler.
     },
   })

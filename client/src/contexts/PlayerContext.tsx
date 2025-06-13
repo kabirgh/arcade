@@ -45,18 +45,10 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({
   }, []);
 
   const clearSessionPlayer = useCallback(() => {
-    // Always clear the player state, regardless of localStorage or WebSocket state
     setPlayer(null);
-    const storedPlayer = localStorage.getItem("player");
-
-    if (storedPlayer && readyState === ReadyState.OPEN) {
-      localStorage.removeItem("player");
-      publish({
-        channel: Channel.PLAYER,
-        messageType: MessageType.LEAVE,
-      });
-    }
-  }, [publish, readyState]);
+    localStorage.removeItem("player");
+    // Another useEffect sends the LEAVE message to the server when readyState is OPEN
+  }, []);
 
   // Load player from localStorage on initial mount
   useEffect(() => {
@@ -87,11 +79,22 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({
     }
   }, [player, publish, readyState]);
 
+  // If player is null, send LEAVE message to server
+  useEffect(() => {
+    if (readyState === ReadyState.OPEN && !player) {
+      publish({
+        channel: Channel.PLAYER,
+        messageType: MessageType.LEAVE,
+      });
+    }
+  }, [player, publish, readyState]);
+
   // Remove player if kicked by server
   useEffect(() => {
     const unsubscribe = subscribe(Channel.PLAYER, (message) => {
       if (message.messageType === MessageType.KICK) {
         clearSessionPlayer();
+        // Don't care about publishing LEAVE beause server has already removed the player
         setLocation(PlayerScreen.Join);
       }
     });

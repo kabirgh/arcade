@@ -12,6 +12,7 @@ export enum MessageType {
   LEAVE = "LEAVE",
   KICK = "KICK",
   LIST = "LIST",
+  JOIN_ERROR = "JOIN_ERROR",
   // Buzzer channel
   BUZZ = "BUZZ",
   RESET = "RESET",

@@ -109,7 +109,7 @@ export default function Joystick() {
         angle: current.angle,
         force: current.force,
       };
-    }, 33); // 30 fps
+    }, 16); // 60 fps
 
     return () => clearInterval(interval);
   }, [publish]);

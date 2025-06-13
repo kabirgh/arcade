@@ -256,7 +256,7 @@ const app = new Elysia()
   .post(
     APIRoute.SetTeamName,
     ({ body }) => {
-      const team = db.teams.find((team) => team.id === body.teamId);
+      const team = db.getTeamById(body.teamId);
       if (!team) {
         return {
           ok: false as const,
@@ -266,7 +266,7 @@ const app = new Elysia()
           },
         };
       }
-      team.name = body.name;
+      db.updateTeamName(body.teamId, body.name);
 
       return { ok: true as const, data: {} };
     },
@@ -278,7 +278,7 @@ const app = new Elysia()
   .post(
     APIRoute.UpdateTeamScore,
     ({ body }) => {
-      const team = db.teams.find((team) => team.id === body.teamId);
+      const team = db.getTeamById(body.teamId);
       if (!team) {
         return {
           ok: false as const,
@@ -288,9 +288,10 @@ const app = new Elysia()
           },
         };
       }
-      team.score = Math.max(0, team.score + body.scoreChange); // Ensure score doesn't go below 0
+      const newScore = Math.max(0, team.score + body.scoreChange); // Ensure score doesn't go below 0
+      db.updateTeamScore(body.teamId, newScore);
 
-      return { ok: true as const, data: { newScore: team.score } };
+      return { ok: true as const, data: { newScore } };
     },
     {
       body: APIRouteToSchema[APIRoute.UpdateTeamScore].req,
@@ -300,8 +301,8 @@ const app = new Elysia()
   .post(
     APIRoute.DeleteTeam,
     ({ body }) => {
-      const teamIndex = db.teams.findIndex((team) => team.id === body.teamId);
-      if (teamIndex === -1) {
+      const team = db.getTeamById(body.teamId);
+      if (!team) {
         return {
           ok: false as const,
           error: {
@@ -311,8 +312,8 @@ const app = new Elysia()
         };
       }
 
-      // Remove team from array
-      db.teams.splice(teamIndex, 1);
+      // Delete team from database
+      db.deleteTeam(body.teamId);
 
       // Move all players from this team back to no team (empty teamId)
       db.players.forEach((player) => {

@@ -12,7 +12,7 @@ import useWebAudio from "./hooks/useWebAudio";
 import { apiFetch } from "./util/apiFetch";
 
 // Use dummy players. When false, calls server to get real players
-const DEBUG = true;
+const DEBUG = false;
 
 //
 // Types
@@ -239,21 +239,6 @@ const GameScreen = ({ team }: { team: NinjaTeam }) => {
           borderBottom: "none", // Connect with color bar
         }}
       >
-        {/* Score display */}
-        <div
-          style={{
-            alignSelf: "flex-end",
-            margin: "8px",
-            fontFamily: "Courier New",
-            fontSize: 16,
-            fontWeight: "bold",
-            color: "white",
-            zIndex: 100,
-          }}
-        >
-          {player.score}
-        </div>
-
         {/* Game content */}
         <div style={{ flex: 1, position: "relative" }}>
           {/* Countdown overlay */}
@@ -571,6 +556,9 @@ const NinjaRun = () => {
 
     Promise.all([apiFetch(APIRoute.ListTeams), apiFetch(APIRoute.ListPlayers)])
       .then(([{ teams: ts }, { players: ps }]) => {
+        state.teams = [];
+        state.playerIdToTeamIdMap = {};
+
         const teamIdToPlayerMap: Record<string, Player[]> = {};
         for (const player of ps) {
           if (!(player.teamId in teamIdToPlayerMap)) {
@@ -962,7 +950,6 @@ const NinjaRun = () => {
   // On button press, change the player's direction
   const handleJump = useCallback((playerId: string) => {
     const teamId = gameState.current.playerIdToTeamIdMap[playerId];
-    console.log("teamId", teamId);
     let team: NinjaTeam | null = null;
     for (const t of gameState.current.teams) {
       if (t.id === teamId) {
@@ -1020,6 +1007,7 @@ const NinjaRun = () => {
       Channel.BUZZER,
       (message: WebSocketMessage) => {
         if (message.messageType === MessageType.BUZZ) {
+          console.log("buzz", message.payload.playerId);
           handleJump(message.payload.playerId);
         }
       }
@@ -1030,6 +1018,10 @@ const NinjaRun = () => {
 
   // Button press event listener
   useEffect(() => {
+    if (!DEBUG) {
+      return;
+    }
+
     const keydownHandler = (event: KeyboardEvent) => {
       switch (event.code) {
         case "KeyA":

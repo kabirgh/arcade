@@ -1,6 +1,6 @@
 import "./buzzer.css";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 
 import { PlayerScreen } from "../../shared/types/domain/misc";
@@ -11,11 +11,14 @@ import { usePlayerContext } from "./contexts/PlayerContext";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
 import { useListenNavigate } from "./hooks/useListenNavigate";
 
+const DEBOUNCE_TIME_MS = 150;
+
 export default function Buzzer() {
   const [, setLocation] = useLocation();
   useListenNavigate("player");
   const { publish } = useWebSocketContext();
   const { sessionPlayer } = usePlayerContext();
+  const lastPressedRef = useRef<number>(0);
 
   useEffect(() => {
     if (!sessionPlayer) {
@@ -30,6 +33,12 @@ export default function Buzzer() {
       console.error("No session player found");
       return;
     }
+
+    const now = Date.now();
+    if (now - lastPressedRef.current < DEBOUNCE_TIME_MS) {
+      return;
+    }
+    lastPressedRef.current = now;
 
     publish({
       channel: Channel.BUZZER,
@@ -46,11 +55,7 @@ export default function Buzzer() {
       <PastelBackground />
       <ConnectionStatusPill />
       <div className="flex items-center justify-center w-[80vmin] h-[80vmin]">
-        <button
-          className="pushable"
-          onTouchStart={handlePress}
-          onMouseDown={handlePress}
-        >
+        <button className="pushable" onPointerDown={handlePress}>
           <span className="shadow"></span>
           <span className="edge"></span>
           <span className="front"></span>

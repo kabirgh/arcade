@@ -63,10 +63,10 @@ export const useAdminAuth = ({
   const { publish, readyState } = useWebSocketContext();
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     // Skip authentication in development mode
-    // if (process.env.NODE_ENV === "development") {
-    //   console.log("Skipping authentication in development mode");
-    //   return true;
-    // }
+    if (process.env.NODE_ENV === "development") {
+      console.log("Skipping authentication in development mode");
+      return true;
+    }
     return sessionStorage.getItem("isAdminAuthenticated") === "true";
   });
 

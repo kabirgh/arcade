@@ -10,7 +10,7 @@ import { useListenNavigate } from "./hooks/useListenNavigate";
 import useWebAudio from "./hooks/useWebAudio";
 import { apiFetch } from "./util/apiFetch";
 
-const DEBUG = true;
+const DEBUG = false;
 
 // ============================================================================
 // TYPES
@@ -100,6 +100,7 @@ const BOAT_ANGULAR_DRAG = 0.9;
 const ROTATION_SPEED = 0.003;
 const BOUNCE_DAMPING = 0.5;
 const DEFAULT_GAME_DURATION = 2 * 60 * 1000; // 2 minutes in milliseconds
+const DUCK_SPAWN_INTERVAL = 3 * 1000;
 
 // Object sizes
 const BOAT_WIDTH = 44;
@@ -427,7 +428,7 @@ const BoatGame = () => {
     gameStartTime: 0,
     currentTime: 0,
     lastDuckSpawnTime: 0,
-    duckSpawnInterval: 5 * 1000, // Initialize here
+    duckSpawnInterval: DUCK_SPAWN_INTERVAL,
   });
 
   // Load images

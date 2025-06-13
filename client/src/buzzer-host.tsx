@@ -46,7 +46,7 @@ const getPlayersWithDistinctTeams = (
 
 const BuzzerHost: React.FC = () => {
   useListenNavigate("host");
-  const { isAuthenticated } = useAdminAuth({ claimHost: true });
+  const { isAuthenticated, passwordPrompt } = useAdminAuth({ claimHost: true });
   const { subscribe } = useWebSocketContext();
   const playSound = useWebAudio();
   const [expandedPlayers, setExpandedPlayers] = useState<
@@ -177,6 +177,7 @@ const BuzzerHost: React.FC = () => {
 
   return (
     <>
+      {passwordPrompt}
       {!isAuthenticated && (
         <div className="absolute top-0 left-0 w-full h-full bg-black/50 flex items-center justify-center">
           <div className="text-white text-2xl">

@@ -525,7 +525,7 @@ const DEFAULT_TEAMS: NinjaTeam[] = [
 //
 const NinjaRun = () => {
   useListenNavigate("host");
-  useAdminAuth({ claimHost: true });
+  const { passwordPrompt } = useAdminAuth({ claimHost: true });
   const { subscribe } = useWebSocketContext();
   const playSound = useWebAudio();
   const stopSound = useRef<() => void>(() => {});
@@ -1128,6 +1128,7 @@ const NinjaRun = () => {
       className="flex flex-col items-center justify-center min-h-screen
         bg-[url('/images/ninja/darkclouds.png')] bg-no-repeat bg-cover bg-center"
     >
+      {passwordPrompt}
       <div className="flex">
         {gameState.current.teams.map((team, index) => (
           <GameScreen key={index} team={team} />

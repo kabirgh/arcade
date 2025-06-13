@@ -112,7 +112,7 @@ const AdminPage: React.FC = () => {
   const [selectedMessageType, setSelectedMessageType] =
     useState<string>("PLAYER/JOIN");
   const broadcastTemplates = useMemo(() => getBroadcastTemplates(), []);
-  const { isAuthenticated } = useAdminAuth();
+  const { isAuthenticated, passwordPrompt } = useAdminAuth();
   const [teams, setTeams] = useState<Team[]>([]);
 
   // Fetch teams on component mount
@@ -316,6 +316,7 @@ const AdminPage: React.FC = () => {
   return (
     <div className="h-screen relative overflow-hidden">
       <PastelBackground />
+      {passwordPrompt}
       {!isAuthenticated && (
         <div className="flex flex-col items-center justify-center w-full h-full">
           <h1 className="text-4xl font-bold">Access denied</h1>

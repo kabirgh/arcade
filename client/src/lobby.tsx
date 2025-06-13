@@ -127,7 +127,7 @@ const hopAnimationStyle = `
 
 export default function Home() {
   useListenNavigate("host");
-  const { isAuthenticated } = useAdminAuth({ claimHost: true });
+  const { isAuthenticated, passwordPrompt } = useAdminAuth({ claimHost: true });
   const { subscribe } = useWebSocketContext();
   const [players, setPlayers] = useState<Player[]>([]);
   const [buzzingPlayers, setBuzzingPlayers] = useState<Set<string>>(new Set());
@@ -236,6 +236,7 @@ export default function Home() {
       {/* Parent needs to be relative to keep the pastel background in view */}
       <style>{hopAnimationStyle}</style>
       <PastelBackground animate />
+      {passwordPrompt}
       {!isAuthenticated && (
         <div className="flex flex-col items-center justify-center w-full h-full">
           <h1 className="text-4xl font-bold">Access denied</h1>

@@ -413,7 +413,7 @@ const isBallOutOfBounds = (ball: Ball, position: Position): boolean => {
 const Quadrapong = () => {
   useListenNavigate("host");
   // TODO: use value of isAuthenticated?
-  useAdminAuth({ claimHost: true });
+  const { passwordPrompt } = useAdminAuth({ claimHost: true });
   const { subscribe } = useWebSocketContext();
   const playSound = useWebAudio();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -1314,6 +1314,7 @@ const Quadrapong = () => {
   // =================== RENDER ===================
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-gray-950">
+      {passwordPrompt}
       {/* Game Canvas */}
       <canvas ref={canvasRef} width={CANVAS_SIZE} height={CANVAS_SIZE} />
 

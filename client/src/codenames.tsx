@@ -67,7 +67,7 @@ const TeamWordsList: React.FC<TeamWordsListProps> = ({
 export const Codenames = () => {
   useListenNavigate("host");
   // TODO: use value of isAuthenticated?
-  useAdminAuth({ claimHost: true });
+  const { passwordPrompt } = useAdminAuth({ claimHost: true });
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -248,6 +248,7 @@ export const Codenames = () => {
         gridTemplateRows: "1.5fr 7fr 1.5fr",
       }}
     >
+      {passwordPrompt}
       <div className="flex flex-col items-center space-y-4 justify-self-center col-start-1 col-span-1 row-start-1 row-span-full">
         <TeamWordsList
           teamColor="#D13030"

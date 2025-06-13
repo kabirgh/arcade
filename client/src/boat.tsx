@@ -406,7 +406,7 @@ const formatTime = (milliseconds: number): string => {
  */
 const BoatGame = () => {
   useListenNavigate("host");
-  useAdminAuth({ claimHost: true });
+  const { passwordPrompt } = useAdminAuth({ claimHost: true });
   const { subscribe } = useWebSocketContext();
   const playSound = useWebAudio();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -1297,6 +1297,7 @@ const BoatGame = () => {
   // =================== RENDER ===================
   return (
     <div className="h-screen w-screen bg-gray-950 overflow-hidden relative">
+      {passwordPrompt}
       {/* Game Canvas - Full screen with overlays */}
       <div className="absolute inset-0 flex items-center justify-center">
         <canvas

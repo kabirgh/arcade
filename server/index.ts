@@ -91,18 +91,16 @@ const handleWebSocketMessage = (ws: ElysiaWS, message: WebSocketMessage) => {
           }
 
           // Check for existing player with same ID (reconnection handling)
-          let isReconnection = false;
           for (const [otherWsId, { player }] of db.wsPlayerMap.entries()) {
             if (otherWsId === ws.id) {
               continue;
             }
-            if (player !== null && player.id === message.payload.id) {
+            if (player.id === message.payload.id) {
               // We found a player with the same id in the list.
               // This means the websocket id has changed (usually due to a reconnect).
               // Remove the old player and add the new one
               db.wsPlayerMap.delete(otherWsId);
               db.wsPlayerMap.set(ws.id, { ws, player: message.payload });
-              isReconnection = true;
               // Don't need to broadcast player list because only the websocket
               // id changed, which the client doesn't need to know. Return early
               return;
@@ -110,44 +108,42 @@ const handleWebSocketMessage = (ws: ElysiaWS, message: WebSocketMessage) => {
           }
 
           // If not a reconnection, validate that name and avatar are unique
-          if (!isReconnection) {
-            // Check for duplicate name
-            const existingPlayerWithName = db.players.find(
-              (player) => player.name === message.payload.name
+          // Check for duplicate name
+          const existingPlayerWithName = db.players.find(
+            (player) => player.name === message.payload.name
+          );
+          if (existingPlayerWithName) {
+            // Send error message back to client
+            ws.send(
+              JSON.stringify({
+                channel: Channel.PLAYER,
+                messageType: MessageType.JOIN_ERROR,
+                payload: {
+                  error: "NAME_TAKEN",
+                  message: "This name has been taken by another player",
+                },
+              })
             );
-            if (existingPlayerWithName) {
-              // Send error message back to client
-              ws.send(
-                JSON.stringify({
-                  channel: Channel.PLAYER,
-                  messageType: MessageType.JOIN_ERROR,
-                  payload: {
-                    error: "NAME_TAKEN",
-                    message: "This name has been taken by another player",
-                  },
-                })
-              );
-              return;
-            }
+            return;
+          }
 
-            // Check for duplicate avatar
-            const existingPlayerWithAvatar = db.players.find(
-              (player) => player.avatar === message.payload.avatar
+          // Check for duplicate avatar
+          const existingPlayerWithAvatar = db.players.find(
+            (player) => player.avatar === message.payload.avatar
+          );
+          if (existingPlayerWithAvatar) {
+            // Send error message back to client
+            ws.send(
+              JSON.stringify({
+                channel: Channel.PLAYER,
+                messageType: MessageType.JOIN_ERROR,
+                payload: {
+                  error: "AVATAR_TAKEN",
+                  message: "This avatar has been taken by another player",
+                },
+              })
             );
-            if (existingPlayerWithAvatar) {
-              // Send error message back to client
-              ws.send(
-                JSON.stringify({
-                  channel: Channel.PLAYER,
-                  messageType: MessageType.JOIN_ERROR,
-                  payload: {
-                    error: "AVATAR_TAKEN",
-                    message: "This avatar has been taken by another player",
-                  },
-                })
-              );
-              return;
-            }
+            return;
           }
 
           // All validation passed, add the player

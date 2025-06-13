@@ -35,7 +35,10 @@ const TeamSection = ({
     }
   }, [team.name, isEditing]);
 
-  const handleConfirm = () => {
+  const handleConfirm = (e?: React.FormEvent) => {
+    if (e) {
+      e.preventDefault();
+    }
     onTeamNameConfirm(editableName);
     setIsEditing(false);
   };
@@ -84,20 +87,23 @@ const TeamSection = ({
         )}
       </div>
       <div className="flex items-center mt-2">
-        <input
-          type="text"
-          className="w-full py-1.5"
-          style={{
-            backgroundColor: isEditing ? "white" : "transparent",
-            borderRadius: isEditing ? "4px" : "0px",
-            paddingLeft: isEditing ? "8px" : "0px",
-            fontWeight: isEditing ? "normal" : "bold",
-          }}
-          value={editableName}
-          onChange={(e) => setEditableName(e.target.value)}
-          disabled={!isEditing}
-        />
+        <form onSubmit={handleConfirm} className="flex-1">
+          <input
+            type="text"
+            className="w-full py-1.5 focus:outline-none focus:ring-3 focus:ring-sky-200/65"
+            style={{
+              backgroundColor: isEditing ? "white" : "transparent",
+              borderRadius: isEditing ? "4px" : "0px",
+              paddingLeft: isEditing ? "8px" : "0px",
+              fontWeight: isEditing ? "normal" : "bold",
+            }}
+            value={editableName}
+            onChange={(e) => setEditableName(e.target.value)}
+            disabled={!isEditing}
+          />
+        </form>
         <button
+          type="button"
           onClick={isEditing ? handleConfirm : handleEdit}
           className="ml-2 px-2 py-1 bg-gray-50 rounded-md hover:bg-white cursor-pointer"
           aria-label={isEditing ? "Confirm name change" : "Edit name"}
@@ -105,8 +111,9 @@ const TeamSection = ({
           {isEditing ? "✔️" : "✏️"}
         </button>
         <button
+          type="button"
           onClick={handleDelete}
-          className="ml-2 px-2 py-1 bg-red-50 rounded-md hover:bg-red-100 cursor-pointer"
+          className="ml-2 px-2 py-1 bg-gray-50 rounded-md hover:bg-white cursor-pointer"
           aria-label="Delete team"
         >
           ❌

@@ -13,7 +13,7 @@ class DB {
     { id: "3", name: "Team 3", color: Color.Green, score: 0 },
     { id: "4", name: "Team 4", color: Color.Yellow, score: 0 },
   ];
-  public screen: PlayerScreen = PlayerScreen.Join;
+  public screen: PlayerScreen = PlayerScreen.Buzzer;
   // ws id -> {ws, player}
   public wsPlayerMap: Map<string, { ws: ElysiaWS; player: Player }> = new Map();
   public hostWs: ElysiaWS | null = null;

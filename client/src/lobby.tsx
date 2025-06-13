@@ -2,11 +2,7 @@ import { useEffect, useState } from "react";
 
 import { APIRoute } from "../../shared/types/api/schema";
 import type { WebSocketMessage } from "../../shared/types/api/websocket";
-import {
-  Color,
-  type Player,
-  type Team,
-} from "../../shared/types/domain/player";
+import { type Player, type Team } from "../../shared/types/domain/player";
 import { Channel, MessageType } from "../../shared/types/domain/websocket";
 import { avatarToPath } from "../../shared/utils";
 import PastelBackground from "./components/PastelBackground";

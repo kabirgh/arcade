@@ -4,7 +4,6 @@ import { useLocation } from "wouter";
 
 import { APIRoute } from "../../shared/types/api/schema";
 import type { WebSocketMessage } from "../../shared/types/api/websocket";
-import { PlayerScreen } from "../../shared/types/domain/misc";
 import type { Player, Team } from "../../shared/types/domain/player";
 import { Avatar } from "../../shared/types/domain/player";
 import { Channel, MessageType } from "../../shared/types/domain/websocket";
@@ -80,27 +79,18 @@ export default function JoinScreen() {
       }
     }
 
-    // Check if the user is already logged in. If so, redirect to buzzer screen.
-    if (sessionPlayer) {
-      setLocation(PlayerScreen.Buzzer);
-    }
-  }, [sessionPlayer, setLocation]);
+    // Another use effect will redirect to the correct screen
+  }, []);
 
   useEffect(() => {
-    // First check what the server thinks the current screen should be.
+    // First check what the server thinks the current screen should be
     apiFetch(APIRoute.PlayerScreen).then((data) => {
       console.log("Server says current screen should be:", data.screen);
 
       if (sessionPlayer !== null) {
-        if (data.screen !== PlayerScreen.Join) {
-          // We have a user in sessionPlayer and the server thinks we should be on a different screen.
-          // Redirect to the correct screen immediately.
-          setLocation(data.screen);
-          return;
-        } else {
-          // Default redirect to buzzer screen
-          setLocation(PlayerScreen.Buzzer);
-        }
+        // We have a user in sessionPlayer, and so shouldn't be on the join screen.
+        // Redirect to the correct screen immediately
+        setLocation(data.screen);
       }
     });
   }, [sessionPlayer, setLocation]);
@@ -250,8 +240,7 @@ export default function JoinScreen() {
       // Use context to set the player state and persist it. Also sends a JOIN message to the server.
       setSessionPlayer(player);
 
-      // Navigate to buzzer screen
-      setLocation(PlayerScreen.Buzzer);
+      // After player is set, another use effect will redirect to the correct screen
     }
   };
 

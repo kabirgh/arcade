@@ -41,7 +41,6 @@ function broadcast(message: WebSocketMessage): void {
 }
 
 function broadcastAllPlayers(): PlayerListAllMessage {
-  console.log("Broadcasting all players:", db.players);
   const message: PlayerListAllMessage = {
     channel: Channel.PLAYER,
     messageType: MessageType.LIST,

@@ -4,6 +4,7 @@ import React, {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import { ReadyState } from "react-use-websocket";
@@ -31,7 +32,18 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({
 }) => {
   const [, setLocation] = useLocation();
   const { publish, readyState, subscribe } = useWebSocketContext();
-  const [player, setPlayer] = useState<Player | null>(null);
+  const [player, setPlayer] = useState<Player | null>(() => {
+    try {
+      const storedPlayer = localStorage.getItem("player");
+      return storedPlayer ? (JSON.parse(storedPlayer) as Player) : null;
+    } catch (error) {
+      console.error("Failed to parse player data from localStorage", error);
+      localStorage.removeItem("player"); // Clear corrupted data
+      return null;
+    }
+  });
+  const hasJoinedRef = useRef(false);
+
   // Function to update player state and localStorage
   // Another useEffect sends the JOIN message to the server when readyState is OPEN
   const setSessionPlayer = useCallback((newPlayer: Player) => {
@@ -47,21 +59,15 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({
   const clearSessionPlayer = useCallback(() => {
     setPlayer(null);
     localStorage.removeItem("player");
-    // Another useEffect sends the LEAVE message to the server when readyState is OPEN
-  }, []);
-
-  // Load player from localStorage on initial mount
-  useEffect(() => {
-    try {
-      const storedPlayer = localStorage.getItem("player");
-      if (storedPlayer) {
-        setPlayer(JSON.parse(storedPlayer));
-      }
-    } catch (error) {
-      console.error("Failed to parse player data from localStorage", error);
-      localStorage.removeItem("player"); // Clear corrupted data
+    if (readyState === ReadyState.OPEN) {
+      publish({
+        channel: Channel.PLAYER,
+        messageType: MessageType.LEAVE,
+      });
+    } else {
+      localStorage.setItem("playerDueToLeave", "true");
     }
-  }, []);
+  }, [publish, readyState]);
 
   // Handles:
   // 1. setSessionPlayer - sends JOIN message to server.
@@ -76,18 +82,21 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({
         messageType: MessageType.JOIN,
         payload: player,
       });
+      hasJoinedRef.current = true;
     }
   }, [player, publish, readyState]);
 
-  // If player is null, send LEAVE message to server
+  // If player is due to leave, send LEAVE message to server
   useEffect(() => {
-    if (readyState === ReadyState.OPEN && !player) {
+    const playerDueToLeave = localStorage.getItem("playerDueToLeave");
+    if (readyState === ReadyState.OPEN && playerDueToLeave === "true") {
       publish({
         channel: Channel.PLAYER,
         messageType: MessageType.LEAVE,
       });
+      localStorage.removeItem("playerDueToLeave");
     }
-  }, [player, publish, readyState]);
+  }, [publish, readyState]);
 
   // Remove player if kicked by server
   useEffect(() => {

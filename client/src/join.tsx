@@ -51,8 +51,7 @@ const TeamCircle = ({
 export default function JoinScreen() {
   const [, setLocation] = useLocation();
   const { subscribe, readyState } = useWebSocketContext();
-  const { sessionPlayer, setSessionPlayer, clearSessionPlayer } =
-    usePlayerContext();
+  const { sessionPlayer, setSessionPlayer } = usePlayerContext();
   const [playerName, setPlayerName] = useState("");
   const [nameError, setNameError] = useState<string | null>(null);
   const [selectedTeam, setSelectedTeam] = useState<Team | null>(null);
@@ -92,28 +91,19 @@ export default function JoinScreen() {
     apiFetch(APIRoute.PlayerScreen).then((data) => {
       console.log("Server says current screen should be:", data.screen);
 
-      if (data.screen === PlayerScreen.Join) {
-        // If the server thinks the current screen should be join, we have stale player info in localStorage.
-        // Clear it.
-        clearSessionPlayer();
-      }
-
-      // If the server thinks the current screen should be anything other than join,
-      // redirect to that screen.
-      if (data.screen !== PlayerScreen.Join) {
-        if (sessionPlayer === null) {
-          // We don't have a user in sessionPlayer and the server thinks we should be on a different screen.
-          // Maybe they joined late. Let them fill out the form again and direct them to the correct screen.
-          clearSessionPlayer();
-        } else {
+      if (sessionPlayer !== null) {
+        if (data.screen !== PlayerScreen.Join) {
           // We have a user in sessionPlayer and the server thinks we should be on a different screen.
           // Redirect to the correct screen immediately.
           setLocation(data.screen);
           return;
+        } else {
+          // Default redirect to buzzer screen
+          setLocation(PlayerScreen.Buzzer);
         }
       }
     });
-  }, [sessionPlayer, setLocation, clearSessionPlayer]);
+  }, [sessionPlayer, setLocation]);
 
   useEffect(() => {
     // Get existing players from server

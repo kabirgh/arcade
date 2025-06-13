@@ -34,13 +34,14 @@ function sendHostMessage(message: WebSocketMessage): void {
 }
 
 function broadcast(message: WebSocketMessage): void {
-  for (const ws of db.wsPlayerMap.keys()) {
+  for (const { ws } of db.wsPlayerMap.values()) {
     ws.send(JSON.stringify(message));
   }
   db.hostWs?.send(JSON.stringify(message));
 }
 
 function broadcastAllPlayers(): PlayerListAllMessage {
+  console.log("Broadcasting all players:", db.players);
   const message: PlayerListAllMessage = {
     channel: Channel.PLAYER,
     messageType: MessageType.LIST,
@@ -91,16 +92,16 @@ const handleWebSocketMessage = (ws: ElysiaWS, message: WebSocketMessage) => {
 
           // Check for existing player with same ID (reconnection handling)
           let isReconnection = false;
-          for (const [otherWs, player] of db.wsPlayerMap.entries()) {
-            if (otherWs === ws) {
+          for (const [otherWsId, { player }] of db.wsPlayerMap.entries()) {
+            if (otherWsId === ws.id) {
               continue;
             }
             if (player !== null && player.id === message.payload.id) {
               // We found a player with the same id in the list.
               // This means the websocket id has changed (usually due to a reconnect).
               // Remove the old player and add the new one
-              db.wsPlayerMap.delete(otherWs);
-              db.wsPlayerMap.set(ws, message.payload);
+              db.wsPlayerMap.delete(otherWsId);
+              db.wsPlayerMap.set(ws.id, { ws, player: message.payload });
               isReconnection = true;
               // Don't need to broadcast player list because only the websocket
               // id changed, which the client doesn't need to know. Return early
@@ -150,13 +151,18 @@ const handleWebSocketMessage = (ws: ElysiaWS, message: WebSocketMessage) => {
           }
 
           // All validation passed, add the player
-          db.wsPlayerMap.set(ws, message.payload);
+          db.wsPlayerMap.set(ws.id, { ws, player: message.payload });
           break;
         }
 
-        case MessageType.LEAVE:
-          db.wsPlayerMap.delete(ws);
+        case MessageType.LEAVE: {
+          const player = db.wsPlayerMap.get(ws.id)?.player;
+          if (player) {
+            db.wsPlayerMap.delete(ws.id);
+            db.kickedPlayerIds.delete(player.id);
+          }
           break;
+        }
 
         case MessageType.JOIN_ERROR:
           // Client message
@@ -217,9 +223,8 @@ const app = new Elysia()
     },
     close(ws) {
       console.log("Client disconnected:", ws.id);
-      db.wsPlayerMap.delete(ws);
-      broadcastAllPlayers();
-      // Handle reconnections in the JOIN message handler.
+      // Don't delete player. If the player's phone idles for a few seconds the ws disconnects.
+      // We handle reconnections in the JOIN message handler by deleting the old ws id
     },
   })
   .get(
@@ -291,7 +296,7 @@ const app = new Elysia()
     () => {
       return {
         ok: true as const,
-        data: { ids: [...db.wsPlayerMap.keys()].map((ws) => ws.id) },
+        data: { ids: [...db.wsPlayerMap.keys()] },
       };
     },
     {
@@ -303,9 +308,7 @@ const app = new Elysia()
     APIRoute.SendWebSocketMessage,
     ({ body }) => {
       const ws =
-        body.id === "host"
-          ? db.hostWs
-          : [...db.wsPlayerMap.keys()].find((ws) => ws.id === body.id);
+        body.id === "host" ? db.hostWs : db.wsPlayerMap.get(body.id)?.ws;
 
       if (!ws) {
         return {
@@ -338,8 +341,8 @@ const app = new Elysia()
   .post(
     APIRoute.KickPlayer,
     ({ body }) => {
-      for (const [ws, player] of db.wsPlayerMap.entries()) {
-        if (player && player.name === body.playerName) {
+      for (const [wsId, { ws, player }] of db.wsPlayerMap.entries()) {
+        if (player && player.name === body.playerName.toUpperCase()) {
           // Emit a message to the client to clear localstorage
           // and prevent the player from rejoining
           ws.send(
@@ -351,7 +354,7 @@ const app = new Elysia()
               },
             })
           );
-          db.wsPlayerMap.delete(ws);
+          db.wsPlayerMap.delete(wsId);
           db.kickedPlayerIds.add(player.id);
           broadcastAllPlayers();
           return { ok: true as const, data: { playerId: player.id } };

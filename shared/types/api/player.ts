@@ -36,3 +36,16 @@ export type SetTeamNameRequest = Static<typeof SetTeamNameRequestType>;
 
 export const SetTeamNameResponseType = t.Object({});
 export type SetTeamNameResponse = Static<typeof SetTeamNameResponseType>;
+
+export const UpdateTeamScoreRequestType = t.Object({
+  teamId: t.String(),
+  scoreChange: t.Integer(), // positive to add, negative to subtract
+});
+export type UpdateTeamScoreRequest = Static<typeof UpdateTeamScoreRequestType>;
+
+export const UpdateTeamScoreResponseType = t.Object({
+  newScore: t.Number(),
+});
+export type UpdateTeamScoreResponse = Static<
+  typeof UpdateTeamScoreResponseType
+>;

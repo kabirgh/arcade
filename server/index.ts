@@ -276,6 +276,28 @@ const app = new Elysia()
       response: APIRouteToSchema[APIRoute.SetTeamName].res,
     }
   )
+  .post(
+    APIRoute.UpdateTeamScore,
+    ({ body }) => {
+      const team = db.teams.find((team) => team.id === body.teamId);
+      if (!team) {
+        return {
+          ok: false as const,
+          error: {
+            status: 404,
+            message: "Team not found",
+          },
+        };
+      }
+      team.score = Math.max(0, team.score + body.scoreChange); // Ensure score doesn't go below 0
+
+      return { ok: true as const, data: { newScore: team.score } };
+    },
+    {
+      body: APIRouteToSchema[APIRoute.UpdateTeamScore].req,
+      response: APIRouteToSchema[APIRoute.UpdateTeamScore].res,
+    }
+  )
   .get(
     APIRoute.ListPlayers,
     () => {

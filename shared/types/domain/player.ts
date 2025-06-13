@@ -38,6 +38,7 @@ export const TeamType = t.Object({
   id: t.String(),
   name: t.String(),
   color: t.Enum(Color),
+  score: t.Number(),
 });
 export type Team = Static<typeof TeamType>;
 

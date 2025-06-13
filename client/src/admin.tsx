@@ -4,10 +4,13 @@ import React, { useEffect, useMemo, useState } from "react";
 import { APIRoute, APIRouteToSchema } from "../../shared/types/api/schema";
 import { WebSocketMessageType } from "../../shared/types/api/websocket";
 import { HostScreen, PlayerScreen } from "../../shared/types/domain/misc";
+import type { Team } from "../../shared/types/domain/player";
+import { Color } from "../../shared/types/domain/player";
 import { Channel, MessageType } from "../../shared/types/domain/websocket";
 import PastelBackground from "./components/PastelBackground";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
 import { useAdminAuth } from "./hooks/useAdminAuth";
+import { apiFetch } from "./util/apiFetch";
 
 // Function to generate schema templates dynamically based on route
 const generateSchemaTemplate = (route: string): any => {
@@ -111,6 +114,23 @@ const AdminPage: React.FC = () => {
     useState<string>("PLAYER/JOIN");
   const broadcastTemplates = useMemo(() => getBroadcastTemplates(), []);
   const { isAuthenticated } = useAdminAuth();
+  const [teams, setTeams] = useState<Team[]>([]);
+
+  // Fetch teams on component mount
+  useEffect(() => {
+    const fetchTeams = async () => {
+      try {
+        const response = await apiFetch(APIRoute.ListTeams);
+        setTeams(response.teams);
+      } catch (error) {
+        console.error("Failed to fetch teams:", error);
+      }
+    };
+
+    if (isAuthenticated) {
+      fetchTeams();
+    }
+  }, [isAuthenticated]);
 
   // Prefill JSON schema when API endpoint or method changes
   useEffect(() => {
@@ -275,6 +295,25 @@ const AdminPage: React.FC = () => {
     }
   };
 
+  const handleUpdateTeamScore = async (teamId: string, scoreChange: number) => {
+    try {
+      const response = await apiFetch(APIRoute.UpdateTeamScore, {
+        teamId,
+        scoreChange,
+      });
+
+      // Update local state with new score
+      setTeams((prevTeams) =>
+        prevTeams.map((team) =>
+          team.id === teamId ? { ...team, score: response.newScore } : team
+        )
+      );
+    } catch (error) {
+      console.error("Failed to update team score:", error);
+      alert(`Failed to update team score: ${error}`);
+    }
+  };
+
   return (
     <div className="h-screen relative overflow-hidden">
       <PastelBackground />
@@ -284,7 +323,7 @@ const AdminPage: React.FC = () => {
         </div>
       )}
       {isAuthenticated && (
-        <div className="grid grid-cols-7 h-full w-full gap-4">
+        <div className="grid grid-cols-8 h-full w-full gap-4">
           <div className="col-start-1 col-span-1 flex flex-col items-center justify-center h-full gap-4">
             <button
               className="bg-red-600 text-white p-2 w-32 rounded-md cursor-pointer hover:bg-red-500 active:bg-red-700"
@@ -349,7 +388,41 @@ const AdminPage: React.FC = () => {
               text="Joystick"
             />
           </div>
-          <div className="col-start-2 col-span-3 text-gray-900 flex flex-col h-full p-6">
+
+          {/* Team Scores Column */}
+          <div className="col-start-2 col-span-1 flex flex-col items-center justify-center h-full gap-4 p-4">
+            <h4 className="text-lg font-bold">Scores</h4>
+            {teams.map((team) => (
+              <div
+                key={team.id}
+                className="p-3 rounded-sm w-full"
+                style={{ backgroundColor: team.color }}
+              >
+                <div className="text-center font-bold text-md mb-2">
+                  {team.name}
+                </div>
+                <div className="flex justify-center gap-2 mb-2">
+                  <button
+                    className="bg-white/80 rounded-full font-bold font-mono py-1 px-3 text-xl cursor-pointer"
+                    onClick={() => handleUpdateTeamScore(team.id, -1)}
+                  >
+                    –
+                  </button>
+                  <div className="text-center text-2xl font-bold mx-2">
+                    {team.score}
+                  </div>
+                  <button
+                    className="bg-white/80 rounded-full font-bold font-mono py-1 px-3 text-xl cursor-pointer"
+                    onClick={() => handleUpdateTeamScore(team.id, 1)}
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="col-start-3 col-span-3 text-gray-900 flex flex-col h-full p-6">
             <form onSubmit={handleSubmit} className="flex flex-col h-full">
               <div className="mb-4">
                 <p className="text-md text-left font-bold min-w-[150px] mb-1">
@@ -443,7 +516,7 @@ const AdminPage: React.FC = () => {
             </form>
           </div>
 
-          <div className="col-start-5 col-span-3 h-full p-4 overflow-auto bg-opacity-80">
+          <div className="col-start-6 col-span-3 h-full p-4 overflow-auto bg-opacity-80">
             <h2 className="text-xl font-bold mb-3 text-left">Response Log</h2>
             {logs.length === 0 ? (
               <p className="text-gray-500 text-left">No requests yet</p>

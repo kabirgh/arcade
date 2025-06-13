@@ -8,10 +8,10 @@ import { Color, type Player, type Team } from "../shared/types/domain/player";
 class DB {
   // Let server read/write fields directly
   public teams: Team[] = [
-    { id: "1", name: "Team 1", color: Color.Red },
-    { id: "2", name: "Team 2", color: Color.Blue },
-    { id: "3", name: "Team 3", color: Color.Green },
-    { id: "4", name: "Team 4", color: Color.Yellow },
+    { id: "1", name: "Team 1", color: Color.Red, score: 0 },
+    { id: "2", name: "Team 2", color: Color.Blue, score: 0 },
+    { id: "3", name: "Team 3", color: Color.Green, score: 0 },
+    { id: "4", name: "Team 4", color: Color.Yellow, score: 0 },
   ];
   public screen: PlayerScreen = PlayerScreen.Join;
   // ws id -> {ws, player}

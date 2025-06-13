@@ -49,3 +49,11 @@ export const UpdateTeamScoreResponseType = t.Object({
 export type UpdateTeamScoreResponse = Static<
   typeof UpdateTeamScoreResponseType
 >;
+
+export const DeleteTeamRequestType = t.Object({
+  teamId: t.String(),
+});
+export type DeleteTeamRequest = Static<typeof DeleteTeamRequestType>;
+
+export const DeleteTeamResponseType = t.Object({});
+export type DeleteTeamResponse = Static<typeof DeleteTeamResponseType>;

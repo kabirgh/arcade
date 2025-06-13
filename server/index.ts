@@ -298,6 +298,40 @@ const app = new Elysia()
       response: APIRouteToSchema[APIRoute.UpdateTeamScore].res,
     }
   )
+  .post(
+    APIRoute.DeleteTeam,
+    ({ body }) => {
+      const teamIndex = db.teams.findIndex((team) => team.id === body.teamId);
+      if (teamIndex === -1) {
+        return {
+          ok: false as const,
+          error: {
+            status: 404,
+            message: "Team not found",
+          },
+        };
+      }
+
+      // Remove team from array
+      db.teams.splice(teamIndex, 1);
+
+      // Move all players from this team back to no team (empty teamId)
+      db.players.forEach((player) => {
+        if (player.teamId === body.teamId) {
+          player.teamId = "";
+        }
+      });
+
+      // Broadcast updated player list
+      broadcastAllPlayers();
+
+      return { ok: true as const, data: {} };
+    },
+    {
+      body: APIRouteToSchema[APIRoute.DeleteTeam].req,
+      response: APIRouteToSchema[APIRoute.DeleteTeam].res,
+    }
+  )
   .get(
     APIRoute.ListPlayers,
     () => {

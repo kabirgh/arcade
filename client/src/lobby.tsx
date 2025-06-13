@@ -18,6 +18,7 @@ import { apiFetch } from "./util/apiFetch";
 type TeamSectionProps = {
   team: Team;
   onTeamNameConfirm: (name: string) => void;
+  onTeamDelete: (teamId: string) => void;
   players: Player[];
   buzzingPlayers: Set<string>;
 };
@@ -25,6 +26,7 @@ type TeamSectionProps = {
 const TeamSection = ({
   team,
   onTeamNameConfirm,
+  onTeamDelete,
   players,
   buzzingPlayers,
 }: TeamSectionProps) => {
@@ -44,6 +46,15 @@ const TeamSection = ({
 
   const handleEdit = () => {
     setIsEditing(true);
+  };
+
+  const handleDelete = () => {
+    const confirmDelete = window.confirm(
+      `Are you sure you want to delete team "${team.name}"?`
+    );
+    if (confirmDelete) {
+      onTeamDelete(team.id);
+    }
   };
 
   // Filter players for this specific team
@@ -97,6 +108,13 @@ const TeamSection = ({
         >
           {isEditing ? "✔️" : "✏️"}
         </button>
+        <button
+          onClick={handleDelete}
+          className="ml-2 px-2 py-1 bg-red-50 rounded-md hover:bg-red-100 cursor-pointer"
+          aria-label="Delete team"
+        >
+          ❌
+        </button>
       </div>
     </div>
   );
@@ -117,13 +135,7 @@ export default function Home() {
   const { subscribe } = useWebSocketContext();
   const [players, setPlayers] = useState<Player[]>([]);
   const [buzzingPlayers, setBuzzingPlayers] = useState<Set<string>>(new Set());
-  const [teams, setTeams] = useState<Team[]>([
-    // Default teams while we wait for the server to return the actual teams
-    { id: "1", name: "", color: Color.Red },
-    { id: "2", name: "", color: Color.Blue },
-    { id: "3", name: "", color: Color.Green },
-    { id: "4", name: "", color: Color.Yellow },
-  ]);
+  const [teams, setTeams] = useState<Team[]>([]);
 
   useEffect(() => {
     apiFetch(APIRoute.ListPlayers).then(({ players }) => {
@@ -183,6 +195,17 @@ export default function Home() {
         return newTeams;
       });
     });
+  };
+
+  const handleTeamDelete = (teamId: string) => {
+    apiFetch(APIRoute.DeleteTeam, { teamId })
+      .then(() => {
+        setTeams((prevTeams) => prevTeams.filter((team) => team.id !== teamId));
+      })
+      .catch((error) => {
+        console.error("Failed to delete team:", error);
+        // Optionally show user-friendly error message
+      });
   };
 
   // Dynamic layout calculation based on number of teams
@@ -258,6 +281,9 @@ export default function Home() {
                       team={team}
                       onTeamNameConfirm={(name) => {
                         handleTeamNameChange(team.id, name);
+                      }}
+                      onTeamDelete={(teamId) => {
+                        handleTeamDelete(teamId);
                       }}
                       players={players}
                       buzzingPlayers={buzzingPlayers}

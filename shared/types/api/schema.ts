@@ -26,6 +26,8 @@ import {
   SetPlayerScreenResponseType,
 } from "./misc";
 import {
+  DeleteTeamRequestType,
+  DeleteTeamResponseType,
   KickPlayerRequestType,
   KickPlayerResponseType,
   ListPlayersRequestType,
@@ -44,6 +46,7 @@ export enum APIRoute {
   ListTeams = "/api/teams",
   SetTeamName = "/api/set-team-name",
   UpdateTeamScore = "/api/update-team-score",
+  DeleteTeam = "/api/delete-team",
   ListPlayers = "/api/players",
   KickPlayer = "/api/kick-player",
   ListWebSocketClientIds = "/api/list-websocket-client-ids",
@@ -82,6 +85,11 @@ export const APIRouteToSchema = {
     method: "POST",
     req: UpdateTeamScoreRequestType,
     res: ResponseEnvelopeType(UpdateTeamScoreResponseType),
+  },
+  [APIRoute.DeleteTeam]: {
+    method: "POST",
+    req: DeleteTeamRequestType,
+    res: ResponseEnvelopeType(DeleteTeamResponseType),
   },
   [APIRoute.ListPlayers]: {
     method: "GET",

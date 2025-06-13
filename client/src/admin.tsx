@@ -5,7 +5,6 @@ import { APIRoute, APIRouteToSchema } from "../../shared/types/api/schema";
 import { WebSocketMessageType } from "../../shared/types/api/websocket";
 import { HostScreen, PlayerScreen } from "../../shared/types/domain/misc";
 import type { Team } from "../../shared/types/domain/player";
-import { Color } from "../../shared/types/domain/player";
 import { Channel, MessageType } from "../../shared/types/domain/websocket";
 import PastelBackground from "./components/PastelBackground";
 import { useWebSocketContext } from "./contexts/WebSocketContext";

@@ -11,7 +11,7 @@ import { useListenNavigate } from "./hooks/useListenNavigate";
 import useWebAudio from "./hooks/useWebAudio";
 import { apiFetch } from "./util/apiFetch";
 
-const DEBUG = false;
+const DEBUG = true;
 
 // ============================================================================
 // TYPES
@@ -111,6 +111,7 @@ const COLLISION_EXTENSION = 1000 * SCALE_FACTOR; // Helps prevent tunneling at h
 // Unscaled constants
 const STARTING_LIVES = 2;
 const SPEED_MULTIPLIER = 1.1;
+const MAX_SPEED = 4 * INITIAL_BALL_SPEED;
 
 // ============================================================================
 // CONSTANTS - GAME DATA
@@ -692,6 +693,54 @@ const Quadrapong = () => {
             );
           }
           break;
+        case "KeyW": {
+          const leftPlayers = stateRef.current.players.filter(
+            (p) => p.position === "left"
+          );
+          if (leftPlayers[0]) {
+            leftPlayers[0].y = Math.max(
+              PADDLE_STOP,
+              leftPlayers[0].y - moveDistance
+            );
+          }
+          break;
+        }
+        case "KeyS": {
+          const leftPlayers = stateRef.current.players.filter(
+            (p) => p.position === "left"
+          );
+          if (leftPlayers[0]) {
+            leftPlayers[0].y = Math.min(
+              CANVAS_SIZE - leftPlayers[0].paddleLength - PADDLE_STOP,
+              leftPlayers[0].y + moveDistance
+            );
+          }
+          break;
+        }
+        case "ArrowUp": {
+          const rightPlayers = stateRef.current.players.filter(
+            (p) => p.position === "right"
+          );
+          if (rightPlayers[0]) {
+            rightPlayers[0].y = Math.max(
+              PADDLE_STOP,
+              rightPlayers[0].y - moveDistance
+            );
+          }
+          break;
+        }
+        case "ArrowDown": {
+          const rightPlayers = stateRef.current.players.filter(
+            (p) => p.position === "right"
+          );
+          if (rightPlayers[0]) {
+            rightPlayers[0].y = Math.min(
+              CANVAS_SIZE - rightPlayers[0].paddleLength - PADDLE_STOP,
+              rightPlayers[0].y + moveDistance
+            );
+          }
+          break;
+        }
         case "ArrowLeft":
           if (bottomPlayers[1]) {
             bottomPlayers[1].x = Math.max(
@@ -825,18 +874,20 @@ const Quadrapong = () => {
             maxAngle *
             (position === "left" || position === "right" ? -1 : 1);
 
-          const speed =
-            SPEED_MULTIPLIER * Math.sqrt(ball.dx ** 2 + ball.dy ** 2);
+          const newSpeed = Math.min(
+            SPEED_MULTIPLIER * Math.hypot(ball.dx, ball.dy),
+            MAX_SPEED
+          );
 
           // Update ball direction based on which paddle was hit
           if (position === "left" || position === "right") {
             ball.dx =
-              speed * Math.cos(newAngle) * (position === "left" ? 1 : -1);
-            ball.dy = speed * -Math.sin(newAngle);
+              newSpeed * Math.cos(newAngle) * (position === "left" ? 1 : -1);
+            ball.dy = newSpeed * -Math.sin(newAngle);
           } else {
-            ball.dx = speed * Math.sin(newAngle);
+            ball.dx = newSpeed * Math.sin(newAngle);
             ball.dy =
-              speed * Math.cos(newAngle) * (position === "top" ? 1 : -1);
+              newSpeed * Math.cos(newAngle) * (position === "top" ? 1 : -1);
           }
 
           playSound("paddle");
@@ -889,14 +940,18 @@ const Quadrapong = () => {
           ball.y = wt - BALL_SIZE;
         }
 
-        if (wall.width > wall.height) {
+        const speed = Math.hypot(ball.dx, ball.dy);
+        const newSpeed = Math.min(SPEED_MULTIPLIER * speed, MAX_SPEED);
+        const scale = newSpeed / speed;
+
+        if (wall.position === "top" || wall.position === "bottom") {
           // Horizontal wall
-          ball.dy = -ball.dy * SPEED_MULTIPLIER;
-          ball.dx = ball.dx * SPEED_MULTIPLIER;
+          ball.dy = -ball.dy * scale;
+          ball.dx = ball.dx * scale;
         } else {
           // Vertical wall
-          ball.dx = -ball.dx * SPEED_MULTIPLIER;
-          ball.dy = ball.dy * SPEED_MULTIPLIER;
+          ball.dx = -ball.dx * scale;
+          ball.dy = ball.dy * scale;
         }
 
         playSound("wall");

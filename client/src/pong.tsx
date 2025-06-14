@@ -11,7 +11,7 @@ import { useListenNavigate } from "./hooks/useListenNavigate";
 import useWebAudio from "./hooks/useWebAudio";
 import { apiFetch } from "./util/apiFetch";
 
-const DEBUG = true;
+const DEBUG = false;
 
 // ============================================================================
 // TYPES
@@ -74,36 +74,43 @@ type State = {
 // CONSTANTS - GAME CONFIGURATION
 // ============================================================================
 
+const SCALE_FACTOR = 1.4;
+
 // Canvas dimensions
-const CANVAS_SIZE = 600;
+const CANVAS_SIZE = 600 * SCALE_FACTOR;
 
 // Scoring display
-const SCORE_LENGTH = 14;
-const SCORE_THICKNESS = 5;
-const SCORE_GAP = 9;
+const SCORE_LENGTH = 14 * SCALE_FACTOR;
+const SCORE_THICKNESS = 5 * SCALE_FACTOR;
+const SCORE_GAP = 9 * SCALE_FACTOR;
 
 // Paddle dimensions
-const PADDLE_LENGTH = 80;
-const PADDLE_THICKNESS = 8;
+const PADDLE_LENGTH = 80 * SCALE_FACTOR;
+const PADDLE_THICKNESS = 8 * SCALE_FACTOR;
 
 // Wall dimensions and positioning
 const WALL_THICKNESS = PADDLE_THICKNESS;
-const WALL_LENGTH = 80;
-const WALL_OFFSET = SCORE_LENGTH + 4;
+const WALL_LENGTH = 80 * SCALE_FACTOR;
+const WALL_OFFSET = (SCORE_LENGTH + 4) * SCALE_FACTOR;
 
 // Paddle positioning
-const PADDLE_OFFSET = WALL_OFFSET + WALL_THICKNESS + 8;
-const PADDLE_STOP = WALL_OFFSET + WALL_THICKNESS + 4; // Let the player stop 4 pixels from the wall
+const PADDLE_OFFSET = (WALL_OFFSET + WALL_THICKNESS + 8) * SCALE_FACTOR;
+const PADDLE_STOP = (WALL_OFFSET + WALL_THICKNESS + 4) * SCALE_FACTOR; // Let the player stop 4 scaled pixels from the wall
+
+// Avatar dimensions
+const AVATAR_SIZE = 24 * SCALE_FACTOR;
 
 // Ball properties
-const BALL_SIZE = 10;
-const INITIAL_BALL_SPEED = 0.18;
-const SPEED_MULTIPLIER = 1.1;
+const BALL_SIZE = 10 * SCALE_FACTOR;
+const INITIAL_BALL_SPEED = 0.18 * SCALE_FACTOR;
 
 // Game mechanics
-const JOYSTICK_SENSITIVITY = 0.6;
+const JOYSTICK_SENSITIVITY = 0.6 * SCALE_FACTOR;
+const COLLISION_EXTENSION = 1000 * SCALE_FACTOR; // Helps prevent tunneling at high speeds
+
+// Unscaled constants
 const STARTING_LIVES = 2;
-const COLLISION_EXTENSION = 1000; // Helps prevent tunneling at high speeds
+const SPEED_MULTIPLIER = 1.1;
 
 // ============================================================================
 // CONSTANTS - GAME DATA
@@ -455,14 +462,9 @@ const Quadrapong = () => {
     const team = teams.find((t) => t.position === position);
     const newWall = createFullWall(position, team?.color || "white");
 
-    // Remove existing walls with overlap because collisions get weird with multiple walls
-    stateRef.current.walls = walls.filter(
-      (wall) =>
-        wall.x + wall.width <= newWall.x ||
-        wall.x >= newWall.x + newWall.width ||
-        wall.y + wall.height <= newWall.y ||
-        wall.y >= newWall.y + newWall.height
-    );
+    // Remove existing walls for this position to avoid overlap issues
+    // This is more reliable than coordinate-based filtering with floating-point arithmetic
+    stateRef.current.walls = walls.filter((wall) => wall.position !== position);
     stateRef.current.walls.push(newWall);
   }, []);
 
@@ -1120,7 +1122,7 @@ const Quadrapong = () => {
       const avatarImg = avatarImagesRef.current.get(player.avatar);
       if (!avatarImg) return; // Image not loaded yet
 
-      const avatarSize = 24; // Size of the avatar image
+      const avatarSize = AVATAR_SIZE;
       let avatarX: number;
       let avatarY: number;
 
@@ -1128,25 +1130,37 @@ const Quadrapong = () => {
       switch (player.position) {
         case "left":
           // Avatar to the left of paddle
-          avatarX = player.x - avatarSize - 4;
+          avatarX = player.x - avatarSize - 6 * SCALE_FACTOR;
           avatarY = player.y + player.paddleLength / 2 - avatarSize / 2;
           break;
         case "right":
           // Avatar to the right of paddle
-          avatarX = player.x + PADDLE_THICKNESS + 4;
+          avatarX = player.x + PADDLE_THICKNESS + 6 * SCALE_FACTOR;
           avatarY = player.y + player.paddleLength / 2 - avatarSize / 2;
           break;
         case "top":
           // Avatar above paddle
           avatarX = player.x + player.paddleLength / 2 - avatarSize / 2;
-          avatarY = player.y - avatarSize - 4;
+          avatarY = player.y - avatarSize - 6 * SCALE_FACTOR;
           break;
         case "bottom":
           // Avatar below paddle
           avatarX = player.x + player.paddleLength / 2 - avatarSize / 2;
-          avatarY = player.y + PADDLE_THICKNESS + 4;
+          avatarY = player.y + PADDLE_THICKNESS + 6 * SCALE_FACTOR;
           break;
       }
+
+      // Draw circle background
+      const centerX = avatarX + avatarSize / 2;
+      const centerY = avatarY + avatarSize / 2;
+      const radius = (avatarSize / 2) * 1.2;
+
+      ctx.globalAlpha = 0.8;
+      ctx.fillStyle = "#030712"; // bg-gray-950 equivalent
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.globalAlpha = 1; // Reset opacity
 
       // Draw the avatar image
       ctx.drawImage(avatarImg, avatarX, avatarY, avatarSize, avatarSize);

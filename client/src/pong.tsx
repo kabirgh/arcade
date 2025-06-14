@@ -1151,16 +1151,16 @@ const Quadrapong = () => {
       }
 
       // Draw circle background
-      const centerX = avatarX + avatarSize / 2;
-      const centerY = avatarY + avatarSize / 2;
-      const radius = (avatarSize / 2) * 1.2;
+      // const centerX = avatarX + avatarSize / 2;
+      // const centerY = avatarY + avatarSize / 2;
+      // const radius = (avatarSize / 2) * 1.2;
 
-      ctx.globalAlpha = 0.8;
-      ctx.fillStyle = "#030712"; // bg-gray-950 equivalent
-      ctx.beginPath();
-      ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-      ctx.fill();
-      ctx.globalAlpha = 1; // Reset opacity
+      // ctx.globalAlpha = 0.8;
+      // ctx.fillStyle = "#030712"; // bg-gray-950 equivalent
+      // ctx.beginPath();
+      // ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI);
+      // ctx.fill();
+      // ctx.globalAlpha = 1; // Reset opacity
 
       // Draw the avatar image
       ctx.drawImage(avatarImg, avatarX, avatarY, avatarSize, avatarSize);

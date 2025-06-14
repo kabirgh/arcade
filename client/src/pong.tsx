@@ -656,7 +656,7 @@ const Quadrapong = () => {
         // Convert polar coordinates to velocity
         // Angle of 0 = right
         player.dx = force * Math.cos(angle) * JOYSTICK_SENSITIVITY;
-        player.dy = force * Math.sin(angle) * JOYSTICK_SENSITIVITY;
+        player.dy = -force * Math.sin(angle) * JOYSTICK_SENSITIVITY;
       }
     );
 

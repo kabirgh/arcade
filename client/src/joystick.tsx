@@ -48,10 +48,10 @@ export default function Joystick() {
     angle: -1,
     force: -1,
   });
-  const [joystickSize, setJoystickSize] = useState<number>(vminToPixels(50));
+  const [joystickSize, setJoystickSize] = useState<number>(vminToPixels(60));
 
   // Calculate min and max sizes in pixels
-  const minSizePx = vminToPixels(10);
+  const minSizePx = vminToPixels(20);
   const maxSizePx = vminToPixels(90);
   const deltaSizePx = vminToPixels(10);
   const containerExtraSizePx = vminToPixels(CONTAINER_PADDING_TOTAL_VMIN);

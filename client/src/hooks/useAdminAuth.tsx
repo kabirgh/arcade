@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ReadyState } from "react-use-websocket";
 
+import config from "../../../config.ts";
 import { Channel, MessageType } from "../../../shared/types/domain/websocket";
 import { useWebSocketContext } from "../contexts/WebSocketContext";
 
@@ -90,7 +91,7 @@ export const useAdminAuth = ({
 
   const handlePasswordSubmit = (password: string) => {
     setShowPasswordPrompt(false);
-    if (password === "bonk123") {
+    if (password === config.admin.password) {
       setIsAuthenticated(true);
       sessionStorage.setItem("isAdminAuthenticated", "true");
       if (claimHost && readyState === ReadyState.OPEN) {

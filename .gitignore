@@ -33,7 +33,7 @@ yarn-error.log*
 .env.production.local
 
 # config
-config.ts
+# config.ts
 
 # images
 **/qr-wifi.png

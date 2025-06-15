@@ -7,21 +7,11 @@ import type { WebSocketMessage } from "../../shared/types/api/websocket";
 import type { Player, Team } from "../../shared/types/domain/player";
 import { Avatar } from "../../shared/types/domain/player";
 import { Channel, MessageType } from "../../shared/types/domain/websocket";
-import { avatarToPath } from "../../shared/utils";
+import { avatarToPath, generateId } from "../../shared/utils";
 import PastelBackground from "./components/PastelBackground";
 import { usePlayerContext } from "./contexts/PlayerContext";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
 import { apiFetch } from "./util/apiFetch";
-
-// Helper function for cross-browser player ID generation
-function generatePlayerId() {
-  const characters = "abcdefghijklmnopqrstuvwxyz0123456789";
-  let result = "";
-  for (let i = 0; i < 6; i++) {
-    result += characters.charAt(Math.floor(Math.random() * characters.length));
-  }
-  return result;
-}
 
 const TeamCircle = ({
   team,
@@ -229,7 +219,7 @@ export default function JoinScreen() {
 
     if (isJoinEnabled && selectedAvatar && selectedTeam) {
       const player: Player = {
-        id: generatePlayerId(),
+        id: generateId("player", 6),
         name: playerName,
         teamId: selectedTeam.id,
         avatar: selectedAvatar,

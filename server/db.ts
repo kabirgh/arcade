@@ -4,6 +4,7 @@ import { ElysiaWS } from "elysia/dist/ws";
 
 import { PlayerScreen } from "../shared/types/domain/misc";
 import { Color, type Player, type Team } from "../shared/types/domain/player";
+import { generateId } from "../shared/utils";
 
 class DB {
   private db: Database;
@@ -55,10 +56,10 @@ class DB {
       const insertTeam = this.db.prepare(
         "INSERT INTO teams (id, name, color, score) VALUES (?, ?, ?, ?)"
       );
-      insertTeam.run("1", "Team 1", Color.Red, 0);
-      insertTeam.run("2", "Team 2", Color.Blue, 0);
-      insertTeam.run("3", "Team 3", Color.Green, 0);
-      insertTeam.run("4", "Team 4", Color.Yellow, 0);
+      insertTeam.run(generateId("team", 6), "Team 1", Color.Red, 0);
+      insertTeam.run(generateId("team", 6), "Team 2", Color.Blue, 0);
+      insertTeam.run(generateId("team", 6), "Team 3", Color.Green, 0);
+      insertTeam.run(generateId("team", 6), "Team 4", Color.Yellow, 0);
     }
 
     // Initialize screen setting if it doesn't exist

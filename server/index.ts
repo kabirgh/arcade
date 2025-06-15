@@ -15,6 +15,7 @@ import {
 } from "../shared/types/api/websocket";
 import { Color } from "../shared/types/domain/player";
 import { Channel, MessageType } from "../shared/types/domain/websocket";
+import { generateId } from "../shared/utils";
 import {
   handleCodenamesAskLlm,
   handleCodenamesClue,
@@ -26,6 +27,10 @@ import {
 import DB from "./db";
 
 const db = new DB();
+
+// Generate a random session ID for the current server session.
+// This is used by the client to determine whether they should delete the cached player data.
+// const sessionId = generateId("session", 6);
 
 function sendHostMessage(message: WebSocketMessage): void {
   if (!db.hostWs) {
@@ -350,14 +355,7 @@ const app = new Elysia()
       }
 
       // Generate team ID based on existing teams
-      const characters = "abcdefghijklmnopqrstuvwxyz";
-      let teamName = "";
-      for (let i = 0; i < 3; i++) {
-        teamName += characters.charAt(
-          Math.floor(Math.random() * characters.length)
-        );
-      }
-      const teamId = teamName.toString();
+      const teamId = generateId("team", 6);
 
       // Colors in order: red, blue, green, yellow
       const colors = [Color.Red, Color.Blue, Color.Green, Color.Yellow];
@@ -371,7 +369,7 @@ const app = new Elysia()
 
       const newTeam = {
         id: teamId,
-        name: `Team ${teamName}`,
+        name: `Team ${teamId.slice(0, 3)}`,
         color: teamColor,
         score: 0,
       };

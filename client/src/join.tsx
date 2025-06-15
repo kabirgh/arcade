@@ -27,10 +27,11 @@ const TeamCircle = ({
       className="w-9 h-9 rounded-full cursor-pointer"
       style={{
         backgroundColor: team.color,
-        outline:
+        boxShadow:
           team.name === selectedTeam?.name
-            ? "4px solid var(--color-gray-900)"
+            ? "0 0 0 4px var(--color-white)"
             : "",
+        transform: team.name === selectedTeam?.name ? "scale(1.2)" : "scale(1)",
       }}
       onClick={onClick}
     ></div>

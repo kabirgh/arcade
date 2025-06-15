@@ -44,7 +44,7 @@ type BoatTeam = {
 };
 
 type Duck = {
-  id: string;
+  id: number;
   x: number;
   y: number;
   collected: boolean;
@@ -71,7 +71,8 @@ type State = {
   currentTime: number;
   lastDuckSpawnTime: number;
   duckSpawnInterval: number;
-  pausedTime: number; // Track how long the game has been paused
+  pausedTime: number;
+  latestDuckId: number;
 };
 
 // ============================================================================
@@ -271,10 +272,13 @@ const generateDuckPosition = (
 /**
  * Generate initial ducks
  */
-const generateDucks = (teams: BoatTeam[], rocks: Rock[]): Duck[] => {
+const generateDucks = (state: State): Duck[] => {
+  const { teams, rocks } = state;
+  const activeTeams = teams.filter((t) => t.type === "active");
+
   const ducks: Duck[] = [];
   const existingPositions: Array<{ x: number; y: number }> = [
-    ...teams,
+    ...activeTeams,
     ...rocks,
   ];
 
@@ -282,13 +286,14 @@ const generateDucks = (teams: BoatTeam[], rocks: Rock[]): Duck[] => {
   for (let i = 0; i < MAX_DUCKS; i++) {
     const pos = generateDuckPosition(existingPositions, rocks);
     ducks.push({
-      id: `duck_${i}`,
+      id: i,
       x: pos.x,
       y: pos.y,
       collected: false,
     });
     existingPositions.push(pos);
   }
+  state.latestDuckId = MAX_DUCKS - 1;
 
   return ducks;
 };
@@ -307,7 +312,8 @@ const spawnNewDuck = (state: State): void => {
   ];
 
   const pos = generateDuckPosition(existingPositions, rocks);
-  const newDuckId = `duck_${Date.now()}_${Math.random()}`;
+  const newDuckId = state.latestDuckId + 1;
+  state.latestDuckId = newDuckId;
 
   ducks.push({
     id: newDuckId,
@@ -431,6 +437,7 @@ const BoatGame = () => {
     lastDuckSpawnTime: 0,
     duckSpawnInterval: DUCK_SPAWN_INTERVAL,
     pausedTime: 0,
+    latestDuckId: 0,
   });
 
   // Load images
@@ -510,10 +517,7 @@ const BoatGame = () => {
         dy: 0,
       }));
       stateRef.current.rocks = generateRocks(stateRef.current.teams);
-      stateRef.current.ducks = generateDucks(
-        stateRef.current.teams,
-        stateRef.current.rocks
-      );
+      stateRef.current.ducks = generateDucks(stateRef.current);
       setNumActiveTeams(DEFAULT_TEAMS.length);
       return;
     }
@@ -558,7 +562,7 @@ const BoatGame = () => {
         // Generate game objects based only on active teams
         const activeTeams = state.teams.filter((t) => t.type === "active");
         state.rocks = generateRocks(activeTeams);
-        state.ducks = generateDucks(activeTeams, state.rocks);
+        state.ducks = generateDucks(state);
 
         console.log("Loaded teams", state.teams);
       })
@@ -1156,7 +1160,7 @@ const BoatGame = () => {
           const waggleSpeed = 0.003; // radians/ms
           const waggleAmount = 0.15; // max radians
           // Use duck id to offset phase for each duck
-          const phase = parseInt(duck.id.replace(/\D/g, "")) || 0;
+          const phase = duck.id;
           const angle = Math.sin(now * waggleSpeed + phase) * waggleAmount;
 
           ctx.save();
@@ -1245,7 +1249,7 @@ const BoatGame = () => {
     } else {
       // Subsequent games: generate completely new map
       newRocks = generateRocks(state.teams);
-      newDucks = generateDucks(state.teams, newRocks);
+      newDucks = generateDucks(state);
     }
 
     // Reset game state, preserving active/dummy team types
@@ -1295,6 +1299,7 @@ const BoatGame = () => {
       lastDuckSpawnTime: Date.now(),
       duckSpawnInterval: state.duckSpawnInterval, // Preserve current interval
       pausedTime: 0,
+      latestDuckId: 0,
     };
   }, [numActiveTeams]);
 

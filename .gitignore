@@ -32,6 +32,9 @@ yarn-error.log*
 .env.test.local
 .env.production.local
 
+# config
+config.ts
+
 # images
 **/qr-wifi.png
 **/qr-joinurl.png

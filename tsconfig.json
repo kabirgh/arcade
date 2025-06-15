@@ -14,6 +14,7 @@
     // "rootDirs": [],                                   /* Allow multiple folders to be treated as one when resolving modules. */
     // "typeRoots": [],                                  /* Specify multiple folders that act like './node_modules/@types'. */
     "types": ["bun-types"],                                      /* Specify type package names to be included without being referenced in a source file. */
+    "resolveJsonModule": true,
 
     /* Emit */
     "verbatimModuleSyntax": true,                        /* Enforce using 'import type' for type-only imports */

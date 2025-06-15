@@ -8,7 +8,6 @@ import { generateId } from "../shared/utils";
 
 class DB {
   private db: Database;
-  private _screen: PlayerScreen = PlayerScreen.Buzzer;
   // ws id -> {ws, player}
   public wsPlayerMap: Map<string, { ws: ElysiaWS; player: Player }> = new Map();
   public hostWs: ElysiaWS | null = null;
@@ -62,17 +61,10 @@ class DB {
       insertTeam.run(generateId("team", 6), "Team 4", Color.Yellow, 0);
     }
 
-    // Initialize screen setting if it doesn't exist
-    const screenSetting = this.db
-      .query("SELECT value FROM settings WHERE key = 'screen'")
-      .get() as { value: string } | null;
-    if (!screenSetting) {
-      this.db
-        .prepare("INSERT INTO settings (key, value) VALUES (?, ?)")
-        .run("screen", PlayerScreen.Buzzer);
-    } else {
-      this._screen = screenSetting.value as PlayerScreen;
-    }
+    // Set screen setting to Buzzer on startup
+    this.db
+      .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
+      .run("screen", PlayerScreen.Buzzer);
   }
 
   public get teams(): Team[] {
@@ -108,11 +100,13 @@ class DB {
   }
 
   public get screen(): PlayerScreen {
-    return this._screen;
+    const row = this.db
+      .query("SELECT value FROM settings WHERE key = 'screen'")
+      .get() as { value: string } | null;
+    return row?.value as PlayerScreen;
   }
 
   public set screen(newScreen: PlayerScreen) {
-    this._screen = newScreen;
     this.db
       .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
       .run("screen", newScreen);

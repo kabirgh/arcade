@@ -29,3 +29,11 @@ export const BroadcastAllPlayersResponseType = t.Object({});
 export type BroadcastAllPlayersResponse = Static<
   typeof BroadcastAllPlayersResponseType
 >;
+
+export const SessionIdRequestType = t.Object({});
+export type SessionIdRequest = Static<typeof SessionIdRequestType>;
+
+export const SessionIdResponseType = t.Object({
+  sessionId: t.String(),
+});
+export type SessionIdResponse = Static<typeof SessionIdResponseType>;

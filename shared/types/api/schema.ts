@@ -22,6 +22,8 @@ import {
   BroadcastAllPlayersResponseType,
   PlayerScreenRequestType,
   PlayerScreenResponseType,
+  SessionIdRequestType,
+  SessionIdResponseType,
   SetPlayerScreenRequestType,
   SetPlayerScreenResponseType,
 } from "./misc";
@@ -43,18 +45,24 @@ import {
 } from "./player";
 
 export enum APIRoute {
-  PlayerScreen = "/api/player-screen",
-  SetPlayerScreen = "/api/set-player-screen",
-  ListTeams = "/api/teams",
-  SetTeamName = "/api/set-team-name",
-  UpdateTeamScore = "/api/update-team-score",
-  DeleteTeam = "/api/delete-team",
-  AddTeam = "/api/add-team",
-  ListPlayers = "/api/players",
-  KickPlayer = "/api/kick-player",
-  ListWebSocketClientIds = "/api/list-websocket-client-ids",
-  SendWebSocketMessage = "/api/send-websocket-message",
-  BroadcastAllPlayers = "/api/broadcast-all-players",
+  // Session
+  SessionId = "/api/session/id",
+  PlayerScreen = "/api/session/player-screen",
+  SetPlayerScreen = "/api/session/set-player-screen",
+  // Teams
+  ListTeams = "/api/teams/list",
+  SetTeamName = "/api/teams/set-name",
+  UpdateTeamScore = "/api/teams/update-score",
+  DeleteTeam = "/api/teams/delete",
+  AddTeam = "/api/teams/add",
+  // Players
+  ListPlayers = "/api/players/list",
+  KickPlayer = "/api/players/kick",
+  // Websocket
+  ListWebSocketClientIds = "/api/websocket/list-client-ids",
+  SendWebSocketMessage = "/api/websocket/send-message",
+  BroadcastAllPlayers = "/api/websocket/broadcast-all-players",
+  // Codenames
   CodenamesState = "/api/codenames/state",
   CodenamesStart = "/api/codenames/start",
   CodenamesClue = "/api/codenames/clue",
@@ -64,6 +72,11 @@ export enum APIRoute {
 
 // Schemas for each API route
 export const APIRouteToSchema = {
+  [APIRoute.SessionId]: {
+    method: "GET",
+    req: SessionIdRequestType,
+    res: ResponseEnvelopeType(SessionIdResponseType),
+  },
   [APIRoute.PlayerScreen]: {
     method: "GET",
     req: PlayerScreenRequestType,

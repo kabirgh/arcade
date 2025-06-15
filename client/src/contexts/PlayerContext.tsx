@@ -4,16 +4,17 @@ import React, {
   useCallback,
   useContext,
   useEffect,
-  useRef,
   useState,
 } from "react";
 import { ReadyState } from "react-use-websocket";
 import { useLocation } from "wouter";
 
+import { APIRoute } from "../../../shared/types/api/schema";
 import { PlayerScreen } from "../../../shared/types/domain/misc";
 import type { Player } from "../../../shared/types/domain/player";
 import { MessageType } from "../../../shared/types/domain/websocket";
 import { Channel } from "../../../shared/types/domain/websocket";
+import { apiFetch } from "../util/apiFetch";
 import { useWebSocketContext } from "./WebSocketContext";
 
 // Define the shape of the context data
@@ -25,6 +26,11 @@ interface PlayerContextType {
 
 // Create the context with a default undefined value
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
+
+type SessionData = {
+  id: string;
+  expiry: number;
+};
 
 // Create the Provider component
 export const PlayerProvider: React.FC<{ children: ReactNode }> = ({
@@ -42,7 +48,8 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({
       return null;
     }
   });
-  const hasJoinedRef = useRef(false);
+  // Track whether session validation is complete
+  const [sessionValidated, setSessionValidated] = useState(false);
 
   // Function to update player state and localStorage
   // Another useEffect sends the JOIN message to the server when readyState is OPEN
@@ -69,22 +76,55 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({
     }
   }, [publish, readyState]);
 
+  useEffect(() => {
+    apiFetch(APIRoute.SessionId).then(({ sessionId: fetchedSessionId }) => {
+      const sessionDataString = localStorage.getItem("sessionData");
+      const sessionData = sessionDataString
+        ? (JSON.parse(sessionDataString) as SessionData)
+        : null;
+
+      // If server went down temporarily, session id will change. But we don't
+      // want to clear player data, so also check if the player joined a long
+      // time ago.
+      if (
+        sessionData?.id !== fetchedSessionId &&
+        sessionData?.expiry &&
+        sessionData.expiry < Date.now()
+      ) {
+        clearSessionPlayer();
+      }
+
+      // Refresh expiry every time this component mounts
+      const newSessionData = {
+        id: fetchedSessionId,
+        // If server is down longer than this, we assume its deliberate rather than a transient issue.
+        expiry: Date.now() + 1000 * 60 * 5, // 5 minutes
+      };
+      localStorage.setItem("sessionData", JSON.stringify(newSessionData));
+
+      // Mark session validation as complete
+      setSessionValidated(true);
+
+      return newSessionData;
+    });
+  }, [clearSessionPlayer]);
+
   // Handles:
   // 1. setSessionPlayer - sends JOIN message to server.
   // 2. Page refresh - sends JOIN message to server if there's a player in localStorage.
   //    We need to do this because when the client disconnects, the server will
   //    remove the player from the list so we need to send a JOIN message to the
   //    server to re-add the player to the list
+  // Wait for session validation before sending JOIN message
   useEffect(() => {
-    if (readyState === ReadyState.OPEN && player) {
+    if (readyState === ReadyState.OPEN && player && sessionValidated) {
       publish({
         channel: Channel.PLAYER,
         messageType: MessageType.JOIN,
         payload: player,
       });
-      hasJoinedRef.current = true;
     }
-  }, [player, publish, readyState]);
+  }, [player, publish, readyState, sessionValidated]);
 
   // If player is due to leave, send LEAVE message to server
   useEffect(() => {

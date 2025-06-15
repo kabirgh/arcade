@@ -17,6 +17,7 @@ type TeamSectionProps = {
   onTeamDelete: (teamId: string) => void;
   players: Player[];
   buzzingPlayers: Set<string>;
+  canDelete: boolean;
 };
 
 const TeamSection = ({
@@ -25,6 +26,7 @@ const TeamSection = ({
   onTeamDelete,
   players,
   buzzingPlayers,
+  canDelete,
 }: TeamSectionProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editableName, setEditableName] = useState(team.name);
@@ -48,12 +50,8 @@ const TeamSection = ({
   };
 
   const handleDelete = () => {
-    const confirmDelete = window.confirm(
-      `Are you sure you want to delete team "${team.name}"?`
-    );
-    if (confirmDelete) {
-      onTeamDelete(team.id);
-    }
+    if (!canDelete) return;
+    onTeamDelete(team.id);
   };
 
   // Filter players for this specific team
@@ -113,13 +111,36 @@ const TeamSection = ({
         <button
           type="button"
           onClick={handleDelete}
-          className="ml-2 px-2 py-1 bg-gray-50 rounded-md hover:bg-white cursor-pointer"
+          disabled={!canDelete}
+          className={`ml-2 px-2 py-1 rounded-md ${
+            canDelete
+              ? "bg-gray-50 hover:bg-white cursor-pointer"
+              : "bg-gray-200 cursor-not-allowed opacity-80"
+          }`}
           aria-label="Delete team"
         >
           ❌
         </button>
       </div>
     </div>
+  );
+};
+
+type PlusButtonProps = {
+  onAddTeam: () => void;
+};
+
+const PlusButton = ({ onAddTeam }: PlusButtonProps) => {
+  return (
+    <button
+      onClick={onAddTeam}
+      className="fixed bottom-6 right-6 w-12 h-12 bg-green-700 hover:bg-green-600 rounded-full shadow-lg flex items-center justify-center z-10 cursor-pointer"
+      aria-label="Add new team"
+    >
+      <span className="text-2xl font-bold text-white -translate-y-0.25">
+        ＋
+      </span>
+    </button>
   );
 };
 
@@ -201,6 +222,12 @@ export default function Home() {
   };
 
   const handleTeamDelete = (teamId: string) => {
+    // Don't allow deleting if there are only 2 teams left
+    if (teams.length <= 2) {
+      alert("Cannot delete team: At least 2 teams are required.");
+      return;
+    }
+
     apiFetch(APIRoute.DeleteTeam, { teamId })
       .then(() => {
         setTeams((prevTeams) => prevTeams.filter((team) => team.id !== teamId));
@@ -211,9 +238,32 @@ export default function Home() {
       });
   };
 
+  const handleTeamAdd = () => {
+    // Don't allow adding if there are already 4 teams
+    if (teams.length >= 4) {
+      alert("Cannot add team: Maximum of 4 teams allowed.");
+      return;
+    }
+
+    apiFetch(APIRoute.AddTeam, {})
+      .then(({ team }) => {
+        setTeams((prevTeams) => [...prevTeams, team]);
+      })
+      .catch((error) => {
+        console.error("Failed to add team:", error);
+        // Optionally show user-friendly error message
+      });
+  };
+
   // Dynamic layout calculation based on number of teams
   const getTeamsGridLayout = (teamCount: number) => {
     switch (teamCount) {
+      case 1:
+        return {
+          gridTemplateColumns: "1fr",
+          gridTemplateRows: "1fr",
+          maxWidth: "800px",
+        };
       case 2:
         return {
           gridTemplateColumns: "1fr",
@@ -291,12 +341,16 @@ export default function Home() {
                       }}
                       players={players}
                       buzzingPlayers={buzzingPlayers}
+                      canDelete={teams.length > 2}
                     />
                   </div>
                 );
               })}
             </div>
           </div>
+
+          {/* Small floating add team button */}
+          {teams.length < 4 && <PlusButton onAddTeam={handleTeamAdd} />}
         </div>
       )}
     </div>

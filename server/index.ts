@@ -13,6 +13,7 @@ import {
   type WebSocketMessage,
   WebSocketMessageType,
 } from "../shared/types/api/websocket";
+import { Color } from "../shared/types/domain/player";
 import { Channel, MessageType } from "../shared/types/domain/websocket";
 import {
   handleCodenamesAskLlm,
@@ -331,6 +332,58 @@ const app = new Elysia()
     {
       body: APIRouteToSchema[APIRoute.DeleteTeam].req,
       response: APIRouteToSchema[APIRoute.DeleteTeam].res,
+    }
+  )
+  .post(
+    APIRoute.AddTeam,
+    () => {
+      const existingTeams = db.teams;
+
+      if (existingTeams.length >= 4) {
+        return {
+          ok: false as const,
+          error: {
+            status: 400,
+            message: "Maximum of 4 teams allowed",
+          },
+        };
+      }
+
+      // Generate team ID based on existing teams
+      const characters = "abcdefghijklmnopqrstuvwxyz";
+      let teamName = "";
+      for (let i = 0; i < 3; i++) {
+        teamName += characters.charAt(
+          Math.floor(Math.random() * characters.length)
+        );
+      }
+      const teamId = teamName.toString();
+
+      // Colors in order: red, blue, green, yellow
+      const colors = [Color.Red, Color.Blue, Color.Green, Color.Yellow];
+      let teamColor = colors[0];
+      for (const color of colors) {
+        if (!db.teams.some((team) => team.color === color)) {
+          teamColor = color;
+          break;
+        }
+      }
+
+      const newTeam = {
+        id: teamId,
+        name: `Team ${teamName}`,
+        color: teamColor,
+        score: 0,
+      };
+
+      // Add team to database
+      db.addTeam(newTeam);
+
+      return { ok: true as const, data: { team: newTeam } };
+    },
+    {
+      body: APIRouteToSchema[APIRoute.AddTeam].req,
+      response: APIRouteToSchema[APIRoute.AddTeam].res,
     }
   )
   .get(

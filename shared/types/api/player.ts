@@ -57,3 +57,11 @@ export type DeleteTeamRequest = Static<typeof DeleteTeamRequestType>;
 
 export const DeleteTeamResponseType = t.Object({});
 export type DeleteTeamResponse = Static<typeof DeleteTeamResponseType>;
+
+export const AddTeamRequestType = t.Object({});
+export type AddTeamRequest = Static<typeof AddTeamRequestType>;
+
+export const AddTeamResponseType = t.Object({
+  team: TeamType,
+});
+export type AddTeamResponse = Static<typeof AddTeamResponseType>;

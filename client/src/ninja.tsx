@@ -569,6 +569,10 @@ const NinjaRun = () => {
 
         for (const team of ts) {
           const teamPlayers = teamIdToPlayerMap[team.id];
+          if (!teamPlayers) {
+            console.warn(`Team ${team.id} has no players`);
+            continue;
+          }
           state.teams.push({
             id: team.id,
             name: team.name,
@@ -1007,7 +1011,6 @@ const NinjaRun = () => {
       Channel.BUZZER,
       (message: WebSocketMessage) => {
         if (message.messageType === MessageType.BUZZ) {
-          console.log("buzz", message.payload.playerId);
           handleJump(message.payload.playerId);
         }
       }

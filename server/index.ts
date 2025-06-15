@@ -6,6 +6,7 @@ import { Elysia } from "elysia";
 import { ElysiaWS } from "elysia/dist/ws";
 import path from "path";
 
+import config from "../config";
 import { APIRoute, APIRouteToSchema } from "../shared/types/api/schema";
 import {
   type PlayerListAllMessage,
@@ -498,7 +499,7 @@ if (process.env.NODE_ENV === "production") {
     .use(html()) // Enables HTML templating
     .use(
       staticPlugin({
-        assets: "client\\dist", // Do not change: must be escaped backslash to work on Windows
+        assets: process.platform === "win32" ? "client\\dist" : "client/dist", // Do not change: must be escaped backslash to work on Windows
         prefix: "/",
       })
     )
@@ -506,7 +507,7 @@ if (process.env.NODE_ENV === "production") {
     .get("*", ({ html }) => html(indexHTML));
 }
 
-app.listen(3001);
+app.listen(config.server.port);
 
 console.log(
   `🦊 Elysia is running at http://${app.server?.hostname}:${app.server?.port}`

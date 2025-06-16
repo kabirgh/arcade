@@ -74,7 +74,6 @@ function kickPlayer(wsId: string): string {
 const handleWebSocketMessage = (ws: ElysiaWS, message: WebSocketMessage) => {
   switch (message.channel) {
     case Channel.ADMIN:
-      console.log("Received admin message:", message);
       switch (message.messageType) {
         case MessageType.CLAIM_HOST:
           console.log("Claiming host:", ws.id);

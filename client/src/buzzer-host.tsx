@@ -111,7 +111,7 @@ const BuzzerHost: React.FC = () => {
       });
   }, [handlePlayerList]);
 
-  // Listen to player updates
+  // Listen to player updates in case someone joins late
   useEffect(() => {
     const unsubscribe = subscribe(
       Channel.PLAYER,

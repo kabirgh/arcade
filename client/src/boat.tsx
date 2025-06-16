@@ -589,6 +589,34 @@ const BoatGame = () => {
       });
   }, [loadImages]);
 
+  // If player disconnects before game starts, they won't show up in the player list
+  // so we need to listen to player updates in case someone joins late
+  useEffect(() => {
+    const unsubscribe = subscribe(
+      Channel.PLAYER,
+      (message: WebSocketMessage) => {
+        if (message.messageType === MessageType.LIST) {
+          for (const player of message.payload) {
+            const existingPlayer = stateRef.current.players.find(
+              (p) => p.id === player.id
+            );
+            if (!existingPlayer) {
+              stateRef.current.players.push({
+                id: player.id,
+                name: player.name,
+                avatar: player.avatar,
+                teamId: player.teamId,
+                dx: 0,
+                dy: 0,
+              });
+            }
+          }
+        }
+      }
+    );
+    return unsubscribe;
+  }, [subscribe]);
+
   // Subscribe to duck spawn interval updates from WebSocket
   useEffect(() => {
     const unsubscribe = subscribe(Channel.GAME, (message: WebSocketMessage) => {

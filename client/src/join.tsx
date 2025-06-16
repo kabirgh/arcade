@@ -213,7 +213,10 @@ export default function JoinScreen() {
     }
 
     if (!isJoinEnabled || !selectedAvatar || !selectedTeam) {
-      toast.error("Not all fields are complete");
+      toast.error("Not all fields are complete", {
+        closeButton: true,
+        position: "top-center",
+      });
       return;
     }
 
@@ -223,7 +226,10 @@ export default function JoinScreen() {
       avatar: selectedAvatar,
     });
     if (!response.valid) {
-      toast.error(response.errorMessage);
+      toast.error(response.errorMessage, {
+        closeButton: true,
+        position: "top-center",
+      });
       // This shouldn't be possible since we listen to player updates...
       return;
     }

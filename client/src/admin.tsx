@@ -453,86 +453,94 @@ const AdminPage: React.FC = () => {
       )}
       {isAuthenticated && (
         <div className="grid grid-cols-8 h-full w-full gap-4">
-          <div className="col-start-1 col-span-1 flex flex-col items-center justify-center h-full gap-4">
-            <button
-              className="bg-red-600 text-white p-2 w-32 rounded-md cursor-pointer hover:bg-red-500 active:bg-red-700"
-              onClick={handleResetBuzzers}
-            >
-              Reset buzzers
-            </button>
+          <div className="col-start-1 col-span-1 flex flex-col items-center h-full overflow-y-auto">
+            <div className="flex flex-col items-center gap-2 py-4 my-auto">
+              <h4 className="text-lg font-bold">Buzzer</h4>
+              <button
+                className="bg-red-600 text-white p-2 w-32 rounded-md cursor-pointer hover:bg-red-500 active:bg-red-700"
+                onClick={handleResetBuzzers}
+              >
+                Reset buzzers
+              </button>
 
-            <h4 className="text-lg font-bold mt-8">Host navigation</h4>
-            <Button
-              color="blue"
-              onClick={() => handleNavigateHostScreen(HostScreen.Lobby)}
-              text="Lobby"
-            />
-            <Button
-              color="blue"
-              onClick={() => {
-                handleNavigateHostScreen(HostScreen.BuzzerHost);
-                handleNavigatePlayerScreen(PlayerScreen.Buzzer);
-              }}
-              text="Buzzer host"
-            />
-            <Button
-              color="blue"
-              onClick={() => {
-                handleNavigateHostScreen(HostScreen.Pong);
-                handleNavigatePlayerScreen(PlayerScreen.Joystick);
-              }}
-              text="Pong"
-            />
-            <Button
-              color="blue"
-              onClick={() => {
-                handleNavigateHostScreen(HostScreen.Boat);
-                handleNavigatePlayerScreen(PlayerScreen.Joystick);
-              }}
-              text="Boat"
-            />
-            <Button
-              color="blue"
-              onClick={() => {
-                handleNavigateHostScreen(HostScreen.Ninja);
-                handleNavigatePlayerScreen(PlayerScreen.Buzzer);
-              }}
-              text="Ninja"
-            />
-            <Button
-              color="blue"
-              onClick={() => handleNavigateHostScreen(HostScreen.Codenames)}
-              text="Codenames"
-            />
+              <h4 className="text-lg font-bold mt-8">Host navigation</h4>
+              <Button
+                color="blue"
+                onClick={() => {
+                  handleNavigateHostScreen(HostScreen.Lobby);
+                  handleNavigatePlayerScreen(PlayerScreen.Buzzer);
+                }}
+                text="Lobby"
+              />
+              <Button
+                color="blue"
+                onClick={() => {
+                  handleNavigateHostScreen(HostScreen.BuzzerHost);
+                  handleNavigatePlayerScreen(PlayerScreen.Buzzer);
+                }}
+                text="Buzzer host"
+              />
+              <Button
+                color="blue"
+                onClick={() => {
+                  handleNavigateHostScreen(HostScreen.Pong);
+                  handleNavigatePlayerScreen(PlayerScreen.Joystick);
+                }}
+                text="Pong"
+              />
+              <Button
+                color="blue"
+                onClick={() => {
+                  handleNavigateHostScreen(HostScreen.Boat);
+                  handleNavigatePlayerScreen(PlayerScreen.Joystick);
+                }}
+                text="Boat"
+              />
+              <Button
+                color="blue"
+                onClick={() => {
+                  handleNavigateHostScreen(HostScreen.Ninja);
+                  handleNavigatePlayerScreen(PlayerScreen.Buzzer);
+                }}
+                text="Ninja"
+              />
+              <Button
+                color="blue"
+                onClick={() => handleNavigateHostScreen(HostScreen.Codenames)}
+                text="Codenames"
+              />
 
-            <h4 className="text-lg font-bold mt-8">Player navigation</h4>
-            <Button
-              color="green"
-              onClick={() => handleNavigatePlayerScreen(PlayerScreen.Buzzer)}
-              text="Buzzer"
-            />
-            <Button
-              color="green"
-              onClick={() => handleNavigatePlayerScreen(PlayerScreen.Joystick)}
-              text="Joystick"
-            />
+              <h4 className="text-lg font-bold mt-8">Player navigation</h4>
+              <Button
+                color="green"
+                onClick={() => handleNavigatePlayerScreen(PlayerScreen.Buzzer)}
+                text="Buzzer"
+              />
+              <Button
+                color="green"
+                onClick={() =>
+                  handleNavigatePlayerScreen(PlayerScreen.Joystick)
+                }
+                text="Joystick"
+              />
 
-            <h4 className="text-lg font-bold mt-8">Session</h4>
-            <div>
-              <div className="text-sm font-mono">
-                {currentSession?.sessionId}
+              <h4 className="text-lg font-bold mt-8">Session</h4>
+              <div>
+                <div className="text-sm font-mono">
+                  {currentSession?.sessionId}
+                </div>
+                <div className="text-sm text-gray-700">
+                  {currentSession?.createdAt
+                    ? new Date(currentSession.createdAt).toLocaleString()
+                    : "No session"}
+                </div>
               </div>
-              <div className="text-sm text-gray-700">
-                {currentSession?.createdAt
-                  ? new Date(currentSession.createdAt).toLocaleString()
-                  : "No session"}
-              </div>
+              <Button
+                color="gray"
+                onClick={handleCreateNewSession}
+                text="New session"
+              />
             </div>
-            <Button
-              color="gray"
-              onClick={handleCreateNewSession}
-              text="New session"
-            />
           </div>
 
           {/* Team Scores Column */}

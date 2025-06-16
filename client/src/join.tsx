@@ -135,17 +135,6 @@ export default function JoinScreen() {
         if (message.messageType === MessageType.LIST) {
           console.log("Updating existing players:", message.payload);
           setExistingPlayers(message.payload);
-        } else if (message.messageType === MessageType.JOIN_ERROR) {
-          console.log("Join error:", message.payload);
-          // Handle server-side validation errors
-          if (message.payload.error === "NAME_TAKEN") {
-            setNameError(message.payload.message);
-          } else if (message.payload.error === "AVATAR_TAKEN") {
-            // Deselect the avatar that was taken
-            setSelectedAvatar(null);
-            // Could also show a toast or other notification here
-            console.warn("Avatar was taken:", message.payload.message);
-          }
         }
       }
     );
@@ -211,7 +200,7 @@ export default function JoinScreen() {
     setSelectedAvatar(avatar);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (playerName.trim().length < 1) {
@@ -223,21 +212,35 @@ export default function JoinScreen() {
       return;
     }
 
-    if (isJoinEnabled && selectedAvatar && selectedTeam) {
-      const player: Player = {
-        id: generateId("player", 6),
-        name: playerName,
-        teamId: selectedTeam.id,
-        avatar: selectedAvatar,
-      };
-
-      // Clear the draft join info from localStorage
-      localStorage.removeItem("playerJoinInfo");
-      // Use context to set the player state and persist it. Also sends a JOIN message to the server.
-      setSessionPlayer(player);
-
-      // After player is set, another use effect will redirect to the correct screen
+    if (!isJoinEnabled || !selectedAvatar || !selectedTeam) {
+      toast.error("Not all fields are complete");
+      return;
     }
+
+    // Validate player
+    const response = await apiFetch(APIRoute.ValidatePlayerJoin, {
+      name: playerName,
+      avatar: selectedAvatar,
+    });
+    if (!response.valid) {
+      toast.error(response.errorMessage);
+      // This shouldn't be possible since we listen to player updates...
+      return;
+    }
+
+    const player: Player = {
+      id: generateId("player", 6),
+      name: playerName,
+      teamId: selectedTeam.id,
+      avatar: selectedAvatar,
+    };
+
+    // Clear the draft join info from localStorage
+    localStorage.removeItem("playerJoinInfo");
+    // Use context to set the player state and persist it. Also sends a JOIN message to the server.
+    setSessionPlayer(player);
+
+    // After player is set, another use effect will redirect to the correct screen
   };
 
   return (

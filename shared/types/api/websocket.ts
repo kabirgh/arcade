@@ -35,16 +35,6 @@ const PlayerKickMessageType = t.Object({
 });
 export type PlayerKickMessage = Static<typeof PlayerKickMessageType>;
 
-const PlayerJoinErrorMessageType = t.Object({
-  channel: t.Literal(Channel.PLAYER),
-  messageType: t.Literal(MessageType.JOIN_ERROR),
-  payload: t.Object({
-    error: t.String(),
-    message: t.String(),
-  }),
-});
-export type PlayerJoinErrorMessage = Static<typeof PlayerJoinErrorMessageType>;
-
 const BuzzerPressMessageType = t.Object({
   channel: t.Literal(Channel.BUZZER),
   messageType: t.Literal(MessageType.BUZZ),
@@ -114,7 +104,6 @@ export const WebSocketMessageType = t.Union([
   PlayerJoinMessageType,
   PlayerLeaveMessageType,
   PlayerKickMessageType,
-  PlayerJoinErrorMessageType,
   BuzzerPressMessageType,
   BuzzerResetMessageType,
   JoystickMoveMessageType,

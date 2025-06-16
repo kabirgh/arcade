@@ -44,6 +44,8 @@ import {
   SetTeamNameResponseType,
   UpdateTeamScoreRequestType,
   UpdateTeamScoreResponseType,
+  ValidatePlayerJoinRequestType,
+  ValidatePlayerJoinResponseType,
 } from "./player";
 
 export enum APIRoute {
@@ -59,6 +61,7 @@ export enum APIRoute {
   DeleteTeam = "/api/teams/delete",
   AddTeam = "/api/teams/add",
   // Players
+  ValidatePlayerJoin = "/api/players/validate-join",
   ListPlayers = "/api/players/list",
   KickPlayer = "/api/players/kick",
   // Websocket
@@ -119,6 +122,11 @@ export const APIRouteToSchema = {
     method: "POST",
     req: AddTeamRequestType,
     res: ResponseEnvelopeType(AddTeamResponseType),
+  },
+  [APIRoute.ValidatePlayerJoin]: {
+    method: "POST",
+    req: ValidatePlayerJoinRequestType,
+    res: ResponseEnvelopeType(ValidatePlayerJoinResponseType),
   },
   [APIRoute.ListPlayers]: {
     method: "GET",

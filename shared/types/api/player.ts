@@ -2,6 +2,26 @@ import { type Static, t } from "elysia";
 
 import { PlayerType, TeamType } from "../domain/player";
 
+export const ValidatePlayerJoinRequestType = t.Object({
+  name: t.String(),
+  avatar: t.String(),
+});
+export type ValidatePlayerJoinRequest = Static<
+  typeof ValidatePlayerJoinRequestType
+>;
+
+export const ValidatePlayerJoinResponseType = t.Object({
+  valid: t.Boolean(),
+  errorMessage: t.Union([
+    t.Literal("This name has been taken by another player"),
+    t.Literal("This avatar has been taken by another player"),
+    t.Literal(""),
+  ]),
+});
+export type ValidatePlayerJoinResponse = Static<
+  typeof ValidatePlayerJoinResponseType
+>;
+
 export const ListPlayersRequestType = t.Object({});
 export type ListPlayersRequest = Static<typeof ListPlayersRequestType>;
 

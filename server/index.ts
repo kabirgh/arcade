@@ -134,46 +134,9 @@ const handleWebSocketMessage = (ws: ElysiaWS, message: WebSocketMessage) => {
             }
           }
 
-          // If not a reconnection, validate that name and avatar are unique
-          // Check for duplicate name
-          const existingPlayerWithName = db.players.find(
-            (player) => player.name === message.payload.name
-          );
-          if (existingPlayerWithName) {
-            // Send error message back to client
-            ws.send(
-              JSON.stringify({
-                channel: Channel.PLAYER,
-                messageType: MessageType.JOIN_ERROR,
-                payload: {
-                  error: "NAME_TAKEN",
-                  message: "This name has been taken by another player",
-                },
-              })
-            );
-            return;
-          }
+          // Assume player has been validated
 
-          // Check for duplicate avatar
-          const existingPlayerWithAvatar = db.players.find(
-            (player) => player.avatar === message.payload.avatar
-          );
-          if (existingPlayerWithAvatar) {
-            // Send error message back to client
-            ws.send(
-              JSON.stringify({
-                channel: Channel.PLAYER,
-                messageType: MessageType.JOIN_ERROR,
-                payload: {
-                  error: "AVATAR_TAKEN",
-                  message: "This avatar has been taken by another player",
-                },
-              })
-            );
-            return;
-          }
-
-          // All validation passed, add the player
+          // Add the player
           db.wsPlayerMap.set(ws.id, { ws, player: message.payload });
           break;
         }
@@ -186,10 +149,6 @@ const handleWebSocketMessage = (ws: ElysiaWS, message: WebSocketMessage) => {
           }
           break;
         }
-
-        case MessageType.JOIN_ERROR:
-          // Client message
-          break;
 
         case MessageType.KICK:
           // Client message
@@ -253,8 +212,8 @@ const app = new Elysia()
         if (removed) {
           broadcastAllPlayers();
         }
-      }, 5000);
-      // If the player reconnects within 5 seconds, the JOIN handler will delete
+      }, 3000);
+      // If the player reconnects within a few seconds, the JOIN handler will delete
       // the old ws id and add the new one, so it looks like they never left
     },
   })
@@ -453,6 +412,43 @@ const app = new Elysia()
     {
       body: APIRouteToSchema[APIRoute.AddTeam].req,
       response: APIRouteToSchema[APIRoute.AddTeam].res,
+    }
+  )
+  .post(
+    APIRoute.ValidatePlayerJoin,
+    ({ body }) => {
+      const existingPlayerWithName = db.players.find(
+        (player) => player.name === body.name
+      );
+      if (existingPlayerWithName) {
+        return {
+          ok: true as const,
+          data: {
+            valid: false,
+            errorMessage: "This name has been taken by another player",
+          },
+        };
+      }
+      const existingPlayerWithAvatar = db.players.find(
+        (player) => player.avatar === body.avatar
+      );
+      if (existingPlayerWithAvatar) {
+        return {
+          ok: true as const,
+          data: {
+            valid: false,
+            errorMessage: "This avatar has been taken by another player",
+          },
+        };
+      }
+      return {
+        ok: true as const,
+        data: { valid: true, errorMessage: "" },
+      };
+    },
+    {
+      body: APIRouteToSchema[APIRoute.ValidatePlayerJoin].req,
+      response: APIRouteToSchema[APIRoute.ValidatePlayerJoin].res,
     }
   )
   .get(

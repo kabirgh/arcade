@@ -206,13 +206,16 @@ const app = new Elysia()
     },
     close(ws) {
       console.log("Client disconnected:", ws.id);
-      // Delete player after a few seconds
+      // Broadcast deletions after a while. This helps with:
+      // 1. Player 1 joins, temporarily disconnects because their phone is off
+      // 2. On the join screen, player 1's avatar should not be available unless they meant to disconnect
+      // If we don't wait to remove the player, their avatar will be available for others to select
       setTimeout(() => {
         const removed = db.wsPlayerMap.delete(ws.id);
         if (removed) {
           broadcastAllPlayers();
         }
-      }, 3000);
+      }, 10000);
       // If the player reconnects within a few seconds, the JOIN handler will delete
       // the old ws id and add the new one, so it looks like they never left
     },

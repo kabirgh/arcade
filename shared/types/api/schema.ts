@@ -32,6 +32,8 @@ import {
   AddTeamResponseType,
   DeleteTeamRequestType,
   DeleteTeamResponseType,
+  KickAllPlayersRequestType,
+  KickAllPlayersResponseType,
   KickPlayerRequestType,
   KickPlayerResponseType,
   ListPlayersRequestType,
@@ -58,6 +60,7 @@ export enum APIRoute {
   // Players
   ListPlayers = "/api/players/list",
   KickPlayer = "/api/players/kick",
+  KickAllPlayers = "/api/players/kick-all",
   // Websocket
   ListWebSocketClientIds = "/api/websocket/list-client-ids",
   SendWebSocketMessage = "/api/websocket/send-message",
@@ -121,6 +124,11 @@ export const APIRouteToSchema = {
     method: "POST",
     req: KickPlayerRequestType,
     res: ResponseEnvelopeType(KickPlayerResponseType),
+  },
+  [APIRoute.KickAllPlayers]: {
+    method: "POST",
+    req: KickAllPlayersRequestType,
+    res: ResponseEnvelopeType(KickAllPlayersResponseType),
   },
   [APIRoute.ListWebSocketClientIds]: {
     method: "GET",

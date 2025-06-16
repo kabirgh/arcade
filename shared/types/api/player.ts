@@ -23,6 +23,14 @@ export const KickPlayerResponseType = t.Object({
 });
 export type KickPlayerResponse = Static<typeof KickPlayerResponseType>;
 
+export const KickAllPlayersRequestType = t.Object({});
+export type KickAllPlayersRequest = Static<typeof KickAllPlayersRequestType>;
+
+export const KickAllPlayersResponseType = t.Object({
+  kickedPlayerIds: t.Array(t.String()),
+});
+export type KickAllPlayersResponse = Static<typeof KickAllPlayersResponseType>;
+
 export const ListTeamsResponseType = t.Object({
   teams: t.Array(TeamType),
 });

@@ -68,8 +68,3 @@ export async function apiFetch<R extends APIRoute>(
     throw new Error(`Request failed for route ${route}: ${String(e)}`);
   }
 }
-
-const example = async () => {
-  const response = await apiFetch(APIRoute.CodenamesStart, {});
-  console.log(response);
-};

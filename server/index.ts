@@ -58,6 +58,24 @@ function broadcastAllPlayers(): PlayerListAllMessage {
   return message;
 }
 
+function kickPlayer(wsId: string): string {
+  const { ws, player } = db.wsPlayerMap.get(wsId)!;
+  // Emit a message to the client to clear localstorage
+  // and prevent the player from rejoining
+  ws.send(
+    JSON.stringify({
+      channel: Channel.PLAYER,
+      messageType: MessageType.KICK,
+      payload: {
+        playerId: player.id,
+      },
+    })
+  );
+  db.wsPlayerMap.delete(wsId);
+  db.kickedPlayerIds.add(player.id);
+  return player.id;
+}
+
 const handleWebSocketMessage = (ws: ElysiaWS, message: WebSocketMessage) => {
   switch (message.channel) {
     case Channel.ADMIN:
@@ -456,21 +474,9 @@ const app = new Elysia()
   .post(
     APIRoute.KickPlayer,
     ({ body }) => {
-      for (const [wsId, { ws, player }] of db.wsPlayerMap.entries()) {
+      for (const [wsId, { player }] of db.wsPlayerMap.entries()) {
         if (player && player.name === body.playerName.toUpperCase()) {
-          // Emit a message to the client to clear localstorage
-          // and prevent the player from rejoining
-          ws.send(
-            JSON.stringify({
-              channel: Channel.PLAYER,
-              messageType: MessageType.KICK,
-              payload: {
-                playerId: player.id,
-              },
-            })
-          );
-          db.wsPlayerMap.delete(wsId);
-          db.kickedPlayerIds.add(player.id);
+          kickPlayer(wsId);
           broadcastAllPlayers();
           return { ok: true as const, data: { playerId: player.id } };
         }
@@ -486,6 +492,21 @@ const app = new Elysia()
     {
       body: APIRouteToSchema[APIRoute.KickPlayer].req,
       response: APIRouteToSchema[APIRoute.KickPlayer].res,
+    }
+  )
+  .post(
+    APIRoute.KickAllPlayers,
+    () => {
+      const kickedPlayerIds = [];
+      for (const wsId of db.wsPlayerMap.keys()) {
+        kickedPlayerIds.push(kickPlayer(wsId));
+      }
+      broadcastAllPlayers();
+      return { ok: true as const, data: { kickedPlayerIds } };
+    },
+    {
+      body: APIRouteToSchema[APIRoute.KickAllPlayers].req,
+      response: APIRouteToSchema[APIRoute.KickAllPlayers].res,
     }
   )
   // Codenames

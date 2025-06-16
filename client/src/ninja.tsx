@@ -303,11 +303,11 @@ const GameScreen = ({ team }: { team: NinjaTeam }) => {
           display: "flex",
           justifyContent: "center",
           alignItems: "center",
-          font: "14px Arvo",
+          font: "16px Arvo",
           // border: `1px solid ${player.color}`,
         }}
       >
-        {player.name}
+        {team.name}
       </div>
 
       {/* Player scores */}

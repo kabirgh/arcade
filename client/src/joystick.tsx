@@ -10,7 +10,7 @@ import ConnectionStatusPill from "./components/ConnectionStatusPill";
 import PastelBackground from "./components/PastelBackground";
 import { usePlayerContext } from "./contexts/PlayerContext";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
-import { useListenNavigate } from "./hooks/useListenNavigate";
+import { useListenPlayerNavigate } from "./hooks/useListenPlayerNavigate";
 
 type NippleManagerType = ReturnType<typeof nipplejs.create>;
 
@@ -33,9 +33,9 @@ const vminToPixels = (vmin: number): number => {
 
 export default function Joystick() {
   const [, setLocation] = useLocation();
-  useListenNavigate("player");
   const { publish } = useWebSocketContext();
   const { sessionPlayer } = usePlayerContext();
+  useListenPlayerNavigate(sessionPlayer);
   const joystickContainerRef = useRef<HTMLDivElement>(null);
   const joystickInstanceRef = useRef<NippleManagerType | null>(null);
   const joystickMoveDataRef = useRef<JoystickMoveData>({

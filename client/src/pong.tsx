@@ -7,7 +7,7 @@ import { Channel, MessageType } from "../../shared/types/domain/websocket";
 import { avatarToPath } from "../../shared/utils";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
 import { useAdminAuth } from "./hooks/useAdminAuth";
-import { useListenNavigate } from "./hooks/useListenNavigate";
+import { useListenHostNavigate } from "./hooks/useListenHostNavigate";
 import useWebAudio from "./hooks/useWebAudio";
 import { apiFetch } from "./util/apiFetch";
 
@@ -419,7 +419,7 @@ const isBallOutOfBounds = (ball: Ball, position: Position): boolean => {
  * 1-4 teams can play, each team can have multiple players with mini-paddles
  */
 const Quadrapong = () => {
-  useListenNavigate("host");
+  useListenHostNavigate();
   // TODO: use value of isAuthenticated?
   const { passwordPrompt } = useAdminAuth({ claimHost: true });
   const { subscribe } = useWebSocketContext();

@@ -8,7 +8,7 @@ import { avatarToPath } from "../../shared/utils";
 import PastelBackground from "./components/PastelBackground";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
 import { useAdminAuth } from "./hooks/useAdminAuth";
-import { useListenNavigate } from "./hooks/useListenNavigate";
+import { useListenHostNavigate } from "./hooks/useListenHostNavigate";
 import { apiFetch } from "./util/apiFetch";
 
 type TeamSectionProps = {
@@ -154,7 +154,7 @@ const hopAnimationStyle = `
 `;
 
 export default function Home() {
-  useListenNavigate("host");
+  useListenHostNavigate();
   const { isAuthenticated, passwordPrompt } = useAdminAuth({ claimHost: true });
   const { subscribe } = useWebSocketContext();
   const [players, setPlayers] = useState<Player[]>([]);

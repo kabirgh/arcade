@@ -16,7 +16,7 @@ import PastelBackground from "./components/PastelBackground";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
 import { useAdminAuth } from "./hooks/useAdminAuth";
 import useClientRect from "./hooks/useClientRect";
-import { useListenNavigate } from "./hooks/useListenNavigate";
+import { useListenHostNavigate } from "./hooks/useListenHostNavigate";
 import useWebAudio from "./hooks/useWebAudio";
 import { apiFetch } from "./util/apiFetch";
 
@@ -45,7 +45,7 @@ const getPlayersWithDistinctTeams = (
 };
 
 const BuzzerHost: React.FC = () => {
-  useListenNavigate("host");
+  useListenHostNavigate();
   const { isAuthenticated, passwordPrompt } = useAdminAuth({ claimHost: true });
   const { subscribe } = useWebSocketContext();
   const playSound = useWebAudio();

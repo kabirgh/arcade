@@ -8,7 +8,7 @@ import {
 } from "../../shared/types/domain/codenames";
 import { Markdown } from "./components/Markdown";
 import { useAdminAuth } from "./hooks/useAdminAuth";
-import { useListenNavigate } from "./hooks/useListenNavigate";
+import { useListenHostNavigate } from "./hooks/useListenHostNavigate";
 import { apiFetch } from "./util/apiFetch";
 
 const UNSELECTED_CARD_STYLES = {
@@ -65,7 +65,7 @@ const TeamWordsList: React.FC<TeamWordsListProps> = ({
 
 // TODO: game over screen
 export const Codenames = () => {
-  useListenNavigate("host");
+  useListenHostNavigate();
   // TODO: use value of isAuthenticated?
   const { passwordPrompt } = useAdminAuth({ claimHost: true });
   const [gameState, setGameState] = useState<GameState | null>(null);

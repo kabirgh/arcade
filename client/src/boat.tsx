@@ -6,7 +6,7 @@ import { Avatar, Color } from "../../shared/types/domain/player";
 import { Channel, MessageType } from "../../shared/types/domain/websocket";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
 import { useAdminAuth } from "./hooks/useAdminAuth";
-import { useListenNavigate } from "./hooks/useListenNavigate";
+import { useListenHostNavigate } from "./hooks/useListenHostNavigate";
 import useWebAudio from "./hooks/useWebAudio";
 import { apiFetch } from "./util/apiFetch";
 
@@ -413,7 +413,7 @@ const formatTime = (milliseconds: number): string => {
  * Boat Game - A multiplayer game where teams collect ducks while avoiding rocks
  */
 const BoatGame = () => {
-  useListenNavigate("host");
+  useListenHostNavigate();
   const { passwordPrompt } = useAdminAuth({ claimHost: true });
   const { subscribe } = useWebSocketContext();
   const playSound = useWebAudio();

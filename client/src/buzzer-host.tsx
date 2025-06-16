@@ -84,6 +84,18 @@ const BuzzerHost: React.FC = () => {
     [expandedPlayers, playSound]
   );
 
+  const handlePlayerList = useCallback((ps: Player[], ts: Team[]) => {
+    const expPlayers: Record<string, ExpandedPlayer> = {};
+    for (const player of ps) {
+      const team = ts.find((t) => t.id === player.teamId);
+      if (!team) {
+        throw new Error(`Team with id ${player.teamId} not found`);
+      }
+      expPlayers[player.id] = { ...player, team };
+    }
+    setExpandedPlayers(expPlayers);
+  }, []);
+
   // Get players and teams from backend
   useEffect(() => {
     Promise.all([apiFetch(APIRoute.ListPlayers), apiFetch(APIRoute.ListTeams)])
@@ -92,20 +104,25 @@ const BuzzerHost: React.FC = () => {
         return { ts, ps };
       })
       .then(({ ts, ps }) => {
-        const expPlayers: Record<string, ExpandedPlayer> = {};
-        for (const player of ps) {
-          const team = ts.find((t) => t.id === player.teamId);
-          if (!team) {
-            throw new Error(`Team with id ${player.teamId} not found`);
-          }
-          expPlayers[player.id] = { ...player, team };
-        }
-        setExpandedPlayers(expPlayers);
+        handlePlayerList(ps, ts);
       })
       .catch((error) => {
         console.error("Failed to fetch players and/or teams:", error);
       });
-  }, []);
+  }, [handlePlayerList]);
+
+  // Listen to player updates
+  useEffect(() => {
+    const unsubscribe = subscribe(
+      Channel.PLAYER,
+      (message: WebSocketMessage) => {
+        if (message.messageType === MessageType.LIST) {
+          handlePlayerList(message.payload, teams);
+        }
+      }
+    );
+    return unsubscribe;
+  }, [handlePlayerList, subscribe, teams]);
 
   // Listen to buzzer presses & reset commands
   useEffect(() => {

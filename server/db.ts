@@ -210,6 +210,7 @@ class DB {
     this.db.exec("DELETE FROM session");
     this.wsPlayerMap.clear();
     this.kickedPlayerIds.clear();
+    this.screen = PlayerScreen.Buzzer;
   }
 }
 

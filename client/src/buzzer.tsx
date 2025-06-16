@@ -1,6 +1,7 @@
 import "./buzzer.css";
 
 import { useEffect, useRef } from "react";
+import { toast, Toaster } from "sonner";
 import { useLocation } from "wouter";
 
 import { PlayerScreen } from "../../shared/types/domain/misc";
@@ -31,6 +32,7 @@ export default function Buzzer() {
   const handlePress = () => {
     if (!sessionPlayer) {
       console.error("No session player found");
+      toast.error("No session player found");
       return;
     }
 
@@ -52,6 +54,7 @@ export default function Buzzer() {
 
   return (
     <div className="buzzer-component flex flex-col items-center justify-center h-screen relative overflow-hidden">
+      <Toaster />
       <PastelBackground />
       <ConnectionStatusPill />
       <div className="flex items-center justify-center w-[80vmin] h-[80vmin]">

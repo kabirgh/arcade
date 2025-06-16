@@ -7,6 +7,7 @@ import React, {
   useState,
 } from "react";
 import { ReadyState } from "react-use-websocket";
+import { toast } from "sonner";
 import { useLocation } from "wouter";
 
 import { APIRoute } from "../../../shared/types/api/schema";
@@ -43,7 +44,12 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({
       const storedPlayer = localStorage.getItem("player");
       return storedPlayer ? (JSON.parse(storedPlayer) as Player) : null;
     } catch (error) {
-      console.error("Failed to parse player data from localStorage", error);
+      // Toaster must be present in the parent component to show the error
+      console.error("Failed to load player data", error);
+      toast.error("Failed to load player data: " + error, {
+        closeButton: true,
+        position: "top-center",
+      });
       localStorage.removeItem("player"); // Clear corrupted data
       return null;
     }
@@ -58,8 +64,12 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({
     try {
       localStorage.setItem("player", JSON.stringify(newPlayer));
     } catch (error) {
-      // TODO: show error to user
-      console.error("Failed to save player data to localStorage", error);
+      // Toaster must be present in the parent component to show the error
+      console.error("Failed to save player data", error);
+      toast.error("Failed to save player data: " + error, {
+        closeButton: true,
+        position: "top-center",
+      });
     }
   }, []);
 

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { ReadyState } from "react-use-websocket";
+import { toast, Toaster } from "sonner";
 import { useLocation } from "wouter";
 
 import { APIRoute } from "../../shared/types/api/schema";
@@ -76,8 +77,6 @@ export default function JoinScreen() {
   useEffect(() => {
     // First check what the server thinks the current screen should be
     apiFetch(APIRoute.PlayerScreen).then((data) => {
-      console.log("Server says current screen should be:", data.screen);
-
       if (sessionPlayer !== null) {
         // We have a user in sessionPlayer, and so shouldn't be on the join screen.
         // Redirect to the correct screen immediately
@@ -90,11 +89,14 @@ export default function JoinScreen() {
     // Get existing players from server
     apiFetch(APIRoute.ListPlayers)
       .then((data) => {
-        setExistingPlayers(data.players as Player[]);
+        setExistingPlayers(data.players);
       })
       .catch((error) => {
         console.error("Failed to load players:", error);
-        // Maybe show an error message to user
+        toast.error("Failed to load players. Please refresh the page.", {
+          closeButton: true,
+          position: "top-center",
+        });
       });
     // Get existing teams from server
     apiFetch(APIRoute.ListTeams)
@@ -103,7 +105,10 @@ export default function JoinScreen() {
       })
       .catch((error) => {
         console.error("Failed to load teams:", error);
-        // Maybe show an error message to user
+        toast.error("Failed to load teams. Please refresh the page.", {
+          closeButton: true,
+          position: "top-center",
+        });
       });
   }, []);
 
@@ -237,6 +242,7 @@ export default function JoinScreen() {
 
   return (
     <div className="h-screen relative overflow-hidden">
+      <Toaster />
       <PastelBackground />
       <div className="text-gray-900 flex flex-col h-full max-w-[400px] p-6 mx-auto overflow-y-auto">
         {/* Name Input */}

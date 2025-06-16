@@ -2,6 +2,7 @@ import "./buzzer.css";
 
 import nipplejs from "nipplejs";
 import { useEffect, useRef, useState } from "react";
+import { Toaster } from "sonner";
 import { useLocation } from "wouter";
 
 import { PlayerScreen } from "../../shared/types/domain/misc";
@@ -158,6 +159,7 @@ export default function Joystick() {
 
   return (
     <div className="flex flex-col items-center justify-center h-screen relative overflow-hidden select-none">
+      <Toaster />
       <PastelBackground />
       <ConnectionStatusPill />
 

@@ -38,3 +38,14 @@ export const SessionIdResponseType = t.Object({
   createdAt: t.Number(),
 });
 export type SessionIdResponse = Static<typeof SessionIdResponseType>;
+
+export const StartNewSessionRequestType = t.Object({});
+export type StartNewSessionRequest = Static<typeof StartNewSessionRequestType>;
+
+export const StartNewSessionResponseType = t.Object({
+  sessionId: t.String(),
+  createdAt: t.Number(),
+});
+export type StartNewSessionResponse = Static<
+  typeof StartNewSessionResponseType
+>;

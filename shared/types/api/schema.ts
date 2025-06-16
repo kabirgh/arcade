@@ -26,14 +26,14 @@ import {
   SessionIdResponseType,
   SetPlayerScreenRequestType,
   SetPlayerScreenResponseType,
+  StartNewSessionRequestType,
+  StartNewSessionResponseType,
 } from "./misc";
 import {
   AddTeamRequestType,
   AddTeamResponseType,
   DeleteTeamRequestType,
   DeleteTeamResponseType,
-  KickAllPlayersRequestType,
-  KickAllPlayersResponseType,
   KickPlayerRequestType,
   KickPlayerResponseType,
   ListPlayersRequestType,
@@ -49,6 +49,7 @@ import {
 export enum APIRoute {
   // Session
   SessionId = "/api/session/id",
+  StartNewSession = "/api/session/start-new",
   PlayerScreen = "/api/session/player-screen",
   SetPlayerScreen = "/api/session/set-player-screen",
   // Teams
@@ -60,7 +61,6 @@ export enum APIRoute {
   // Players
   ListPlayers = "/api/players/list",
   KickPlayer = "/api/players/kick",
-  KickAllPlayers = "/api/players/kick-all",
   // Websocket
   ListWebSocketClientIds = "/api/websocket/list-client-ids",
   SendWebSocketMessage = "/api/websocket/send-message",
@@ -79,6 +79,11 @@ export const APIRouteToSchema = {
     method: "GET",
     req: SessionIdRequestType,
     res: ResponseEnvelopeType(SessionIdResponseType),
+  },
+  [APIRoute.StartNewSession]: {
+    method: "POST",
+    req: StartNewSessionRequestType,
+    res: ResponseEnvelopeType(StartNewSessionResponseType),
   },
   [APIRoute.PlayerScreen]: {
     method: "GET",
@@ -124,11 +129,6 @@ export const APIRouteToSchema = {
     method: "POST",
     req: KickPlayerRequestType,
     res: ResponseEnvelopeType(KickPlayerResponseType),
-  },
-  [APIRoute.KickAllPlayers]: {
-    method: "POST",
-    req: KickAllPlayersRequestType,
-    res: ResponseEnvelopeType(KickAllPlayersResponseType),
   },
   [APIRoute.ListWebSocketClientIds]: {
     method: "GET",

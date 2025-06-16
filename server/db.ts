@@ -77,17 +77,7 @@ class DB {
     // Set session data if it doesn't exist
     const existingSession = this.getSession();
     if (!existingSession) {
-      // Session ID is used by the client to determine whether they should delete the cached player data.
-      const sessionId = generateId("session", 4);
-      const sessionCreatedAt = Date.now();
-      this.setSession(sessionId, sessionCreatedAt);
-
-      console.log(
-        "Session ID:",
-        sessionId,
-        "Created at:",
-        new Date(sessionCreatedAt).toISOString()
-      );
+      this.startNewSession();
     }
   }
 
@@ -182,7 +172,7 @@ class DB {
   }
 
   // Session methods
-  public getSession(): { id: string; createdAt: number } | null {
+  public getSession(): { sessionId: string; createdAt: number } | null {
     const row = this.db
       .query("SELECT id, created_at FROM session LIMIT 1")
       .get() as { id: string; created_at: number } | null;
@@ -190,17 +180,36 @@ class DB {
     if (!row) return null;
 
     return {
-      id: row.id,
+      sessionId: row.id,
       createdAt: row.created_at,
     };
   }
 
-  public setSession(sessionId: string, createdAt: number): void {
+  public startNewSession(): { sessionId: string; createdAt: number } {
+    // Session ID is used by the client to determine whether they should delete the cached player data.
+    const sessionId = generateId("session", 4);
+    const createdAt = Date.now();
+
     // Clear any existing session and insert the new one
-    this.db.exec("DELETE FROM session");
+    this.endSession();
     this.db
       .prepare("INSERT INTO session (id, created_at) VALUES (?, ?)")
       .run(sessionId, createdAt);
+
+    console.log(
+      "Session ID:",
+      sessionId,
+      "Created at:",
+      new Date(createdAt).toISOString()
+    );
+
+    return { sessionId, createdAt };
+  }
+
+  public endSession(): void {
+    this.db.exec("DELETE FROM session");
+    this.wsPlayerMap.clear();
+    this.kickedPlayerIds.clear();
   }
 }
 

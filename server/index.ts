@@ -246,8 +246,8 @@ const app = new Elysia()
   .get(
     APIRoute.SessionId,
     () => {
-      const session = db.getSession();
-      if (!session) {
+      const sessionData = db.getSession();
+      if (!sessionData) {
         return {
           ok: false as const,
           error: {
@@ -258,15 +258,31 @@ const app = new Elysia()
       }
       return {
         ok: true as const,
-        data: {
-          sessionId: session.id,
-          createdAt: session.createdAt,
-        },
+        data: sessionData,
       };
     },
     {
       body: APIRouteToSchema[APIRoute.SessionId].req,
       response: APIRouteToSchema[APIRoute.SessionId].res,
+    }
+  )
+  .post(
+    APIRoute.StartNewSession,
+    () => {
+      // First kick all players so they're redirected to the join screen
+      for (const wsId of db.wsPlayerMap.keys()) {
+        kickPlayer(wsId);
+      }
+      // Then start a new session
+      const sessionData = db.startNewSession();
+      return {
+        ok: true as const,
+        data: sessionData,
+      };
+    },
+    {
+      body: APIRouteToSchema[APIRoute.StartNewSession].req,
+      response: APIRouteToSchema[APIRoute.StartNewSession].res,
     }
   )
   .get(
@@ -503,21 +519,6 @@ const app = new Elysia()
     {
       body: APIRouteToSchema[APIRoute.KickPlayer].req,
       response: APIRouteToSchema[APIRoute.KickPlayer].res,
-    }
-  )
-  .post(
-    APIRoute.KickAllPlayers,
-    () => {
-      const kickedPlayerIds = [];
-      for (const wsId of db.wsPlayerMap.keys()) {
-        kickedPlayerIds.push(kickPlayer(wsId));
-      }
-      broadcastAllPlayers();
-      return { ok: true as const, data: { kickedPlayerIds } };
-    },
-    {
-      body: APIRouteToSchema[APIRoute.KickAllPlayers].req,
-      response: APIRouteToSchema[APIRoute.KickAllPlayers].res,
     }
   )
   // Codenames

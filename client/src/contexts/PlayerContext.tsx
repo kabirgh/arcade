@@ -28,11 +28,6 @@ interface PlayerContextType {
 // Create the context with a default undefined value
 const PlayerContext = createContext<PlayerContextType | undefined>(undefined);
 
-type SessionData = {
-  id: string;
-  expiry: number;
-};
-
 // Create the Provider component
 export const PlayerProvider: React.FC<{ children: ReactNode }> = ({
   children,
@@ -54,7 +49,7 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({
       return null;
     }
   });
-  // Track whether session validation is complete
+  // Track whether session validation is complete so we only send JOIN message after validation
   const [sessionValidated, setSessionValidated] = useState(false);
 
   // Function to update player state and localStorage
@@ -88,34 +83,14 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({
 
   useEffect(() => {
     apiFetch(APIRoute.SessionId).then(({ sessionId: fetchedSessionId }) => {
-      const sessionDataString = localStorage.getItem("sessionData");
-      const sessionData = sessionDataString
-        ? (JSON.parse(sessionDataString) as SessionData)
-        : null;
-
-      // If server went down temporarily, session id will change. But we don't
-      // want to clear player data, so also check if the player joined a long
-      // time ago.
-      if (
-        sessionData?.id !== fetchedSessionId &&
-        sessionData?.expiry &&
-        sessionData.expiry < Date.now()
-      ) {
+      const storedSessionId = localStorage.getItem("sessionId");
+      // If its a new session, clear player data
+      if (storedSessionId !== fetchedSessionId) {
         clearSessionPlayer();
+        localStorage.setItem("sessionId", fetchedSessionId);
       }
-
-      // Refresh expiry every time this component mounts
-      const newSessionData = {
-        id: fetchedSessionId,
-        // If server is down longer than this, we assume its deliberate rather than a transient issue.
-        expiry: Date.now() + 1000 * 60 * 5, // 5 minutes
-      };
-      localStorage.setItem("sessionData", JSON.stringify(newSessionData));
-
       // Mark session validation as complete
       setSessionValidated(true);
-
-      return newSessionData;
     });
   }, [clearSessionPlayer]);
 

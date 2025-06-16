@@ -1,6 +1,7 @@
 import { Value } from "@sinclair/typebox/value";
 import React, { useEffect, useMemo, useState } from "react";
 
+import type { SessionIdResponse } from "../../shared/types/api/misc";
 import { APIRoute, APIRouteToSchema } from "../../shared/types/api/schema";
 import { WebSocketMessageType } from "../../shared/types/api/websocket";
 import { HostScreen, PlayerScreen } from "../../shared/types/domain/misc";
@@ -10,6 +11,52 @@ import PastelBackground from "./components/PastelBackground";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
 import { useAdminAuth } from "./hooks/useAdminAuth";
 import { apiFetch } from "./util/apiFetch";
+
+const SessionModal: React.FC<{
+  currentSessionId: string;
+  currentSessionCreatedAt: number;
+  onCreateNewSession: () => void;
+  onKeepCurrent: () => void;
+}> = ({
+  currentSessionId,
+  currentSessionCreatedAt,
+  onCreateNewSession,
+  onKeepCurrent,
+}) => {
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+        <h2 className="text-xl font-bold mb-4">New session?</h2>
+        <div className="mb-4 text-left">
+          <p className="text-gray-900 mb-2">Found an active session.</p>
+          <div className="bg-gray-100 p-3 rounded mb-2 flex flex-row justify-between items-center">
+            <div className="text-sm font-mono">{currentSessionId}</div>
+            <div className="text-sm text-gray-700">
+              {new Date(currentSessionCreatedAt).toLocaleString()}
+            </div>
+          </div>
+        </div>
+        <p className="text-gray-900 mb-6 text-left">
+          Would you like to create a new session? This will kick all players.
+        </p>
+        <div className="flex gap-3">
+          <button
+            onClick={onKeepCurrent}
+            className="flex-1 bg-gray-300 text-gray-900 py-2 px-4 rounded hover:bg-gray-400 cursor-pointer"
+          >
+            Keep current
+          </button>
+          <button
+            onClick={onCreateNewSession}
+            className="flex-1 bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 cursor-pointer"
+          >
+            Create new
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // Function to generate schema templates dynamically based on route
 const generateSchemaTemplate = (route: string): any => {
@@ -115,6 +162,13 @@ const AdminPage: React.FC = () => {
   const { isAuthenticated, passwordPrompt } = useAdminAuth();
   const [teams, setTeams] = useState<Team[]>([]);
 
+  // Session management state
+  const [showSessionModal, setShowSessionModal] = useState(false);
+  const [currentSession, setCurrentSession] = useState<{
+    sessionId: string;
+    createdAt: number;
+  } | null>(null);
+
   // Fetch teams on component mount
   useEffect(() => {
     const fetchTeams = async () => {
@@ -129,6 +183,44 @@ const AdminPage: React.FC = () => {
     if (isAuthenticated) {
       fetchTeams();
     }
+  }, [isAuthenticated]);
+
+  // Check session on component mount
+  useEffect(() => {
+    const checkSession = async () => {
+      if (!isAuthenticated) return;
+
+      let response: SessionIdResponse;
+      try {
+        response = await apiFetch(APIRoute.SessionId);
+      } catch {
+        console.log("No session found, creating a new one.");
+        handleCreateNewSession();
+        return;
+      }
+
+      setCurrentSession(response);
+
+      // Get stored session from localStorage
+      const stored = localStorage.getItem("adminSessionId");
+
+      // Don't ask to keep/start new session every time the page refreshes, only if its a new browser session.
+      if (stored && sessionStorage.getItem("selectedSession") === "true") {
+        return;
+      }
+
+      // Compare sessions. We want to prompt the user if the previous session didn't terminate cleanly
+      // i.e. session id from response is the same as the local storage session id.
+      if (stored && stored === response.sessionId) {
+        setShowSessionModal(true);
+      } else {
+        // Store current session if none stored or if they don't match
+        localStorage.setItem("adminSessionId", response.sessionId);
+        sessionStorage.setItem("selectedSession", "true");
+      }
+    };
+
+    checkSession();
   }, [isAuthenticated]);
 
   // Prefill JSON schema when API endpoint or method changes
@@ -313,6 +405,35 @@ const AdminPage: React.FC = () => {
     }
   };
 
+  const handleCreateNewSession = async () => {
+    try {
+      const response = await apiFetch(APIRoute.StartNewSession, {});
+      const newSessionData = {
+        sessionId: response.sessionId,
+        createdAt: response.createdAt,
+      };
+      setCurrentSession(newSessionData);
+      localStorage.setItem("adminSessionId", response.sessionId);
+      sessionStorage.setItem("selectedSession", "true");
+      setShowSessionModal(false);
+
+      // Refresh teams after new session
+      const teamsResponse = await apiFetch(APIRoute.ListTeams);
+      setTeams(teamsResponse.teams);
+    } catch (error) {
+      console.error("Failed to create new session:", error);
+      alert(`Failed to create new session: ${error}`);
+    }
+  };
+
+  const handleKeepCurrentSession = () => {
+    if (currentSession) {
+      localStorage.setItem("adminSessionId", currentSession.sessionId);
+      sessionStorage.setItem("selectedSession", "true");
+    }
+    setShowSessionModal(false);
+  };
+
   return (
     <div className="h-screen relative overflow-hidden">
       <PastelBackground />
@@ -321,6 +442,14 @@ const AdminPage: React.FC = () => {
         <div className="flex flex-col items-center justify-center w-full h-full">
           <h1 className="text-4xl font-bold">Access denied</h1>
         </div>
+      )}
+      {isAuthenticated && showSessionModal && currentSession && (
+        <SessionModal
+          currentSessionId={currentSession.sessionId}
+          currentSessionCreatedAt={currentSession.createdAt}
+          onCreateNewSession={handleCreateNewSession}
+          onKeepCurrent={handleKeepCurrentSession}
+        />
       )}
       {isAuthenticated && (
         <div className="grid grid-cols-8 h-full w-full gap-4">
@@ -386,6 +515,23 @@ const AdminPage: React.FC = () => {
               color="green"
               onClick={() => handleNavigatePlayerScreen(PlayerScreen.Joystick)}
               text="Joystick"
+            />
+
+            <h4 className="text-lg font-bold mt-8">Session</h4>
+            <div>
+              <div className="text-sm font-mono">
+                {currentSession?.sessionId}
+              </div>
+              <div className="text-sm text-gray-700">
+                {currentSession?.createdAt
+                  ? new Date(currentSession.createdAt).toLocaleString()
+                  : "No session"}
+              </div>
+            </div>
+            <Button
+              color="gray"
+              onClick={handleCreateNewSession}
+              text="New session"
             />
           </div>
 

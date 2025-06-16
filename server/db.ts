@@ -9,7 +9,8 @@ import { generateId } from "../shared/utils";
 class DB {
   private db: Database;
   // ws id -> {ws, player}
-  public wsPlayerMap: Map<string, { ws: ElysiaWS; player: Player }> = new Map();
+  public wsPlayerMap: Map<string, { ws: ElysiaWS; player: Player | null }> =
+    new Map();
   public hostWs: ElysiaWS | null = null;
   public kickedPlayerIds: Set<string> = new Set();
 
@@ -127,7 +128,9 @@ class DB {
   }
 
   public get players(): Player[] {
-    return Array.from(this.wsPlayerMap.values()).map((entry) => entry.player);
+    return Array.from(this.wsPlayerMap.values())
+      .filter((entry) => entry.player !== null)
+      .map((entry) => entry.player!);
   }
 
   // Helper methods for team operations

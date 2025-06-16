@@ -49,26 +49,34 @@ function broadcastAllPlayers(): PlayerListAllMessage {
     messageType: MessageType.LIST,
     payload: db.players,
   };
+  console.log(
+    "Broadcasting player list",
+    message.payload.map((p) => p.name)
+  );
   broadcast(message);
   return message;
 }
 
 function kickPlayer(wsId: string): string {
-  const { ws, player } = db.wsPlayerMap.get(wsId)!;
+  const entry = db.wsPlayerMap.get(wsId);
+  if (!entry || !entry.player || !entry.ws) {
+    console.error("Entry/player/ws not found:", wsId);
+    return "";
+  }
   // Emit a message to the client to clear localstorage
   // and prevent the player from rejoining
-  ws.send(
+  entry.ws.send(
     JSON.stringify({
       channel: Channel.PLAYER,
       messageType: MessageType.KICK,
       payload: {
-        playerId: player.id,
+        playerId: entry.player.id,
       },
     })
   );
   db.wsPlayerMap.delete(wsId);
-  db.kickedPlayerIds.add(player.id);
-  return player.id;
+  db.kickedPlayerIds.add(entry.player.id);
+  return entry.player.id;
 }
 
 const handleWebSocketMessage = (ws: ElysiaWS, message: WebSocketMessage) => {
@@ -114,7 +122,7 @@ const handleWebSocketMessage = (ws: ElysiaWS, message: WebSocketMessage) => {
             if (otherWsId === ws.id) {
               continue;
             }
-            if (player.id === message.payload.id) {
+            if (player && player.id === message.payload.id) {
               // We found a player with the same id in the list.
               // This means the websocket id has changed (usually due to a reconnect).
               // Remove the old player and add the new one
@@ -235,6 +243,7 @@ const app = new Elysia()
     },
     open(ws) {
       console.log("Client connected:", ws.id);
+      db.wsPlayerMap.set(ws.id, { ws, player: null });
     },
     close(ws) {
       console.log("Client disconnected:", ws.id);

@@ -1,7 +1,7 @@
 import { type Static, t } from "elysia";
 
 export enum Color {
-  Red = "#E8293C",
+  Red = "#DF3A40",
   Blue = "#5596E6",
   Green = "#00B4A0",
   Yellow = "#FFAE42",

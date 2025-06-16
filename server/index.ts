@@ -239,8 +239,15 @@ const app = new Elysia()
     },
     close(ws) {
       console.log("Client disconnected:", ws.id);
-      // Don't delete player. If the player's phone idles for a few seconds the ws disconnects.
-      // We handle reconnections in the JOIN message handler by deleting the old ws id
+      // Delete player after a few seconds
+      setTimeout(() => {
+        const removed = db.wsPlayerMap.delete(ws.id);
+        if (removed) {
+          broadcastAllPlayers();
+        }
+      }, 5000);
+      // If the player reconnects within 5 seconds, the JOIN handler will delete
+      // the old ws id and add the new one, so it looks like they never left
     },
   })
   .get(

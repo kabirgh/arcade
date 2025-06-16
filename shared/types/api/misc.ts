@@ -35,5 +35,6 @@ export type SessionIdRequest = Static<typeof SessionIdRequestType>;
 
 export const SessionIdResponseType = t.Object({
   sessionId: t.String(),
+  createdAt: t.Number(),
 });
 export type SessionIdResponse = Static<typeof SessionIdResponseType>;

@@ -28,11 +28,6 @@ import DB from "./db";
 
 const db = new DB();
 
-// Generate a random session ID for the current server session.
-// This is used by the client to determine whether they should delete the cached player data.
-const sessionId = generateId("session", 6);
-console.log("Session ID:", sessionId);
-
 function sendHostMessage(message: WebSocketMessage): void {
   if (!db.hostWs) {
     console.error("No host ws found");
@@ -251,7 +246,23 @@ const app = new Elysia()
   .get(
     APIRoute.SessionId,
     () => {
-      return { ok: true as const, data: { sessionId } };
+      const session = db.getSession();
+      if (!session) {
+        return {
+          ok: false as const,
+          error: {
+            status: 500,
+            message: "Session not found",
+          },
+        };
+      }
+      return {
+        ok: true as const,
+        data: {
+          sessionId: session.id,
+          createdAt: session.createdAt,
+        },
+      };
     },
     {
       body: APIRouteToSchema[APIRoute.SessionId].req,

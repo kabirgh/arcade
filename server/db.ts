@@ -40,6 +40,14 @@ class DB {
       )
     `);
 
+    // Create session table for storing session data
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS session (
+        id TEXT PRIMARY KEY,
+        created_at INTEGER NOT NULL
+      )
+    `);
+
     // No players table. Players are stored in memory in wsPlayerMap
     // If the server restarts, the clients will resend JOIN messages on reconnect
   }
@@ -65,6 +73,22 @@ class DB {
     this.db
       .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)")
       .run("screen", PlayerScreen.Buzzer);
+
+    // Set session data if it doesn't exist
+    const existingSession = this.getSession();
+    if (!existingSession) {
+      // Session ID is used by the client to determine whether they should delete the cached player data.
+      const sessionId = generateId("session", 4);
+      const sessionCreatedAt = Date.now();
+      this.setSession(sessionId, sessionCreatedAt);
+
+      console.log(
+        "Session ID:",
+        sessionId,
+        "Created at:",
+        new Date(sessionCreatedAt).toISOString()
+      );
+    }
   }
 
   public get teams(): Team[] {
@@ -155,6 +179,28 @@ class DB {
       color: row.color as Color,
       score: row.score,
     };
+  }
+
+  // Session methods
+  public getSession(): { id: string; createdAt: number } | null {
+    const row = this.db
+      .query("SELECT id, created_at FROM session LIMIT 1")
+      .get() as { id: string; created_at: number } | null;
+
+    if (!row) return null;
+
+    return {
+      id: row.id,
+      createdAt: row.created_at,
+    };
+  }
+
+  public setSession(sessionId: string, createdAt: number): void {
+    // Clear any existing session and insert the new one
+    this.db.exec("DELETE FROM session");
+    this.db
+      .prepare("INSERT INTO session (id, created_at) VALUES (?, ?)")
+      .run(sessionId, createdAt);
   }
 }
 

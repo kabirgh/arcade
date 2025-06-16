@@ -57,6 +57,7 @@ type Rock = {
   radius: number;
   variant: "rock_1" | "rock_2" | "rock_3";
   hasMoss: boolean;
+  rotation: number;
 };
 
 type State = {
@@ -385,6 +386,7 @@ const generateRocks = (teams: BoatTeam[]): Rock[] => {
       radius: ROCK_BASE_SIZES[variant] / 2,
       variant,
       hasMoss: Math.random() > 0.5,
+      rotation: Math.random() * Math.PI * 2,
     };
     rocks.push(rock);
     existingPositions.push(pos);
@@ -1138,13 +1140,11 @@ const BoatGame = () => {
         const rockImg = imagesRef.current.get(imagePath);
         if (rockImg) {
           const size = rock.radius * 2;
-          ctx.drawImage(
-            rockImg,
-            rock.x - rock.radius,
-            rock.y - rock.radius,
-            size,
-            size
-          );
+          ctx.save();
+          ctx.translate(rock.x, rock.y);
+          ctx.rotate(rock.rotation);
+          ctx.drawImage(rockImg, -rock.radius, -rock.radius, size, size);
+          ctx.restore();
         }
       }
     };

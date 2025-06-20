@@ -516,7 +516,10 @@ const app = new Elysia()
     APIRoute.KickPlayer,
     ({ body }) => {
       for (const [wsId, { player }] of db.wsPlayerMap.entries()) {
-        if (player && player.name === body.playerName.toUpperCase()) {
+        if (
+          player &&
+          player.name.toUpperCase() === body.playerName.toUpperCase()
+        ) {
           kickPlayer(wsId);
           broadcastAllPlayers();
           return { ok: true as const, data: { playerId: player.id } };

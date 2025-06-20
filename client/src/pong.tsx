@@ -11,7 +11,7 @@ import { useListenHostNavigate } from "./hooks/useListenHostNavigate";
 import useWebAudio from "./hooks/useWebAudio";
 import { apiFetch } from "./util/apiFetch";
 
-const DEBUG = true;
+const DEBUG = false;
 
 // ============================================================================
 // TYPES
@@ -74,10 +74,20 @@ type State = {
 // CONSTANTS - GAME CONFIGURATION
 // ============================================================================
 
-const SCALE_FACTOR = 1.4;
+// Base (unscaled) canvas size in pixels. All other dimensions are derived from this.
+const BASE_CANVAS_SIZE = 600;
 
-// Canvas dimensions
-const CANVAS_SIZE = 600 * SCALE_FACTOR;
+// Compute a scale factor once, based on the initial viewport height, so that the
+// canvas occupies ~90% of the viewport height. This is done at module load time
+// and will not update on subsequent resizes.
+const SCALE_FACTOR =
+  typeof window === "undefined"
+    ? 1
+    : (window.innerHeight * 0.9) / BASE_CANVAS_SIZE;
+
+// Canvas dimensions (square canvas). All drawing is performed relative to this
+// size.
+const CANVAS_SIZE = Math.round(BASE_CANVAS_SIZE * SCALE_FACTOR);
 
 // Scoring display
 const SCORE_LENGTH = 14 * SCALE_FACTOR;

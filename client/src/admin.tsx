@@ -1,5 +1,5 @@
 import { Value } from "@sinclair/typebox/value";
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 
 import type { SessionIdResponse } from "../../shared/types/api/misc";
 import { APIRoute, APIRouteToSchema } from "../../shared/types/api/schema";
@@ -283,12 +283,12 @@ const AdminPage: React.FC = () => {
     }
   }, [selectedAPI, broadcastTemplates, selectedMessageType]);
 
-  const handleResetBuzzers = () => {
+  const handleResetBuzzers = useCallback(() => {
     publish({
       channel: Channel.BUZZER,
       messageType: MessageType.RESET,
     });
-  };
+  }, [publish]);
 
   const handleNavigateHostScreen = (hostScreen: HostScreen) => {
     publish({
@@ -433,6 +433,31 @@ const AdminPage: React.FC = () => {
     }
     setShowSessionModal(false);
   };
+
+  // Add global key listener for resetting buzzers with the "R" key
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Ignore if focus is on an input, textarea, or contentEditable element
+      const target = event.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+
+      if (event.code === "KeyR") {
+        handleResetBuzzers();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [handleResetBuzzers]);
 
   return (
     <div className="h-screen relative overflow-hidden">

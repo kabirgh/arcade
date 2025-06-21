@@ -1,5 +1,6 @@
 import "./buzzer.css";
 
+import NoSleep from "nosleep.js";
 import { useEffect, useRef } from "react";
 import { toast, Toaster } from "sonner";
 import { useLocation } from "wouter";
@@ -20,6 +21,8 @@ export default function Buzzer() {
   const { sessionPlayer } = usePlayerContext();
   useListenPlayerNavigate(sessionPlayer);
   const lastPressedRef = useRef<number>(0);
+  const anyPressRef = useRef<boolean>(false);
+  const noSleepRef = useRef<NoSleep>(new NoSleep());
 
   useEffect(() => {
     if (!sessionPlayer) {
@@ -28,6 +31,14 @@ export default function Buzzer() {
       return;
     }
   }, [sessionPlayer, setLocation]);
+
+  const enableNoSleep = () => {
+    // Keeps phone awake even when navigated to joystick screen
+    if (!anyPressRef.current) {
+      noSleepRef.current.enable();
+      anyPressRef.current = true;
+    }
+  };
 
   const handlePress = () => {
     if (!sessionPlayer) {
@@ -58,7 +69,11 @@ export default function Buzzer() {
       <PastelBackground />
       <ConnectionStatusPill />
       <div className="flex items-center justify-center w-[80vmin] h-[80vmin]">
-        <button className="pushable" onPointerDown={handlePress}>
+        <button
+          className="pushable"
+          onPointerDown={handlePress}
+          onClick={enableNoSleep}
+        >
           <span className="shadow"></span>
           <span className="edge"></span>
           <span className="front"></span>

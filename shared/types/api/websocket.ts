@@ -99,6 +99,15 @@ export type SetDuckSpawnIntervalMessage = Static<
   typeof SetDuckSpawnIntervalMessageType
 >;
 
+const BoatAddTimeMessageType = t.Object({
+  channel: t.Literal(Channel.GAME),
+  messageType: t.Literal(MessageType.BOAT_ADD_TIME),
+  payload: t.Object({
+    timeSeconds: t.Number(),
+  }),
+});
+export type BoatAddTimeMessage = Static<typeof BoatAddTimeMessageType>;
+
 export const WebSocketMessageType = t.Union([
   PlayerListAllMessageType,
   PlayerJoinMessageType,
@@ -111,6 +120,7 @@ export const WebSocketMessageType = t.Union([
   NavigatePlayerMessageType,
   NavigateHostMessageType,
   SetDuckSpawnIntervalMessageType,
+  BoatAddTimeMessageType,
 ]);
 export type WebSocketMessage = Static<typeof WebSocketMessageType>;
 

@@ -189,6 +189,10 @@ const handleWebSocketMessage = (ws: ElysiaWS, message: WebSocketMessage) => {
         case MessageType.DUCK_SPAWN_INTERVAL:
           sendHostMessage(message);
           break;
+
+        case MessageType.BOAT_ADD_TIME:
+          sendHostMessage(message);
+          break;
       }
       break;
   }
@@ -481,8 +485,7 @@ const app = new Elysia()
   .post(
     APIRoute.SendWebSocketMessage,
     ({ body }) => {
-      const ws =
-        body.id === "host" ? db.hostWs : db.wsPlayerMap.get(body.id)?.ws;
+      const ws = body.id === "" ? db.hostWs : db.wsPlayerMap.get(body.id)?.ws;
 
       if (!ws) {
         return {

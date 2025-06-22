@@ -628,6 +628,17 @@ const BoatGame = () => {
     return unsubscribe;
   }, [subscribe]);
 
+  // Subscribe to game phase updates from WebSocket
+  useEffect(() => {
+    const unsubscribe = subscribe(Channel.GAME, (message: WebSocketMessage) => {
+      if (message.messageType === MessageType.BOAT_ADD_TIME) {
+        setGameDuration((prev) => prev + message.payload.timeSeconds * 1000);
+      }
+    });
+
+    return unsubscribe;
+  }, [subscribe]);
+
   // =================== INPUT HANDLING ===================
   // Subscribe to joystick move updates from WebSocket
   useEffect(() => {
@@ -1334,8 +1345,14 @@ const BoatGame = () => {
   // Add pause/resume functionality
   const pauseResume = useCallback(() => {
     if (stateRef.current.phase === "in_progress") {
+      // Enter paused state – remember when we paused
       stateRef.current.phase = "paused";
+      stateRef.current.pausedTime = Date.now();
     } else if (stateRef.current.phase === "paused") {
+      // Leaving paused state – shift gameStartTime so the paused duration isn't counted
+      const pausedDuration = Date.now() - stateRef.current.pausedTime;
+      stateRef.current.gameStartTime += pausedDuration;
+      stateRef.current.pausedTime = 0;
       stateRef.current.phase = "in_progress";
     }
   }, []);

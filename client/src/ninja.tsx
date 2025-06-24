@@ -12,7 +12,7 @@ import useWebAudio from "./hooks/useWebAudio";
 import { apiFetch } from "./util/apiFetch";
 
 // Use dummy players. When false, calls server to get real players
-const DEBUG = false;
+const DEBUG = true;
 
 //
 // Types
@@ -49,7 +49,9 @@ type NinjaTeam = {
   color: string;
   players: NinjaPlayer[];
   currentPlayerIndex: number;
-  state: "not_started" | "playing" | "countdown" | "game_over";
+  state: "not_started" | "countdown" | "playing" | "team_game_over";
+  speed: number;
+  speedUpdateAccumulator: number;
   countdownStartTime?: number;
   countdownMessage?: string;
 };
@@ -57,12 +59,10 @@ type NinjaTeam = {
 type GameState = {
   teams: NinjaTeam[];
   obstaclePoolsByPlayerIndex: ObstaclePool[];
-  speed: number;
   obstacleBag: number[];
   lastTick: number;
   // not_started is only at before the first game starts
   phase: "not_started" | "in_progress" | "game_over";
-  speedUpdateAccumulator: number;
   playerIdToTeamIdMap: Record<string, string>;
 };
 
@@ -102,7 +102,7 @@ class ObstaclePool {
     }
   }
 
-  updateActiveObstacles(deltaTime: number, speed: number) {
+  updateActiveObstaclePositions(deltaTime: number, speed: number) {
     for (let i = this.activeObstacles.length - 1; i >= 0; i--) {
       const obstacle = this.activeObstacles[i];
       obstacle.y = Math.round(obstacle.y + speed * deltaTime);
@@ -270,7 +270,7 @@ const GameScreen = ({ team }: { team: NinjaTeam }) => {
               </div>
             )}
 
-          {team.state === "game_over" && (
+          {team.state === "team_game_over" && (
             <div
               style={{
                 position: "absolute",
@@ -396,6 +396,17 @@ const ANIMATIONS = {
   },
 };
 
+const STANDARD_TEAM_STATE: NinjaTeam = {
+  id: "",
+  name: "",
+  color: "",
+  currentPlayerIndex: 0,
+  state: "not_started",
+  speed: 0.15,
+  speedUpdateAccumulator: 0,
+  players: [],
+};
+
 const STANDARD_PLAYER_STATE: CommonPlayerState = {
   x: 0,
   y: GAME_HEIGHT * 0.6,
@@ -412,11 +423,10 @@ const STANDARD_PLAYER_STATE: CommonPlayerState = {
 
 const DEFAULT_TEAMS: NinjaTeam[] = [
   {
+    ...STANDARD_TEAM_STATE,
     id: "1",
     name: "Lizard Wizard",
     color: Color.Blue,
-    currentPlayerIndex: 0,
-    state: "not_started",
     players: [
       {
         id: "hp_0sdf79",
@@ -437,11 +447,10 @@ const DEFAULT_TEAMS: NinjaTeam[] = [
     ],
   },
   {
+    ...STANDARD_TEAM_STATE,
     id: "2",
     name: "Surprise entrant",
     color: Color.Red,
-    currentPlayerIndex: 0,
-    state: "not_started",
     players: [
       {
         id: "blam_9dg",
@@ -454,11 +463,10 @@ const DEFAULT_TEAMS: NinjaTeam[] = [
     ],
   },
   {
+    ...STANDARD_TEAM_STATE,
     id: "3",
     name: "Triple Threat",
     color: Color.Green,
-    currentPlayerIndex: 0,
-    state: "not_started",
     players: [
       {
         id: "tt_p1",
@@ -487,11 +495,10 @@ const DEFAULT_TEAMS: NinjaTeam[] = [
     ],
   },
   {
+    ...STANDARD_TEAM_STATE,
     id: "4",
     name: "Underdog",
     color: Color.Yellow,
-    currentPlayerIndex: 0,
-    state: "not_started",
     players: [
       {
         id: "st_p1",
@@ -521,12 +528,10 @@ const NinjaRun = () => {
     // Same obstacles used for all teams. team.obstacles is usually a reference to the list in the pool
     teams: [],
     obstaclePoolsByPlayerIndex: [],
-    speed: 0.15,
     // Ensure we don't choose the same side for new obstacles too many times in a row
     obstacleBag: [...OBSTACLE_BAG_DEFAULT],
     lastTick: 0,
     phase: "not_started",
-    speedUpdateAccumulator: 0,
     playerIdToTeamIdMap: {},
   });
 
@@ -579,6 +584,8 @@ const NinjaRun = () => {
             color: team.color,
             currentPlayerIndex: 0,
             state: "not_started",
+            speed: 0.15,
+            speedUpdateAccumulator: 0,
             players: teamPlayers.map((player) => ({
               id: player.id,
               name: player.name,
@@ -624,7 +631,11 @@ const NinjaRun = () => {
       teams: gameState.current.teams.map((team) => ({
         ...team,
         currentPlayerIndex: 0,
-        state: "playing",
+        state: "countdown",
+        countdownStartTime: Date.now(),
+        countdownMessage: `${
+          team.players[team.currentPlayerIndex].name
+        } will begin in`,
         players: team.players.map((player) => ({
           ...player,
           x: 0,
@@ -643,11 +654,9 @@ const NinjaRun = () => {
       obstaclePoolsByPlayerIndex: Array(maxPlayersInAnyTeam)
         .fill(null)
         .map(() => new ObstaclePool(20)),
-      speed: 0.15,
       obstacleBag: [...OBSTACLE_BAG_DEFAULT],
       lastTick: 0,
       phase: "in_progress",
-      speedUpdateAccumulator: 0,
       playerIdToTeamIdMap: gameState.current.playerIdToTeamIdMap,
     };
 
@@ -669,31 +678,33 @@ const NinjaRun = () => {
     };
   }, []);
 
-  const updateGameSpeed = useCallback((deltaTime: number) => {
+  const updateTeamSpeeds = useCallback((deltaTime: number) => {
     const state = gameState.current;
 
     if (state.phase !== "in_progress") {
       return;
     }
 
-    // Gradually increase the speed of the obstacles
-    state.speedUpdateAccumulator += deltaTime;
-    if (state.speedUpdateAccumulator >= 500) {
-      const intervals = Math.floor(state.speedUpdateAccumulator / 500);
-      // Update the speed based on the number of intervals passed
-      state.speed *= Math.pow(1.015, intervals);
-      state.speedUpdateAccumulator -= intervals * 500;
-
-      for (const team of state.teams) {
-        // Only update teams that are currently playing
-        if (team.state !== "playing") {
-          continue;
-        }
-
-        const player = team.players[team.currentPlayerIndex];
-        // Increase running speed
-        player.msPerFrame -= 0.15;
+    // Gradually increase the speed of the obstacles for teams that are currently playing
+    for (const team of state.teams) {
+      // Only update teams that are currently playing
+      if (team.state !== "playing") {
+        continue;
       }
+
+      team.speedUpdateAccumulator += deltaTime;
+      if (team.speedUpdateAccumulator < 500) {
+        continue;
+      }
+
+      const intervals = Math.floor(team.speedUpdateAccumulator / 500);
+      // Update the obstacle speed based on the number of intervals passed
+      team.speed *= Math.pow(1.015, intervals);
+      team.speedUpdateAccumulator -= intervals * 500;
+
+      const player = team.players[team.currentPlayerIndex];
+      // Increase running speed
+      player.msPerFrame -= 0.15;
     }
   }, []);
 
@@ -703,19 +714,6 @@ const NinjaRun = () => {
 
     // Don't update obstacles if game hasn't started
     if (state.phase === "not_started") {
-      return;
-    }
-
-    // Don't update obstacles if all teams are game over
-    let isGameOverForAll = true;
-    for (const team of state.teams) {
-      if (team.state === "playing" || team.state === "countdown") {
-        isGameOverForAll = false;
-        break;
-      }
-    }
-    if (isGameOverForAll) {
-      state.phase = "game_over";
       return;
     }
 
@@ -730,7 +728,8 @@ const NinjaRun = () => {
     // Only update obstacle pools that are currently being used by active players
     for (const playerIndex of activePlayerIndices) {
       const pool = state.obstaclePoolsByPlayerIndex[playerIndex];
-      pool.updateActiveObstacles(deltaTime, state.speed);
+      // TODO: use team speed
+      pool.updateActiveObstaclePositions(deltaTime, 0.15);
       const activeObstacles = pool.getActiveObstacles();
 
       if (
@@ -780,14 +779,14 @@ const NinjaRun = () => {
     (team: NinjaTeam, deadPlayer: NinjaPlayer) => {
       // Check if there are more players available
       if (team.currentPlayerIndex + 1 < team.players.length) {
-        // index will be incremented in updateCountdowns
-        const nextPlayer = team.players[team.currentPlayerIndex + 1];
+        team.currentPlayerIndex++;
+        const nextPlayer = team.players[team.currentPlayerIndex];
         team.state = "countdown";
         team.countdownStartTime = Date.now();
         team.countdownMessage = `${deadPlayer.name} has perished. ${nextPlayer.name} will begin in`;
       } else {
         // No more players - team is game over
-        team.state = "game_over";
+        team.state = "team_game_over";
       }
     },
     []
@@ -865,7 +864,7 @@ const NinjaRun = () => {
         }
 
         // Skip gameplay updates if team is in countdown or game over state
-        if (team.state === "countdown" || team.state === "game_over") {
+        if (team.state === "countdown" || team.state === "team_game_over") {
           continue;
         }
 
@@ -1053,13 +1052,12 @@ const NinjaRun = () => {
       if (team.state === "countdown" && team.countdownStartTime) {
         const elapsed = now - team.countdownStartTime;
         if (elapsed >= 5000) {
-          // Countdown finished - switch to next player
-          team.currentPlayerIndex++;
+          // Countdown finished
           team.state = "playing";
 
           // Reset game speed to initial value for the new player
-          state.speed = 0.15;
-          state.speedUpdateAccumulator = 0;
+          team.speed = 0.15;
+          team.speedUpdateAccumulator = 0;
 
           // Reset the new player
           const newPlayer = team.players[team.currentPlayerIndex];
@@ -1083,15 +1081,41 @@ const NinjaRun = () => {
     }
   }, []);
 
+  const checkGameOver = useCallback(() => {
+    const state = gameState.current;
+    if (state.phase === "game_over") {
+      return;
+    }
+
+    let isGameOverForAll = true;
+    for (const team of state.teams) {
+      if (team.state !== "team_game_over") {
+        isGameOverForAll = false;
+        break;
+      }
+    }
+    if (isGameOverForAll) {
+      state.phase = "game_over";
+      return;
+    }
+  }, []);
+
   // Game loop, runs every frame
   const gameLoop = useCallback(
     (deltaTime: number) => {
-      updateGameSpeed(deltaTime);
+      checkGameOver();
+      updateTeamSpeeds(deltaTime);
       updateObstacles(deltaTime);
       updatePlayers(deltaTime);
       updateCountdowns();
     },
-    [updateGameSpeed, updatePlayers, updateObstacles, updateCountdowns]
+    [
+      checkGameOver,
+      updateTeamSpeeds,
+      updatePlayers,
+      updateObstacles,
+      updateCountdowns,
+    ]
   );
 
   // Scaffolding for the game loop

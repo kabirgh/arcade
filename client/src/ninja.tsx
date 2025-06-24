@@ -52,8 +52,9 @@ type NinjaTeam = {
   state: "not_started" | "countdown" | "playing" | "team_game_over";
   speed: number;
   speedUpdateAccumulator: number;
-  countdownStartTime?: number;
-  countdownMessage?: string;
+  firstCountdown: boolean;
+  countdownEndTime: number;
+  countdownMessage: string;
 };
 
 type GameState = {
@@ -67,13 +68,7 @@ type GameState = {
 type CommonPlayerState = Required<
   Omit<
     NinjaPlayer,
-    | "id"
-    | "name"
-    | "avatar"
-    | "color"
-    | "teamId"
-    | "obstaclePool"
-    | "obstacleBag"
+    "id" | "name" | "avatar" | "color" | "teamId" | "obstaclePool"
   >
 >;
 
@@ -264,7 +259,7 @@ const GameScreen = ({ team }: { team: NinjaTeam }) => {
           {/* Countdown overlay */}
           {team.state === "countdown" &&
             team.countdownMessage &&
-            team.countdownStartTime && (
+            team.countdownEndTime && (
               <div
                 style={{
                   position: "absolute",
@@ -283,8 +278,7 @@ const GameScreen = ({ team }: { team: NinjaTeam }) => {
                 <div style={{ fontSize: 32, marginTop: "10px" }}>
                   {Math.max(
                     0,
-                    5 -
-                      Math.floor((Date.now() - team.countdownStartTime) / 1000)
+                    Math.ceil((team.countdownEndTime - Date.now()) / 1000)
                   )}
                 </div>
               </div>
@@ -425,6 +419,9 @@ const STANDARD_TEAM_STATE: NinjaTeam = {
   speed: 0.15,
   speedUpdateAccumulator: 0,
   players: [],
+  firstCountdown: true,
+  countdownEndTime: 0,
+  countdownMessage: "",
 };
 
 const STANDARD_PLAYER_STATE: CommonPlayerState = {
@@ -577,6 +574,7 @@ const NinjaRun = () => {
         hp_0sdf79: "1",
         g_n9o87as: "1",
         blam_9dg: "2",
+        whomp_m09: "2",
         tt_p1: "3",
         tt_p2: "3",
         tt_p3: "3",
@@ -618,27 +616,29 @@ const NinjaRun = () => {
             state: "not_started",
             speed: 0.15,
             speedUpdateAccumulator: 0,
-            players: teamPlayers.map((player, index) => ({
-              id: player.id,
-              name: player.name,
-              color: team.color,
-              teamId: team.id,
-              avatar: player.avatar,
-              x: 0,
-              y: GAME_HEIGHT * 0.6,
-              vx: 0,
-              score: 0,
-              obstacles: [],
-              isGameOver: false,
-              currentAnimation: "run",
-              msPerFrame: ANIMATIONS.run.msPerFrame,
-              wall: "left",
-              currentFrame: 0,
-              lastFrameUpdate: Date.now(),
-              startTime: null,
-              obstaclePool: new ObstaclePool(createPrng(index)),
-              obstacleBag: [...OBSTACLE_BAG_DEFAULT],
-            })),
+            firstCountdown: true,
+            countdownEndTime: 0,
+            countdownMessage: "",
+            players: teamPlayers.map(
+              (player, index): NinjaPlayer => ({
+                id: player.id,
+                name: player.name,
+                color: team.color,
+                teamId: team.id,
+                avatar: player.avatar,
+                x: 0,
+                y: GAME_HEIGHT * 0.6,
+                vx: 0,
+                score: 0,
+                isGameOver: false,
+                currentAnimation: "run",
+                msPerFrame: ANIMATIONS.run.msPerFrame,
+                wall: "left",
+                currentFrame: 3, // 3 looks nicest
+                lastFrameUpdate: Date.now(),
+                obstaclePool: new ObstaclePool(createPrng(index)),
+              })
+            ),
           });
         }
 
@@ -661,26 +661,25 @@ const NinjaRun = () => {
         ...team,
         currentPlayerIndex: 0,
         state: "countdown",
-        countdownStartTime: Date.now(),
-        countdownMessage: `${
-          team.players[team.currentPlayerIndex].name
-        } will begin in`,
-        players: team.players.map((player) => ({
-          ...player,
-          x: 0,
-          y: GAME_HEIGHT * 0.6,
-          vx: 0,
-          score: 0,
-          obstaclePool: new ObstaclePool(createPrng(0)),
-          obstacleBag: [...OBSTACLE_BAG_DEFAULT],
-          obstacles: [],
-          isGameOver: false,
-          currentAnimation: "run",
-          msPerFrame: ANIMATIONS.run.msPerFrame,
-          wall: "left",
-          currentFrame: 0,
-          lastFrameUpdate: Date.now(),
-        })),
+        firstCountdown: true,
+        countdownEndTime: Date.now() + 3000, // first countdown is 3 seconds
+        countdownMessage: `${team.players[0].name} will begin in`,
+        players: team.players.map(
+          (player): NinjaPlayer => ({
+            ...player,
+            x: 0,
+            y: GAME_HEIGHT * 0.6,
+            vx: 0,
+            score: 0,
+            obstaclePool: new ObstaclePool(createPrng(0)),
+            isGameOver: false,
+            currentAnimation: "run",
+            msPerFrame: ANIMATIONS.run.msPerFrame,
+            wall: "left",
+            currentFrame: 3,
+            lastFrameUpdate: Date.now(),
+          })
+        ),
       })),
       lastTick: 0,
       phase: "in_progress",
@@ -772,12 +771,13 @@ const NinjaRun = () => {
 
   const handlePlayerDeath = useCallback(
     (team: NinjaTeam, deadPlayer: NinjaPlayer) => {
-      // Check if there are more players available
       if (team.currentPlayerIndex + 1 < team.players.length) {
-        team.currentPlayerIndex++;
-        const nextPlayer = team.players[team.currentPlayerIndex];
+        // currentPlayerIndex will be incremented in updateCountdowns. We don't
+        // want to increment it here because we want to keep the current player
+        // active while the death animation plays
+        const nextPlayer = team.players[team.currentPlayerIndex + 1];
         team.state = "countdown";
-        team.countdownStartTime = Date.now();
+        team.countdownEndTime = Date.now() + 5000;
         team.countdownMessage = `${deadPlayer.name} has perished. ${nextPlayer.name} will begin in`;
       } else {
         // No more players - team is game over
@@ -1041,33 +1041,21 @@ const NinjaRun = () => {
     const now = Date.now();
 
     for (const team of state.teams) {
-      if (team.state === "countdown" && team.countdownStartTime) {
-        const elapsed = now - team.countdownStartTime;
-        if (elapsed >= 5000) {
-          // Countdown finished
+      if (team.state === "countdown" && team.countdownEndTime) {
+        if (now >= team.countdownEndTime) {
+          if (!team.firstCountdown) {
+            team.currentPlayerIndex++;
+          }
+          team.firstCountdown = false;
           team.state = "playing";
 
           // Reset game speed to initial value for the new player
           team.speed = 0.15;
           team.speedUpdateAccumulator = 0;
 
-          // Reset the new player
-          const newPlayer = team.players[team.currentPlayerIndex];
-          newPlayer.x = 0;
-          newPlayer.y = GAME_HEIGHT * 0.6;
-          newPlayer.vx = 0;
-          newPlayer.score = 0;
-          newPlayer.isGameOver = false;
-          newPlayer.currentAnimation = "run";
-          newPlayer.msPerFrame = ANIMATIONS.run.msPerFrame;
-          newPlayer.wall = "left";
-          newPlayer.currentFrame = 3;
-          newPlayer.lastFrameUpdate = Date.now();
-          // Obstacle pool should already be initialized with the correct prng seed
-
           // Clear countdown data
-          team.countdownStartTime = undefined;
-          team.countdownMessage = undefined;
+          team.countdownEndTime = 0;
+          team.countdownMessage = "";
         }
       }
     }

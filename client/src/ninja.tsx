@@ -12,7 +12,7 @@ import useWebAudio from "./hooks/useWebAudio";
 import { apiFetch } from "./util/apiFetch";
 
 // Use dummy players. When false, calls server to get real players
-const DEBUG = true;
+const DEBUG = false;
 
 //
 // Types
@@ -899,7 +899,7 @@ const NinjaRun = () => {
           player.isGameOver = true;
           player.currentAnimation = "hit";
           player.currentFrame = 0;
-          player.lastFrameUpdate = Date.now();
+          player.lastFrameUpdate = now;
           player.vx = 0; // Stop horizontal movement
 
           // Handle relay transition
@@ -1052,6 +1052,10 @@ const NinjaRun = () => {
           // Reset game speed to initial value for the new player
           team.speed = 0.15;
           team.speedUpdateAccumulator = 0;
+
+          // Set lastFrameUpdate so scores aren't cumulative
+          const player = team.players[team.currentPlayerIndex];
+          player.lastFrameUpdate = now;
 
           // Clear countdown data
           team.countdownEndTime = 0;

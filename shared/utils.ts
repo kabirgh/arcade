@@ -9,7 +9,8 @@ export const createPrng = (seed: number): (() => number) => {
 export const shuffle = <T>(array: T[], prng?: () => number): T[] => {
   const newArray = [...array];
   for (let i = newArray.length - 1; i > 0; i--) {
-    const j = Math.floor(prng?.() ?? Math.random() * (i + 1));
+    const rand = prng ? prng() : Math.random();
+    const j = Math.floor(rand * (i + 1));
     [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
   }
   return newArray;

@@ -4,7 +4,7 @@ import { APIRoute } from "../../shared/types/api/schema";
 import type { WebSocketMessage } from "../../shared/types/api/websocket";
 import { Avatar, Color, type Player } from "../../shared/types/domain/player";
 import { Channel, MessageType } from "../../shared/types/domain/websocket";
-import { shuffle } from "../../shared/utils";
+import { createPrng, shuffle } from "../../shared/utils";
 import { useWebSocketContext } from "./contexts/WebSocketContext";
 import { useAdminAuth } from "./hooks/useAdminAuth";
 import { useListenHostNavigate } from "./hooks/useListenHostNavigate";
@@ -27,7 +27,7 @@ type NinjaPlayer = {
   y: number;
   vx: number;
   score: number;
-  obstacles: Obstacle[];
+  obstaclePool: ObstaclePool;
   isGameOver: boolean;
   currentAnimation: "run" | "roll" | "hit" | "fall";
   currentFrame: number;
@@ -58,8 +58,6 @@ type NinjaTeam = {
 
 type GameState = {
   teams: NinjaTeam[];
-  obstaclePoolsByPlayerIndex: ObstaclePool[];
-  obstacleBag: number[];
   lastTick: number;
   // not_started is only at before the first game starts
   phase: "not_started" | "in_progress" | "game_over";
@@ -67,42 +65,64 @@ type GameState = {
 };
 
 type CommonPlayerState = Required<
-  Omit<NinjaPlayer, "id" | "name" | "avatar" | "color" | "teamId">
+  Omit<
+    NinjaPlayer,
+    | "id"
+    | "name"
+    | "avatar"
+    | "color"
+    | "teamId"
+    | "obstaclePool"
+    | "obstacleBag"
+  >
 >;
 
 class ObstaclePool {
-  private pool: Obstacle[] = [];
+  private positionBag: number[] = [];
   private activeObstacles: Obstacle[] = [];
+  private prng: () => number;
 
-  constructor(initialSize: number) {
+  constructor(prng: () => number) {
+    // Using a bag ensures we don't see obstacles in the same side of the screen too often
+    // Max in a row = 4 using OBSTACLE_BAG_DEFAULT (2 from previous bag, 2 from new bag)
+    this.positionBag = [...OBSTACLE_BAG_DEFAULT];
     this.activeObstacles = structuredClone(DEFAULT_OBSTACLES);
-    for (let i = 0; i < initialSize - this.activeObstacles.length; i++) {
-      this.pool.push({ x: 0, y: 0, currentFrame: 0, lastFrameUpdate: 0 });
+    this.prng = prng;
+  }
+
+  addObstacle(): void {
+    this.activeObstacles.push({
+      // Bag is used to decide whether to place the obstacle on the left or right
+      x: this.positionBag.pop()! * (GAME_WIDTH - OBSTACLE_SIZE),
+      y: -this.prng() * OBSTACLE_MIN_GAP * 0.6,
+      currentFrame: 0,
+      lastFrameUpdate: 0,
+    });
+
+    // If the bag is empty, shuffle a new one
+    if (this.positionBag.length === 0) {
+      this.positionBag = shuffle([...OBSTACLE_BAG_DEFAULT], this.prng);
     }
   }
 
-  getObstacle(x: number, y: number): Obstacle {
-    let obstacle: Obstacle;
-    if (this.pool.length > 0) {
-      obstacle = this.pool.pop()!;
-    } else {
-      obstacle = { x: 0, y: 0, currentFrame: 0, lastFrameUpdate: 0 };
-    }
-    obstacle.x = x;
-    obstacle.y = y;
-    this.activeObstacles.push(obstacle);
-    return obstacle;
-  }
-
-  releaseObstacle(obstacle: Obstacle) {
+  releaseObstacle(obstacle: Obstacle): void {
     const index = this.activeObstacles.indexOf(obstacle);
     if (index > -1) {
       this.activeObstacles.splice(index, 1);
-      this.pool.push(obstacle);
     }
   }
 
-  updateActiveObstaclePositions(deltaTime: number, speed: number) {
+  // Should be called every frame
+  updateActiveObstaclePositions(deltaTime: number, speed: number): void {
+    // If the last obstacle is too close to the top of the screen, add a new obstacle
+    if (
+      this.activeObstacles.length === 0 ||
+      this.activeObstacles[this.activeObstacles.length - 1].y > OBSTACLE_MIN_GAP
+    ) {
+      this.addObstacle();
+    }
+
+    // Update obstacle positions
     for (let i = this.activeObstacles.length - 1; i >= 0; i--) {
       const obstacle = this.activeObstacles[i];
       obstacle.y = Math.round(obstacle.y + speed * deltaTime);
@@ -288,7 +308,7 @@ const GameScreen = ({ team }: { team: NinjaTeam }) => {
           )}
 
           <PlayerSprite {...player} />
-          {player.obstacles.map((obstacle, index) => (
+          {player.obstaclePool.getActiveObstacles().map((obstacle, index) => (
             <ObstacleSprite key={index} {...obstacle} />
           ))}
         </div>
@@ -412,7 +432,6 @@ const STANDARD_PLAYER_STATE: CommonPlayerState = {
   y: GAME_HEIGHT * 0.6,
   vx: 0,
   score: 0,
-  obstacles: DEFAULT_OBSTACLES,
   isGameOver: false,
   currentAnimation: "run",
   msPerFrame: ANIMATIONS.run.msPerFrame,
@@ -429,20 +448,23 @@ const DEFAULT_TEAMS: NinjaTeam[] = [
     color: Color.Blue,
     players: [
       {
+        ...STANDARD_PLAYER_STATE,
         id: "hp_0sdf79",
         name: "Harry Potter",
         color: Color.Blue,
         teamId: "1",
         avatar: Avatar.Icecream,
-        ...STANDARD_PLAYER_STATE,
+        // The same prng seed should be used for the same player index on different teams for the course to be identical per player index
+        obstaclePool: new ObstaclePool(createPrng(0)),
       },
       {
+        ...STANDARD_PLAYER_STATE,
         id: "g_n9o87as",
         name: "Gandalf",
         color: Color.Blue,
         teamId: "1",
         avatar: Avatar.Tree,
-        ...STANDARD_PLAYER_STATE,
+        obstaclePool: new ObstaclePool(createPrng(1)),
       },
     ],
   },
@@ -453,12 +475,22 @@ const DEFAULT_TEAMS: NinjaTeam[] = [
     color: Color.Red,
     players: [
       {
+        ...STANDARD_PLAYER_STATE,
         id: "blam_9dg",
         name: "Blam",
         color: Color.Red,
         teamId: "2",
         avatar: Avatar.Spikyball,
+        obstaclePool: new ObstaclePool(createPrng(0)),
+      },
+      {
         ...STANDARD_PLAYER_STATE,
+        id: "whomp_m09",
+        name: "Whomp",
+        color: Color.Red,
+        teamId: "2",
+        avatar: Avatar.Chimney,
+        obstaclePool: new ObstaclePool(createPrng(1)),
       },
     ],
   },
@@ -469,28 +501,31 @@ const DEFAULT_TEAMS: NinjaTeam[] = [
     color: Color.Green,
     players: [
       {
+        ...STANDARD_PLAYER_STATE,
         id: "tt_p1",
         name: "Player 1",
         color: Color.Green,
         teamId: "3",
         avatar: Avatar.Carrot,
-        ...STANDARD_PLAYER_STATE,
+        obstaclePool: new ObstaclePool(createPrng(0)),
       },
       {
+        ...STANDARD_PLAYER_STATE,
         id: "tt_p2",
         name: "Player 2",
         color: Color.Green,
         teamId: "3",
         avatar: Avatar.Palette,
-        ...STANDARD_PLAYER_STATE,
+        obstaclePool: new ObstaclePool(createPrng(1)),
       },
       {
+        ...STANDARD_PLAYER_STATE,
         id: "tt_p3",
         name: "Player 3",
         color: Color.Green,
         teamId: "3",
         avatar: Avatar.Apple,
-        ...STANDARD_PLAYER_STATE,
+        obstaclePool: new ObstaclePool(createPrng(2)),
       },
     ],
   },
@@ -501,12 +536,13 @@ const DEFAULT_TEAMS: NinjaTeam[] = [
     color: Color.Yellow,
     players: [
       {
+        ...STANDARD_PLAYER_STATE,
         id: "st_p1",
         name: "Player A",
         color: Color.Yellow,
         teamId: "4",
         avatar: Avatar.Cloud,
-        ...STANDARD_PLAYER_STATE,
+        obstaclePool: new ObstaclePool(createPrng(0)),
       },
     ],
   },
@@ -525,11 +561,7 @@ const NinjaRun = () => {
   const [loadingPlayers, setLoadingPlayers] = useState(true);
 
   const gameState = useRef<GameState>({
-    // Same obstacles used for all teams. team.obstacles is usually a reference to the list in the pool
     teams: [],
-    obstaclePoolsByPlayerIndex: [],
-    // Ensure we don't choose the same side for new obstacles too many times in a row
-    obstacleBag: [...OBSTACLE_BAG_DEFAULT],
     lastTick: 0,
     phase: "not_started",
     playerIdToTeamIdMap: {},
@@ -540,7 +572,7 @@ const NinjaRun = () => {
     const state = gameState.current;
 
     if (DEBUG) {
-      state.teams = structuredClone(DEFAULT_TEAMS);
+      state.teams = DEFAULT_TEAMS;
       state.playerIdToTeamIdMap = {
         hp_0sdf79: "1",
         g_n9o87as: "1",
@@ -586,7 +618,7 @@ const NinjaRun = () => {
             state: "not_started",
             speed: 0.15,
             speedUpdateAccumulator: 0,
-            players: teamPlayers.map((player) => ({
+            players: teamPlayers.map((player, index) => ({
               id: player.id,
               name: player.name,
               color: team.color,
@@ -604,6 +636,8 @@ const NinjaRun = () => {
               currentFrame: 0,
               lastFrameUpdate: Date.now(),
               startTime: null,
+              obstaclePool: new ObstaclePool(createPrng(index)),
+              obstacleBag: [...OBSTACLE_BAG_DEFAULT],
             })),
           });
         }
@@ -622,11 +656,6 @@ const NinjaRun = () => {
   const start = useCallback(() => {
     stopSound.current();
 
-    // Calculate max players across all teams to know how many obstacle pools we need
-    const maxPlayersInAnyTeam = Math.max(
-      ...gameState.current.teams.map((team) => team.players.length)
-    );
-
     gameState.current = {
       teams: gameState.current.teams.map((team) => ({
         ...team,
@@ -642,6 +671,8 @@ const NinjaRun = () => {
           y: GAME_HEIGHT * 0.6,
           vx: 0,
           score: 0,
+          obstaclePool: new ObstaclePool(createPrng(0)),
+          obstacleBag: [...OBSTACLE_BAG_DEFAULT],
           obstacles: [],
           isGameOver: false,
           currentAnimation: "run",
@@ -651,10 +682,6 @@ const NinjaRun = () => {
           lastFrameUpdate: Date.now(),
         })),
       })),
-      obstaclePoolsByPlayerIndex: Array(maxPlayersInAnyTeam)
-        .fill(null)
-        .map(() => new ObstaclePool(20)),
-      obstacleBag: [...OBSTACLE_BAG_DEFAULT],
       lastTick: 0,
       phase: "in_progress",
       playerIdToTeamIdMap: gameState.current.playerIdToTeamIdMap,
@@ -717,59 +744,27 @@ const NinjaRun = () => {
       return;
     }
 
-    // Get set of currently active player indices across all teams
-    const activePlayerIndices = new Set<number>();
     for (const team of state.teams) {
-      if (team.state === "playing") {
-        activePlayerIndices.add(team.currentPlayerIndex);
-      }
-    }
-
-    // Only update obstacle pools that are currently being used by active players
-    for (const playerIndex of activePlayerIndices) {
-      const pool = state.obstaclePoolsByPlayerIndex[playerIndex];
-      // TODO: use team speed
-      pool.updateActiveObstaclePositions(deltaTime, 0.15);
-      const activeObstacles = pool.getActiveObstacles();
-
-      if (
-        activeObstacles.length === 0 ||
-        activeObstacles[activeObstacles.length - 1].y > OBSTACLE_MIN_GAP
-      ) {
-        const x = state.obstacleBag.pop()! * (GAME_WIDTH - OBSTACLE_SIZE);
-        if (state.obstacleBag.length === 0) {
-          state.obstacleBag = shuffle([...OBSTACLE_BAG_DEFAULT]);
-        }
-
-        pool.getObstacle(x, -Math.random() * OBSTACLE_MIN_GAP * 0.6);
+      if (team.state !== "playing") {
+        continue;
       }
 
-      // Update animation frame
-      for (const obstacle of activeObstacles) {
+      const player = team.players[team.currentPlayerIndex];
+
+      // Only update obstacle positions for active, playing player in team
+      if (!player.isGameOver) {
+        player.obstaclePool.updateActiveObstaclePositions(
+          deltaTime,
+          team.speed
+        );
+      }
+
+      // Update animation frame, even if the player has died
+      for (const obstacle of player.obstaclePool.getActiveObstacles()) {
         if (obstacle.lastFrameUpdate + ANIMATIONS.bat.msPerFrame < now) {
           obstacle.currentFrame =
             (obstacle.currentFrame + 1) % ANIMATIONS.bat.frames;
           obstacle.lastFrameUpdate = now;
-        }
-      }
-    }
-
-    // Live players reference the same obstacles list to reduce memory allocations and GC pauses
-    for (const team of state.teams) {
-      const player = team.players[team.currentPlayerIndex];
-      if (team.state === "playing" && !player.isGameOver) {
-        player.obstacles =
-          state.obstaclePoolsByPlayerIndex[
-            team.currentPlayerIndex
-          ].getActiveObstacles();
-      } else {
-        // Keep animating the obstacles for the game over players
-        for (const obstacle of player.obstacles) {
-          if (obstacle.lastFrameUpdate + ANIMATIONS.bat.msPerFrame < now) {
-            obstacle.currentFrame =
-              (obstacle.currentFrame + 1) % ANIMATIONS.bat.frames;
-            obstacle.lastFrameUpdate = now;
-          }
         }
       }
     }
@@ -882,7 +877,7 @@ const NinjaRun = () => {
 
         // Check for collisions with obstacles
         let isColliding = false;
-        for (const obstacle of player.obstacles) {
+        for (const obstacle of player.obstaclePool.getActiveObstacles()) {
           const { xb, xf, yb, yt } = ANIMATIONS[player.currentAnimation].hitbox;
           const oBox = ANIMATIONS.bat.hitbox;
           if (
@@ -901,12 +896,6 @@ const NinjaRun = () => {
         }
 
         if (isColliding) {
-          // Copy a snapshot of the obstacles list
-          player.obstacles = structuredClone(
-            state.obstaclePoolsByPlayerIndex[
-              team.currentPlayerIndex
-            ].getActiveObstacles()
-          );
           player.isGameOver = true;
           player.currentAnimation = "hit";
           player.currentFrame = 0;
@@ -1035,6 +1024,9 @@ const NinjaRun = () => {
         case "KeyS":
           handleJump("blam_9dg");
           break;
+        case "KeyW":
+          handleJump("whomp_m09");
+          break;
       }
     };
 
@@ -1065,13 +1057,13 @@ const NinjaRun = () => {
           newPlayer.y = GAME_HEIGHT * 0.6;
           newPlayer.vx = 0;
           newPlayer.score = 0;
-          newPlayer.obstacles = [];
           newPlayer.isGameOver = false;
           newPlayer.currentAnimation = "run";
           newPlayer.msPerFrame = ANIMATIONS.run.msPerFrame;
           newPlayer.wall = "left";
           newPlayer.currentFrame = 3;
           newPlayer.lastFrameUpdate = Date.now();
+          // Obstacle pool should already be initialized with the correct prng seed
 
           // Clear countdown data
           team.countdownStartTime = undefined;

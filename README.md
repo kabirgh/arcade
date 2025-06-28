@@ -1,8 +1,17 @@
 # Arcade
 
-Arcade is an application to help run game nights at home that supports up to 24 players divided into 2-4 teams. Each player uses their phone as a controller, connecting via your local WiFi network.
+Arcade is an application to help you run a game night at home. Players join using their phone.
 
-![](./docs/lobby.png)
+<img src="./docs/lobby.png" alt="Lobby screen">
+
+Players get either a big red button to buzz in to answer quiz questions (questions not provided) or a joystick for the arcade games (games are provided).
+
+<table>
+  <tr>
+    <td width="50%" style="text-align: center;"><img src="./docs/buzzer-portrait.png" alt="Buzzer screen" width="50%"></td>
+    <td width="50%" style="text-align: center;"><img src="./docs/joystick-portrait.png" alt="Joystick screen" width="50%"></td>
+  </tr>
+</table>
 
 ## Table of contents
 - [Arcade](#arcade)
@@ -17,18 +26,10 @@ Arcade is an application to help run game nights at home that supports up to 24 
 
 ## Features
 
-> [!NOTE]
-> This project does not have production-grade security. I use it to host game nights for friends. You shouldn't expose this to the internet.
-
 ### Buzzer rounds
 See who can buzz in first to answer questions.
 
-<table>
-  <tr>
-    <td width="75%"><img src="./docs/buzzer-host.png" alt="Buzzer host" width="100%"></td>
-    <td width="25%"><img src="./docs/buzzer-portrait.png" alt="Buzzer portrait" width="100%"></td>
-  </tr>
-</table>
+<img src="./docs/buzzer-host.png" alt="Buzzer host">
 
 ### Multiplayer arcade games
 
@@ -36,20 +37,19 @@ See who can buzz in first to answer questions.
 
 Classic pong, but each player controls a mini-paddle.
 
-![](./docs/pong.png)
+<img src="./docs/pong.png" alt="Pong">
 
 **Boat game**
 
 Collect the most ducks before time runs out.
 
-![](./docs/boat.png)
+<img src="./docs/boat.png" alt="Boat game">
 
 **Ninja run**
 
 Avoid obstacles as the course speeds up.
 
-![](./docs/ninja.png)
-
+<img src="./docs/ninja.png" alt="Ninja run">
 
 
 ## Installation & setup
@@ -60,6 +60,9 @@ Avoid obstacles as the course speeds up.
 - A WiFi network connection, ideally one that lets you set up a static IP address for the server computer
 - A display device (TV/projector) for the main game screen
 - Mobile phones for players
+
+> [!NOTE]
+> This project does not have internet-grade security. I recommend only exposing the server to your local WiFi network.
 
 ### Instructions
 1. **Clone and install dependencies**
@@ -89,15 +92,14 @@ Avoid obstacles as the course speeds up.
 
 ## Admin controls
 
-![](./docs/admin.png)
+<img src="./docs/admin.png" alt="Admin screen">
 
-The admin panel is a web interface that allows you to navigate between screens and manage game flow. You can:
-- Navigate between screens
+The admin screen allows you to manage game flow. You can:
+- Navigate between screens on the main display
 - Reset buzzer presses
 - Track team scores
 - Start a new session, which kicks all players and resets scores
 - Make any API call to the server. The most useful are:
   - `POST /api/players/kick` - Kick a player from the game
-  - `POST /api/websocket/send-message` - Send a websocket message
-    - Set how quickly ducks appear on screen in boat game with the `GAME/DUCK_SPAWN_INTERVAL` message
-    - Add more time to the boat game timer with the `GAME/BOAT_ADD_TIME` message
+  - `POST /api/websocket/send-message` + `GAME/DUCK_SPAWN_INTERVAL` - Set how quickly ducks appear on screen in boat game
+  - `POST /api/websocket/send-message` + `GAME/BOAT_ADD_TIME` - Add more time to the boat game timer

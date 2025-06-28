@@ -32,23 +32,22 @@ See who can buzz in first to answer questions.
 <img src="./docs/buzzer-host.png" alt="Buzzer host">
 
 ### Multiplayer arcade games
-Each game lets every player get involved.
 
 **Pong**
 
-Classic pong, except each player controls a mini-paddle.
+Classic pong, except each player controls a mini-paddle using their joystick.
 
 <img src="./docs/pong.png" alt="Pong">
 
 **Boat game**
 
-Collect the most ducks before time runs out.
+Collect the most ducks before time runs out. The boat goes in the average direction of all the players' joystick movements.
 
 <img src="./docs/boat.png" alt="Boat game">
 
 **Ninja run**
 
-Avoid obstacles as the course speeds up.
+Avoid obstacles as the course speeds up. Players press the big red button to jump from one side of the screen to the other.
 
 <img src="./docs/ninja.png" alt="Ninja run">
 

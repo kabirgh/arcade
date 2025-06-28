@@ -25,9 +25,8 @@ See who can buzz in first to answer questions.
 
 <table>
   <tr>
-    <td width="78%"><img src="./docs/buzzer-host.png" alt="Buzzer host" width="100%"></td>
-    <td width="5%"></td>
-    <td width="22%"><img src="./docs/buzzer-portrait.png" alt="Buzzer portrait" width="100%"></td>
+    <td width="75%"><img src="./docs/buzzer-host.png" alt="Buzzer host" width="100%"></td>
+    <td width="25%"><img src="./docs/buzzer-portrait.png" alt="Buzzer portrait" width="100%"></td>
   </tr>
 </table>
 

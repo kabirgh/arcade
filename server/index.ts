@@ -406,7 +406,7 @@ const app = new Elysia()
 
       const newTeam = {
         id: teamId,
-        name: `Team ${teamId.slice(0, 3)}`,
+        name: `Team ${teamId.slice(6, 9)}`,
         color: teamColor,
         score: 0,
       };

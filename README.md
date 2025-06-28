@@ -1,15 +1,15 @@
 # Arcade
 
-Arcade is an application to help you run a game night at home. Players join using their phone.
+Arcade is an application to help you run a game night for up to 24 players in 2-4 teams.
 
 <img src="./docs/lobby.png" alt="Lobby screen">
 
-Players get either a big red button to buzz in to answer quiz questions (questions not provided) or a joystick for the arcade games (games are provided).
+Players use their phone to press a big red button to buzz in to answer quiz questions (questions not provided) or move a joystick for arcade games (games are provided).
 
 <table>
   <tr>
-    <td width="50%" style="text-align: center;"><img src="./docs/buzzer-portrait.png" alt="Buzzer screen" width="50%"></td>
-    <td width="50%" style="text-align: center;"><img src="./docs/joystick-portrait.png" alt="Joystick screen" width="50%"></td>
+    <td width="50%" align="center"><img src="./docs/buzzer-portrait.png" alt="Buzzer screen" width="50%"></td>
+    <td width="50%" align="center"><img src="./docs/joystick-portrait.png" alt="Joystick screen" width="50%"></td>
   </tr>
 </table>
 
@@ -32,10 +32,11 @@ See who can buzz in first to answer questions.
 <img src="./docs/buzzer-host.png" alt="Buzzer host">
 
 ### Multiplayer arcade games
+Each game lets every player get involved.
 
 **Pong**
 
-Classic pong, but each player controls a mini-paddle.
+Classic pong, except each player controls a mini-paddle.
 
 <img src="./docs/pong.png" alt="Pong">
 
@@ -84,7 +85,8 @@ Avoid obstacles as the course speeds up.
    If you're editing the code, you can start the server with `bun dev`. This starts the application with hot reloading.
 
 1. **Connect devices**
-  Display the main game on your TV at `http://{server.host}:{server.port}`. Players can join by scanning the QR code on the screen.
+
+   Display the main game on your TV at `http://{server.host}:{server.port}`, where host and port are the values from `config.ts`. Players can join by scanning the QR code on the screen.
 
 1. **Navigate between screens using the admin controls**
 

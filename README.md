@@ -2,73 +2,98 @@
 
 Arcade is an application to help run game nights at home. It supports up to 24 players divided into 2-4 teams. Each player uses their phone as a controller, connecting via your local WiFi network.
 
-TODO screenshot
+## Table of contents
+- [Arcade](#arcade)
+  - [Table of contents](#table-of-contents)
+  - [Features](#features)
+    - [Buzzer rounds](#buzzer-rounds)
+    - [Multiplayer arcade games](#multiplayer-arcade-games)
+  - [Installation \& setup](#installation--setup)
+    - [Prerequisites](#prerequisites)
+    - [Instructions](#instructions)
+  - [Admin controls](#admin-controls)
+
+## Features
+
+> [!NOTE]
+> This project does not have production-grade security. I use it to host game nights for friends. You shouldn't expose this to the internet.
 
 ### Buzzer rounds
 See who can buzz in first to answer questions.
 
-TODO video
+<div style="display: flex; flex-direction: row; gap: 10px; align-items: center; justify-content: center; width: 100%;">
+  <img src="./docs/buzzer-host.png" alt="Buzzer host" style="width: 75%;">
+  <img src="./docs/buzzer-portrait.png" alt="Buzzer portrait" style="width: 25%;">
+</div>
 
 ### Multiplayer arcade games
-Get everyone involved in multiplayer games.
 
 **Pong**
-Each player controls a mini-paddle to hit the ball.
 
-TODO video
+Classic pong, but each player controls a mini-paddle.
+
+![](./docs/pong.png)
 
 **Boat game**
 
-TODO video and rename
+Collect the most ducks before time runs out.
+
+![](./docs/boat.png)
 
 **Ninja run**
+
 Avoid obstacles as the course speeds up.
 
-TODO video
+![](./docs/ninja.png)
 
-> [!NOTE]
-> Arcade does not have production-grade security. I use this to host game nights for friends - you shouldn't expose this to the internet.
 
 
 ## Installation & setup
 
 ### Prerequisites
 - The [Bun](https://bun.sh) javascript runtime
-- A WiFi network where you have admin access to the router (for eg. your home WiFi)
 - A computer to run the server
+- A WiFi network connection, ideally one that lets you set up a static IP address for the server computer
 - A display device (TV/projector) for the main game screen
 - Mobile phones for players
 
 ### Instructions
-1. **Clone and install dependencies:**
+1. **Clone and install dependencies**
+
    ```bash
    git clone https://github.com/kabirgh/arcade.git
    cd arcade
    bun install
    ```
 
-1. **Set up configuration:**
-Update `config.ts` with your WiFi credentials and server IP address. This is used to generate QR codes that players can scan to connect to the WiFi and join the game.
+1. **Set up configuration**
 
-1. **Start the development server:**
-   ```bash
-   bun dev
-   ```
-   This starts both the server (port 3001) and frontend development server (port 5173).
+   Update `config.ts` with your WiFi credentials and server IP address. This is used to generate QR codes that players can scan to connect to the WiFi and join the game.
 
-1. **For production (compiled binary):**
-   ```bash
-   bun prod
-   ```
+1. **Start the server**
 
-1. **Connect devices:**
-   - Display the main game on your TV at `http://{server.host}:{server.port}`
-   - Players join by scanning QR code or navigating to the same URL on their phones
+   Use `bun prod` to compile and start the application.
 
-## 🎮 How to Play
+   If you're editing the code, you can start the server with `bun dev`. This starts the application with hot reloading.
 
-### Game Host Setup
-1. Open the admin panel on your main display
-2. Navigate between game modes using the admin controls
-3. Start rounds and manage game flow
-4. Keep score across your 5-round game show event
+1. **Connect devices**
+  Display the main game on your TV at `http://{server.host}:{server.port}`. Players can join by scanning the QR code on the screen.
+
+1. **Navigate between screens using the admin controls**
+
+   Open the admin panel on your main display at `http://{server.host}:{server.port}/admin` to use the admin controls.
+
+## Admin controls
+
+![](./docs/admin.png)
+
+The admin panel is a web interface that allows you to navigate between screens and manage game flow. You can:
+- Navigate between screens
+- Reset buzzer presses
+- Track team scores
+- Start a new session, which kicks all players and resets scores
+- Make any API call to the server. The most useful are:
+  - `POST /api/players/kick` - Kick a player from the game
+  - `POST /api/websocket/send-message` - Send a websocket message
+    - Set how quickly ducks appear on screen in boat game with the `GAME/DUCK_SPAWN_INTERVAL` message
+    - Add more time to the boat game timer with the `GAME/BOAT_ADD_TIME` message

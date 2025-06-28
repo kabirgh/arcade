@@ -23,10 +23,13 @@ Arcade is an application to help run game nights at home that supports up to 24 
 ### Buzzer rounds
 See who can buzz in first to answer questions.
 
-<div style="display: flex; flex-direction: row; gap: 10px; align-items: center; justify-content: center; width: 100%; padding-left: 20px; padding-right: 20px;">
-  <img src="./docs/buzzer-host.png" alt="Buzzer host" style="width: 75%;">
-  <img src="./docs/buzzer-portrait.png" alt="Buzzer portrait" style="width: 25%;">
-</div>
+<table>
+  <tr>
+    <td width="78%"><img src="./docs/buzzer-host.png" alt="Buzzer host" width="100%"></td>
+    <td width="5%"></td>
+    <td width="22%"><img src="./docs/buzzer-portrait.png" alt="Buzzer portrait" width="100%"></td>
+  </tr>
+</table>
 
 ### Multiplayer arcade games
 

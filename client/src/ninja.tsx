@@ -12,7 +12,7 @@ import useWebAudio from "./hooks/useWebAudio";
 import { apiFetch } from "./util/apiFetch";
 
 // Use dummy players. When false, calls server to get real players
-const DEBUG = false;
+const DEBUG = true;
 
 //
 // Types
@@ -231,11 +231,11 @@ const ObstacleSprite = ({ x, y, currentFrame }: Obstacle) => {
   );
 };
 
-const GameScreen = ({ team }: { team: NinjaTeam }) => {
+const GameScreen = ({ team, zoom }: { team: NinjaTeam; zoom: number }) => {
   const player = team.players[team.currentPlayerIndex];
 
   return (
-    <div style={{ margin: "24px" }}>
+    <div style={{ margin: "24px", zoom: zoom, imageRendering: "pixelated" }}>
       <div
         style={{
           width: GAME_WIDTH,
@@ -556,6 +556,10 @@ const NinjaRun = () => {
   const stopSound = useRef<() => void>(() => {});
   const [, setRenderTrigger] = useState({});
   const [loadingPlayers, setLoadingPlayers] = useState(true);
+  const [windowSize, setWindowSize] = useState({
+    width: window.innerWidth,
+    height: window.innerHeight,
+  });
 
   const gameState = useRef<GameState>({
     teams: [],
@@ -563,6 +567,30 @@ const NinjaRun = () => {
     phase: "not_started",
     playerIdToTeamIdMap: {},
   });
+
+  // Track window size changes
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowSize({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // Calculate zoom based on window size and number of teams
+  const calculateZoom = () => {
+    const numTeams = gameState.current.teams.length;
+    if (numTeams === 0) return 1;
+
+    const heightZoom = (0.75 * windowSize.height) / GAME_HEIGHT;
+    const widthZoom = (0.8 * windowSize.width) / (numTeams * GAME_WIDTH);
+
+    return Math.min(heightZoom, widthZoom);
+  };
 
   // Get teams from backend
   useEffect(() => {
@@ -1134,7 +1162,7 @@ const NinjaRun = () => {
       {passwordPrompt}
       <div className="flex">
         {gameState.current.teams.map((team, index) => (
-          <GameScreen key={index} team={team} />
+          <GameScreen key={index} team={team} zoom={calculateZoom()} />
         ))}
       </div>
       <div>

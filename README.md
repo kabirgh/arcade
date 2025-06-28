@@ -1,6 +1,8 @@
 # Arcade
 
-Arcade is an application to help run game nights at home. It supports up to 24 players divided into 2-4 teams. Each player uses their phone as a controller, connecting via your local WiFi network.
+Arcade is an application to help run game nights at home that supports up to 24 players divided into 2-4 teams. Each player uses their phone as a controller, connecting via your local WiFi network.
+
+![](./docs/lobby.png)
 
 ## Table of contents
 - [Arcade](#arcade)

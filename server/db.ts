@@ -206,6 +206,11 @@ class DB {
       new Date(createdAt).toISOString()
     );
 
+    // Reset team scores
+    for (const team of this.teams) {
+      this.updateTeamScore(team.id, 0);
+    }
+
     return { sessionId, createdAt };
   }
 

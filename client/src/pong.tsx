@@ -432,8 +432,7 @@ const isBallOutOfBounds = (ball: Ball, position: Position): boolean => {
  */
 const Quadrapong = () => {
   useListenHostNavigate();
-  // TODO: use value of isAuthenticated?
-  const { passwordPrompt } = useAdminAuth({ claimHost: true });
+  const { isAuthenticated, passwordPrompt } = useAdminAuth({ claimHost: true });
   const { subscribe } = useWebSocketContext();
   const playSound = useWebAudio();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -1396,39 +1395,50 @@ const Quadrapong = () => {
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-gray-950">
       {passwordPrompt}
-      {/* Game Canvas */}
-      <canvas ref={canvasRef} width={CANVAS_SIZE} height={CANVAS_SIZE} />
+      {!isAuthenticated && (
+        <div className="flex flex-col items-center justify-center w-full h-full">
+          <h1 className="text-4xl font-bold text-white">Access denied</h1>
+        </div>
+      )}
+      {isAuthenticated && (
+        <>
+          {/* Game Canvas */}
+          <canvas ref={canvasRef} width={CANVAS_SIZE} height={CANVAS_SIZE} />
 
-      {/* Game Controls */}
-      <div
-        className="flex flex-row items-center justify-center"
-        style={{
-          visibility:
-            stateRef.current.phase === "in_progress" ? "hidden" : "visible",
-        }}
-      >
-        {/* Lives Input */}
-        <input
-          className="w-12 mx-4 py-0.5 px-2 bg-white focus:outline-none"
-          type="number"
-          placeholder="lives"
-          value={startingLives}
-          min={1}
-          max={9}
-          onChange={(e) => {
-            setStartingLives(e.target.valueAsNumber);
-          }}
-        />
+          {/* Game Controls */}
+          <div
+            className="flex flex-row items-center justify-center"
+            style={{
+              visibility:
+                stateRef.current.phase === "in_progress" ? "hidden" : "visible",
+            }}
+          >
+            {/* Lives Input */}
+            <input
+              className="w-12 mx-4 py-0.5 px-2 bg-white focus:outline-none"
+              type="number"
+              placeholder="lives"
+              value={startingLives}
+              min={1}
+              max={9}
+              onChange={(e) => {
+                setStartingLives(e.target.valueAsNumber);
+              }}
+            />
 
-        {/* Start/Play Again Button */}
-        <button
-          className="bg-gray-200 text-black text-sm px-3 py-1"
-          disabled={loading}
-          onClick={() => start()}
-        >
-          {stateRef.current.phase === "not_started" ? "Start" : "Play again"}
-        </button>
-      </div>
+            {/* Start/Play Again Button */}
+            <button
+              className="bg-gray-200 text-black text-sm px-3 py-1"
+              disabled={loading}
+              onClick={() => start()}
+            >
+              {stateRef.current.phase === "not_started"
+                ? "Start"
+                : "Play again"}
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 };

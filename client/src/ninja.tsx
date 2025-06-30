@@ -551,7 +551,7 @@ const DEFAULT_TEAMS: NinjaTeam[] = [
 //
 const NinjaRun = () => {
   useListenHostNavigate();
-  const { passwordPrompt } = useAdminAuth({ claimHost: true });
+  const { isAuthenticated, passwordPrompt } = useAdminAuth({ claimHost: true });
   const { subscribe } = useWebSocketContext();
   const playSound = useWebAudio();
   const stopSound = useRef<() => void>(() => {});
@@ -1161,24 +1161,37 @@ const NinjaRun = () => {
         bg-[url('/images/ninja/darkclouds.png')] bg-no-repeat bg-cover bg-center"
     >
       {passwordPrompt}
-      <div className="flex">
-        {gameState.current.teams.map((team, index) => (
-          <GameScreen key={index} team={team} zoom={calculateZoom()} />
-        ))}
-      </div>
-      <div>
-        <button
-          className="text-sm px-3 py-1 mb-0 mt-2 bg-white text-black"
-          style={{
-            visibility:
-              gameState.current.phase === "in_progress" ? "hidden" : "visible",
-          }}
-          disabled={loadingPlayers}
-          onClick={() => start()}
-        >
-          {gameState.current.phase === "not_started" ? "Start" : "Play again"}
-        </button>
-      </div>
+      {!isAuthenticated && (
+        <div className="flex flex-col items-center justify-center w-full h-full">
+          <h1 className="text-4xl font-bold text-white">Access denied</h1>
+        </div>
+      )}
+      {isAuthenticated && (
+        <>
+          <div className="flex">
+            {gameState.current.teams.map((team, index) => (
+              <GameScreen key={index} team={team} zoom={calculateZoom()} />
+            ))}
+          </div>
+          <div>
+            <button
+              className="text-sm px-3 py-1 mb-0 mt-2 bg-white text-black"
+              style={{
+                visibility:
+                  gameState.current.phase === "in_progress"
+                    ? "hidden"
+                    : "visible",
+              }}
+              disabled={loadingPlayers}
+              onClick={() => start()}
+            >
+              {gameState.current.phase === "not_started"
+                ? "Start"
+                : "Play again"}
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 };

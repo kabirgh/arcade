@@ -418,7 +418,7 @@ const formatTime = (milliseconds: number): string => {
  */
 const BoatGame = () => {
   useListenHostNavigate();
-  const { passwordPrompt } = useAdminAuth({ claimHost: true });
+  const { isAuthenticated, passwordPrompt } = useAdminAuth({ claimHost: true });
   const { subscribe } = useWebSocketContext();
   const playSound = useWebAudio();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -1366,152 +1366,163 @@ const BoatGame = () => {
       }}
     >
       {passwordPrompt}
+      {!isAuthenticated && (
+        <div className="flex flex-col items-center justify-center w-full h-full col-span-3">
+          <h1 className="text-4xl font-bold text-white">Access denied</h1>
+        </div>
+      )}
+      {isAuthenticated && (
+        <>
+          {/* First column - empty */}
+          <div></div>
 
-      {/* First column - empty */}
-      <div></div>
-
-      {/* Second column - Game Canvas */}
-      <div className="flex items-center justify-center w-full">
-        <canvas
-          ref={canvasRef}
-          className="rounded-lg"
-          style={{
-            aspectRatio: `${CANVAS_WIDTH}/${CANVAS_HEIGHT}`,
-            width: "min(100%, 95vh * 1.5)", // Take most of viewport, respecting aspect ratio
-            height: "auto",
-          }}
-        />
-      </div>
-
-      {/* Third column - game info and controls */}
-      <div className="flex flex-col justify-center p-4">
-        <div className="bg-black/80 rounded-lg p-4 flex flex-col gap-4">
-          {/* Game duration / time */}
-          <div className="text-center pb-4">
-            {stateRef.current.phase === "in_progress" ||
-            stateRef.current.phase === "paused" ? (
-              <div>
-                <div className="text-white text-xs font-semibold mb-1">
-                  {stateRef.current.phase === "paused"
-                    ? "PAUSED"
-                    : "Time remaining"}
-                </div>
-                <div className="text-white text-xl font-bold">
-                  {formatTime(gameDuration - stateRef.current.currentTime)}
-                </div>
-              </div>
-            ) : (
-              <div>
-                <label className="text-white text-sm font-semibold block mb-2">
-                  Game duration
-                </label>
-                <select
-                  className="bg-gray-700 text-white text-xs px-3 py-1 rounded w-full"
-                  value={gameDuration}
-                  onChange={(e) => setGameDuration(parseInt(e.target.value))}
-                >
-                  <option value={60 * 1000}>1 minute</option>
-                  <option value={2 * 60 * 1000}>2 minutes</option>
-                  <option value={3 * 60 * 1000}>3 minutes</option>
-                  <option value={5 * 60 * 1000}>5 minutes</option>
-                  <option value={10 * 60 * 1000}>10 minutes</option>
-                </select>
-              </div>
-            )}
+          {/* Second column - Game Canvas */}
+          <div className="flex items-center justify-center w-full">
+            <canvas
+              ref={canvasRef}
+              className="rounded-lg"
+              style={{
+                aspectRatio: `${CANVAS_WIDTH}/${CANVAS_HEIGHT}`,
+                width: "min(100%, 95vh * 1.5)", // Take most of viewport, respecting aspect ratio
+                height: "auto",
+              }}
+            />
           </div>
 
-          {/* Scores */}
-          <div className="text-center border-t border-gray-600 pt-8">
-            <h2 className="text-lg font-bold text-white mb-3">Scores</h2>
-            <div className="flex flex-col gap-2">
-              {stateRef.current.teams
-                .filter((t) => t.type === "active")
-                .slice(0, numActiveTeams)
-                .map((team) => (
-                  <div key={team.id} className="text-center">
-                    <div
-                      className="text-sm font-bold"
-                      style={{ color: team.color }}
-                    >
-                      {team.name}
+          {/* Third column - game info and controls */}
+          <div className="flex flex-col justify-center p-4">
+            <div className="bg-black/80 rounded-lg p-4 flex flex-col gap-4">
+              {/* Game duration / time */}
+              <div className="text-center pb-4">
+                {stateRef.current.phase === "in_progress" ||
+                stateRef.current.phase === "paused" ? (
+                  <div>
+                    <div className="text-white text-xs font-semibold mb-1">
+                      {stateRef.current.phase === "paused"
+                        ? "PAUSED"
+                        : "Time remaining"}
                     </div>
                     <div className="text-white text-xl font-bold">
-                      {team.score}
+                      {formatTime(gameDuration - stateRef.current.currentTime)}
                     </div>
                   </div>
-                ))}
-            </div>
-          </div>
-
-          {/* Start/Pause/Resume button */}
-          <div className="border-t border-gray-600 pt-8">
-            <button
-              className="bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2 rounded disabled:opacity-50 whitespace-nowrap cursor-pointer w-full"
-              disabled={loading}
-              onClick={() => {
-                if (
-                  stateRef.current.phase === "not_started" ||
-                  stateRef.current.phase === "game_over"
-                ) {
-                  start();
-                } else if (
-                  stateRef.current.phase === "in_progress" ||
-                  stateRef.current.phase === "paused"
-                ) {
-                  pauseResume();
-                }
-              }}
-            >
-              {stateRef.current.phase === "not_started"
-                ? "Start game"
-                : stateRef.current.phase === "in_progress"
-                ? "Pause"
-                : stateRef.current.phase === "paused"
-                ? "Resume"
-                : "Play again"}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Game Over Overlay */}
-      {stateRef.current.phase === "game_over" && stateRef.current.winner && (
-        <div
-          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 cursor-pointer"
-          onClick={() => {
-            stateRef.current.phase = "not_started";
-            setRenderTrigger({});
-          }}
-        >
-          <div className="bg-gray-900 p-8 rounded-lg text-center">
-            <h1
-              className="text-4xl font-bold mb-4"
-              style={{ color: stateRef.current.winner.color }}
-            >
-              {stateRef.current.winner.name} wins!
-            </h1>
-            <div className="text-white text-lg mb-4">
-              <h3 className="font-semibold mb-2">Final Standings:</h3>
-              {stateRef.current.teams
-                .filter((t) => t.type === "active")
-                .sort((a, b) => b.score - a.score)
-                .map((team, index) => (
-                  <div
-                    key={team.id}
-                    className="flex justify-between items-center px-4 py-1"
-                  >
-                    <span
-                      style={{ color: team.color }}
-                      className="font-semibold"
+                ) : (
+                  <div>
+                    <label className="text-white text-sm font-semibold block mb-2">
+                      Game duration
+                    </label>
+                    <select
+                      className="bg-gray-700 text-white text-xs px-3 py-1 rounded w-full"
+                      value={gameDuration}
+                      onChange={(e) =>
+                        setGameDuration(parseInt(e.target.value))
+                      }
                     >
-                      #{index + 1} {team.name}
-                    </span>
-                    <span>{team.score} ducks</span>
+                      <option value={60 * 1000}>1 minute</option>
+                      <option value={2 * 60 * 1000}>2 minutes</option>
+                      <option value={3 * 60 * 1000}>3 minutes</option>
+                      <option value={5 * 60 * 1000}>5 minutes</option>
+                      <option value={10 * 60 * 1000}>10 minutes</option>
+                    </select>
                   </div>
-                ))}
+                )}
+              </div>
+
+              {/* Scores */}
+              <div className="text-center border-t border-gray-600 pt-8">
+                <h2 className="text-lg font-bold text-white mb-3">Scores</h2>
+                <div className="flex flex-col gap-2">
+                  {stateRef.current.teams
+                    .filter((t) => t.type === "active")
+                    .slice(0, numActiveTeams)
+                    .map((team) => (
+                      <div key={team.id} className="text-center">
+                        <div
+                          className="text-sm font-bold"
+                          style={{ color: team.color }}
+                        >
+                          {team.name}
+                        </div>
+                        <div className="text-white text-xl font-bold">
+                          {team.score}
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+
+              {/* Start/Pause/Resume button */}
+              <div className="border-t border-gray-600 pt-8">
+                <button
+                  className="bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2 rounded disabled:opacity-50 whitespace-nowrap cursor-pointer w-full"
+                  disabled={loading}
+                  onClick={() => {
+                    if (
+                      stateRef.current.phase === "not_started" ||
+                      stateRef.current.phase === "game_over"
+                    ) {
+                      start();
+                    } else if (
+                      stateRef.current.phase === "in_progress" ||
+                      stateRef.current.phase === "paused"
+                    ) {
+                      pauseResume();
+                    }
+                  }}
+                >
+                  {stateRef.current.phase === "not_started"
+                    ? "Start game"
+                    : stateRef.current.phase === "in_progress"
+                    ? "Pause"
+                    : stateRef.current.phase === "paused"
+                    ? "Resume"
+                    : "Play again"}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+
+          {/* Game Over Overlay */}
+          {stateRef.current.phase === "game_over" &&
+            stateRef.current.winner && (
+              <div
+                className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 cursor-pointer"
+                onClick={() => {
+                  stateRef.current.phase = "not_started";
+                  setRenderTrigger({});
+                }}
+              >
+                <div className="bg-gray-900 p-8 rounded-lg text-center">
+                  <h1
+                    className="text-4xl font-bold mb-4"
+                    style={{ color: stateRef.current.winner.color }}
+                  >
+                    {stateRef.current.winner.name} wins!
+                  </h1>
+                  <div className="text-white text-lg mb-4">
+                    <h3 className="font-semibold mb-2">Final Standings:</h3>
+                    {stateRef.current.teams
+                      .filter((t) => t.type === "active")
+                      .sort((a, b) => b.score - a.score)
+                      .map((team, index) => (
+                        <div
+                          key={team.id}
+                          className="flex justify-between items-center px-4 py-1"
+                        >
+                          <span
+                            style={{ color: team.color }}
+                            className="font-semibold"
+                          >
+                            #{index + 1} {team.name}
+                          </span>
+                          <span>{team.score} ducks</span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              </div>
+            )}
+        </>
       )}
     </div>
   );

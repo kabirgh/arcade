@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import config from "../../config.ts";
 import { APIRoute } from "../../shared/types/api/schema";
 import type { WebSocketMessage } from "../../shared/types/api/websocket";
 import { Avatar, Color, type Player } from "../../shared/types/domain/player";
@@ -11,8 +12,8 @@ import { useListenHostNavigate } from "./hooks/useListenHostNavigate";
 import useWebAudio from "./hooks/useWebAudio";
 import { apiFetch } from "./util/apiFetch";
 
-// Use dummy players. When false, calls server to get real players
-const DEBUG = true;
+// Always false in production, otherwise takes the value from config
+const DEBUG = process.env.NODE_ENV === "production" ? false : config.gameDebug;
 
 //
 // Types

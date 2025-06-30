@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import config from "../../config.ts";
 import { APIRoute } from "../../shared/types/api/schema";
 import type { WebSocketMessage } from "../../shared/types/api/websocket";
 import { Avatar, Color } from "../../shared/types/domain/player";
@@ -10,7 +11,8 @@ import { useListenHostNavigate } from "./hooks/useListenHostNavigate";
 import useWebAudio from "./hooks/useWebAudio";
 import { apiFetch } from "./util/apiFetch";
 
-const DEBUG = false;
+// Always false in production, otherwise takes the value from config
+const DEBUG = process.env.NODE_ENV === "production" ? false : config.gameDebug;
 
 // ============================================================================
 // TYPES
@@ -445,10 +447,7 @@ const BoatGame = () => {
   // Load images
   const loadImages = useCallback(() => {
     const imagePaths = [
-      "/boat/water.png",
-      "/boat/water32.png",
       "/boat/water48.png",
-      "/boat/water64.png",
       "/boat/duck.png",
       "/boat/rock_1.png",
       "/boat/rock_1_moss.png",
@@ -748,7 +747,7 @@ const BoatGame = () => {
         }
       }
     };
-  }, []); // Rerun if game phase changes to ensure controls are active only during "in_progress"
+  }, []);
 
   // =================== COLLISION & MOVEMENT FUNCTIONS ===================
   const handleBoatDuckCollision = useCallback(() => {

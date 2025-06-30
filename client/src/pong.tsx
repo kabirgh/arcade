@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import config from "../../config.ts";
 import { APIRoute } from "../../shared/types/api/schema";
 import type { WebSocketMessage } from "../../shared/types/api/websocket";
 import { Avatar, Color } from "../../shared/types/domain/player";
@@ -11,7 +12,8 @@ import { useListenHostNavigate } from "./hooks/useListenHostNavigate";
 import useWebAudio from "./hooks/useWebAudio";
 import { apiFetch } from "./util/apiFetch";
 
-const DEBUG = false;
+// Always false in production, otherwise takes the value from config
+const DEBUG = process.env.NODE_ENV === "production" ? false : config.gameDebug;
 
 // ============================================================================
 // TYPES

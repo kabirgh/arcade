@@ -8,7 +8,7 @@ Players use their phone to press a big red button to buzz in to answer quiz ques
 
 <table>
   <tr>
-    <td width="33%" align="center"><img src="./docs/joystick-portrait.png" alt="Joystick screen" width="80%"></td>
+    <td width="33%" align="center"><img src="./docs/join-portrait.png" alt="Join screen" width="80%"></td>
     <td width="33%" align="center"><img src="./docs/buzzer-portrait.png" alt="Buzzer screen" width="80%"></td>
     <td width="33%" align="center"><img src="./docs/joystick-portrait.png" alt="Joystick screen" width="80%"></td>
   </tr>

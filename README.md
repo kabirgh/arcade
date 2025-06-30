@@ -48,7 +48,7 @@ Collect the most ducks before time runs out. The boat goes in the average direct
 
 **Ninja run**
 
-Avoid obstacles as the course speeds up. Players press the big red button to jump from one side of the screen to the other.
+Avoid obstacles as the course speeds up. Players press the big red button to jump from one side of the screen to the other. After one player dies to an obstacle, the next player on the team starts.
 
 <img src="./docs/ninja.png" alt="Ninja run">
 

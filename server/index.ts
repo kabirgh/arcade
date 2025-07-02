@@ -25,12 +25,13 @@ import {
   handleCodenamesState,
 } from "./codenames";
 import DB from "./db";
+import { logError, logInfo } from "./utils";
 
 const db = new DB();
 
 function sendHostMessage(message: WebSocketMessage): void {
   if (!db.hostWs) {
-    console.error("No host ws found");
+    logError("No host ws found");
     return;
   }
   db.hostWs.send(JSON.stringify(message));
@@ -49,18 +50,19 @@ function broadcastAllPlayers(): PlayerListAllMessage {
     messageType: MessageType.LIST,
     payload: db.players,
   };
-  console.log(
+  logInfo(
     "Broadcasting player list",
     message.payload.map((p) => p.name)
   );
   broadcast(message);
   return message;
+  console.log();
 }
 
 function kickPlayer(wsId: string): string {
   const entry = db.wsPlayerMap.get(wsId);
   if (!entry || !entry.player || !entry.ws) {
-    console.error("Entry/player/ws not found:", wsId);
+    logError("Entry/player/ws not found:", wsId);
     return "";
   }
   // Emit a message to the client to clear localstorage
@@ -84,7 +86,7 @@ const handleWebSocketMessage = (ws: ElysiaWS, message: WebSocketMessage) => {
     case Channel.ADMIN:
       switch (message.messageType) {
         case MessageType.CLAIM_HOST:
-          console.log("Claiming host:", ws.id);
+          logInfo("Claiming host:", ws.id);
           db.hostWs = ws;
           break;
         case MessageType.HOST_NAVIGATE:
@@ -98,7 +100,7 @@ const handleWebSocketMessage = (ws: ElysiaWS, message: WebSocketMessage) => {
       break;
 
     case Channel.PLAYER:
-      console.log("Received player message:", message);
+      logInfo("Received player message:", message);
       switch (message.messageType) {
         case MessageType.JOIN: {
           if (db.kickedPlayerIds.has(message.payload.id)) {
@@ -205,11 +207,11 @@ const app = new Elysia()
       handleWebSocketMessage(ws, message);
     },
     open(ws) {
-      console.log("Client connected:", ws.id);
+      logInfo("Client connected:", ws.id);
       db.wsPlayerMap.set(ws.id, { ws, player: null });
     },
     close(ws) {
-      console.log("Client disconnected:", ws.id);
+      logInfo("Client disconnected:", ws.id);
       // Broadcast deletions after a while. This helps with:
       // 1. Player 1 joins, temporarily disconnects because their phone is off
       // 2. On the join screen, player 1's avatar should not be available unless they meant to disconnect
@@ -624,6 +626,6 @@ if (process.env.NODE_ENV === "production") {
 
 app.listen(config.server.port);
 
-console.log(
+logInfo(
   `🦊 Elysia is running at http://${app.server?.hostname}:${app.server?.port}`
 );

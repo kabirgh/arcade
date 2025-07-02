@@ -110,7 +110,7 @@ const PADDLE_OFFSET = (WALL_OFFSET + WALL_THICKNESS + 4) * SCALE_FACTOR;
 const PADDLE_STOP = (WALL_OFFSET + WALL_THICKNESS + 4) * SCALE_FACTOR; // Let the player stop 4 scaled pixels from the wall
 
 // Avatar dimensions
-const AVATAR_SIZE = 24 * SCALE_FACTOR;
+const AVATAR_SIZE = 28 * SCALE_FACTOR;
 
 // Ball properties
 const BALL_SIZE = 10 * SCALE_FACTOR;

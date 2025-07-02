@@ -102,11 +102,11 @@ const PADDLE_THICKNESS = 8 * SCALE_FACTOR;
 
 // Wall dimensions and positioning
 const WALL_THICKNESS = PADDLE_THICKNESS;
-const WALL_LENGTH = 80 * SCALE_FACTOR;
+const WALL_LENGTH = 50 * SCALE_FACTOR;
 const WALL_OFFSET = (SCORE_LENGTH + 4) * SCALE_FACTOR;
 
 // Paddle positioning
-const PADDLE_OFFSET = (WALL_OFFSET + WALL_THICKNESS + 8) * SCALE_FACTOR;
+const PADDLE_OFFSET = (WALL_OFFSET + WALL_THICKNESS + 4) * SCALE_FACTOR;
 const PADDLE_STOP = (WALL_OFFSET + WALL_THICKNESS + 4) * SCALE_FACTOR; // Let the player stop 4 scaled pixels from the wall
 
 // Avatar dimensions
@@ -123,13 +123,13 @@ const COLLISION_EXTENSION = 1000 * SCALE_FACTOR; // Helps prevent tunneling at h
 // Unscaled constants
 const STARTING_LIVES = 2;
 const SPEED_MULTIPLIER = 1.1;
-const MAX_SPEED = 4 * INITIAL_BALL_SPEED;
+const MAX_SPEED = 5 * INITIAL_BALL_SPEED;
 
 // ============================================================================
 // CONSTANTS - GAME DATA
 // ============================================================================
 
-const POSITIONS: Array<Position> = ["bottom", "top", "right", "left"] as const;
+const POSITIONS: Array<Position> = ["right", "left", "bottom", "top"] as const;
 
 const POSITION_TO_DEFAULT_XY: Record<Position, { x: number; y: number }> = {
   top: { x: CANVAS_SIZE / 2 - PADDLE_LENGTH / 2, y: 0 + PADDLE_OFFSET },
@@ -558,11 +558,6 @@ const Quadrapong = () => {
     apiFetch(APIRoute.ListTeams)
       .then(({ teams }) => {
         state.teams = [];
-        const unusedColors = ["padding1", "padding2"].concat(
-          DEFAULT_TEAMS.map((t) => t.color).filter(
-            (c) => !teams.some((t) => t.color === c)
-          )
-        );
 
         // Assign teams to positions, fill empty slots with dummy teams
         for (let i = 0; i < DEFAULT_TEAMS.length; i++) {
@@ -577,11 +572,10 @@ const Quadrapong = () => {
               position: POSITIONS[i],
             });
           } else {
-            // Create dummy team with wall
             state.teams.push({
               id: DEFAULT_TEAMS[i].id,
               name: DEFAULT_TEAMS[i].name,
-              color: unusedColors[i],
+              color: "#ffffff",
               lives: 0,
               type: "dummy",
               position: POSITIONS[i],

@@ -119,7 +119,7 @@ const ROCK_BASE_SIZES = {
 };
 
 // Game objects configuration
-const MAX_DUCKS = 16;
+const STARTING_DUCKS = 16;
 const NUM_ROCKS = 15;
 const MIN_SPAWN_DISTANCE = 100; // Minimum distance from boats when spawning objects
 
@@ -286,17 +286,17 @@ const generateDucks = (state: State): Duck[] => {
   ];
 
   // Generate all ducks randomly and evenly spread across the map
-  for (let i = 0; i < MAX_DUCKS; i++) {
+  for (let i = 0; i < STARTING_DUCKS; i++) {
     const pos = generateDuckPosition(existingPositions, rocks);
     ducks.push({
-      id: i,
+      id: i * 10,
       x: pos.x,
       y: pos.y,
       collected: false,
     });
     existingPositions.push(pos);
   }
-  state.latestDuckId = MAX_DUCKS - 1;
+  state.latestDuckId = (STARTING_DUCKS - 1) * 10;
 
   return ducks;
 };
@@ -315,7 +315,7 @@ const spawnNewDuck = (state: State): void => {
   ];
 
   const pos = generateDuckPosition(existingPositions, rocks);
-  const newDuckId = state.latestDuckId + 1;
+  const newDuckId = state.latestDuckId + 10;
   state.latestDuckId = newDuckId;
 
   ducks.push({
@@ -1369,6 +1369,7 @@ const BoatGame = () => {
     });
 
     stateRef.current = {
+      ...state,
       lastTick: 0,
       phase: "in_progress",
       teams: resetTeams,
@@ -1381,7 +1382,6 @@ const BoatGame = () => {
       lastDuckSpawnTime: Date.now(),
       duckSpawnInterval: state.duckSpawnInterval, // Preserve current interval
       pausedTime: 0,
-      latestDuckId: 0,
     };
 
     // Map might have changed → rebuild static layer

@@ -144,7 +144,7 @@ export default function JoinScreen() {
 
   // If the selected avatar is taken by another player, deselect it.
   useEffect(() => {
-    if (selectedAvatar === null) return; // No avatar selected, nothing to do
+    if (sessionPlayer !== null || selectedAvatar === null) return; // Skip after joining
 
     const avatarIsTakenByOther = existingPlayers.some(
       (player) => player.avatar === selectedAvatar
@@ -154,7 +154,7 @@ export default function JoinScreen() {
       console.log("Avatar is taken by other:", avatarIsTakenByOther);
       setSelectedAvatar(null);
     }
-  }, [existingPlayers, selectedAvatar]);
+  }, [existingPlayers, selectedAvatar, sessionPlayer]);
 
   // Enable join button when name, team color, and avatar are selected and there are no errors
   useEffect(() => {
@@ -173,6 +173,9 @@ export default function JoinScreen() {
 
   // Validate playerName against existingPlayers
   useEffect(() => {
+    // Skip validation once the player has already joined to avoid a brief flash of "invalid"
+    if (sessionPlayer !== null) return;
+
     if (playerName.trim().length === 0) {
       setNameError(null); // No error if name is empty
       return;
@@ -189,7 +192,7 @@ export default function JoinScreen() {
       // Name not found in existingPlayers
       setNameError(null);
     }
-  }, [playerName, existingPlayers]);
+  }, [playerName, existingPlayers, sessionPlayer]);
 
   const handleAvatarSelect = (avatar: Avatar) => {
     // If this avatar is already taken, don't select it

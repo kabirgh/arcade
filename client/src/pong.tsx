@@ -102,7 +102,7 @@ const PADDLE_THICKNESS = 8 * SCALE_FACTOR;
 
 // Wall dimensions and positioning
 const WALL_THICKNESS = PADDLE_THICKNESS;
-const WALL_LENGTH = 50 * SCALE_FACTOR;
+const WALL_LENGTH = 80 * SCALE_FACTOR;
 const WALL_OFFSET = (SCORE_LENGTH + 4) * SCALE_FACTOR;
 
 // Paddle positioning

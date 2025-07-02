@@ -423,11 +423,13 @@ const BoatGame = () => {
   const playSound = useWebAudio();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const imagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
-  const [loading, setLoading] = useState(true);
+  const [imagesLoading, setImagesLoading] = useState(true);
   const [numActiveTeams, setNumActiveTeams] = useState(0);
   const [, setRenderTrigger] = useState({});
   const [gameDuration, setGameDuration] = useState(DEFAULT_GAME_DURATION);
-  const hasStartedGameRef = useRef(false); // Track if we've started a game before
+  const hasStartedGameRef = useRef(false);
+  // Off-screen canvas that stores static scenery (water, borders, rocks)
+  const offscreenCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const stateRef = useRef<State>({
     lastTick: 0,
     winner: null,
@@ -480,14 +482,14 @@ const BoatGame = () => {
         imagesRef.current.set(path, img);
         loadedCount++;
         if (loadedCount === totalImages) {
-          setLoading(false);
+          setImagesLoading(false);
         }
       };
       img.onerror = () => {
         console.error(`Failed to load image: ${path}`);
         loadedCount++;
         if (loadedCount === totalImages) {
-          setLoading(false);
+          setImagesLoading(false);
         }
       };
     });
@@ -994,9 +996,146 @@ const BoatGame = () => {
     };
   }, [updateCanvasSize]);
 
+  // =================== RENDERING HELPERS ===================
+  /**
+   * Build (or rebuild) the off-screen canvas that contains all static graphics
+   * that never change during gameplay: background water pattern, land borders
+   * and rocks.
+   */
+  const buildStaticLayer = useCallback(() => {
+    if (imagesLoading) return;
+
+    // Respect the current device-pixel-ratio so the cached bitmap remains sharp
+    const dpr = window.devicePixelRatio || 1;
+
+    const off = document.createElement("canvas");
+    off.width = CANVAS_WIDTH * dpr;
+    off.height = CANVAS_HEIGHT * dpr;
+    const offCtx = off.getContext("2d")!;
+
+    // Work in logical game units (1200×800) regardless of DPR
+    offCtx.scale(dpr, dpr);
+
+    // === Background water ===
+    const waterImg = imagesRef.current.get("/boat/water48.png");
+    if (waterImg) {
+      const pattern = offCtx.createPattern(waterImg, "repeat");
+      if (pattern) {
+        offCtx.fillStyle = pattern;
+        offCtx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      }
+    } else {
+      offCtx.fillStyle = "#4A90E2";
+      offCtx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+    }
+
+    // === Land borders ===
+    const leftImg = imagesRef.current.get("/boat/landborder_left_1.png")!;
+    const rightImg = imagesRef.current.get("/boat/landborder_right_1.png")!;
+    const topImg = imagesRef.current.get("/boat/landborder_top_1.png")!;
+    const bottomImg = imagesRef.current.get("/boat/landborder_bottom_1.png")!;
+    // Left border
+    for (
+      let y = BORDER_TILE_SIZE;
+      y < CANVAS_HEIGHT - BORDER_TILE_SIZE;
+      y += BORDER_TILE_SIZE
+    ) {
+      offCtx.drawImage(leftImg, 0, y, BORDER_TILE_SIZE, BORDER_TILE_SIZE);
+    }
+    // Right border
+    for (let y = 0; y < CANVAS_HEIGHT; y += BORDER_TILE_SIZE) {
+      offCtx.drawImage(
+        rightImg,
+        CANVAS_WIDTH - BORDER_TILE_SIZE,
+        y,
+        BORDER_TILE_SIZE,
+        BORDER_TILE_SIZE
+      );
+    }
+    // Top border
+    offCtx.drawImage(
+      imagesRef.current.get("/boat/landborder_topleft.png")!,
+      0,
+      0,
+      BORDER_TILE_SIZE,
+      BORDER_TILE_SIZE
+    );
+    for (
+      let x = BORDER_TILE_SIZE;
+      x < CANVAS_WIDTH - BORDER_TILE_SIZE;
+      x += BORDER_TILE_SIZE
+    ) {
+      offCtx.drawImage(topImg, x, 0, BORDER_TILE_SIZE, BORDER_TILE_SIZE);
+    }
+    offCtx.drawImage(
+      imagesRef.current.get("/boat/landborder_topright.png")!,
+      CANVAS_WIDTH - BORDER_TILE_SIZE,
+      0,
+      BORDER_TILE_SIZE,
+      BORDER_TILE_SIZE
+    );
+    // Bottom border
+    offCtx.drawImage(
+      imagesRef.current.get("/boat/landborder_bottomleft.png")!,
+      0,
+      CANVAS_HEIGHT - BORDER_TILE_SIZE,
+      BORDER_TILE_SIZE,
+      BORDER_TILE_SIZE
+    );
+    for (
+      let x = BORDER_TILE_SIZE;
+      x < CANVAS_WIDTH - BORDER_TILE_SIZE;
+      x += BORDER_TILE_SIZE
+    ) {
+      offCtx.drawImage(
+        bottomImg,
+        x,
+        CANVAS_HEIGHT - BORDER_TILE_SIZE,
+        BORDER_TILE_SIZE,
+        BORDER_TILE_SIZE
+      );
+    }
+    offCtx.drawImage(
+      imagesRef.current.get("/boat/landborder_bottomright.png")!,
+      CANVAS_WIDTH - BORDER_TILE_SIZE,
+      CANVAS_HEIGHT - BORDER_TILE_SIZE,
+      BORDER_TILE_SIZE,
+      BORDER_TILE_SIZE
+    );
+
+    // === Rocks ===
+    for (const rock of stateRef.current.rocks) {
+      const imagePath = `/boat/${rock.variant}${
+        rock.hasMoss ? "_moss" : ""
+      }.png`;
+      const rockImg = imagesRef.current.get(imagePath);
+      if (!rockImg) continue;
+      const size = rock.radius * 2;
+      offCtx.save();
+      offCtx.translate(rock.x, rock.y);
+      offCtx.rotate(rock.rotation);
+      offCtx.drawImage(rockImg, -rock.radius, -rock.radius, size, size);
+      offCtx.restore();
+    }
+
+    offscreenCanvasRef.current = off;
+  }, [imagesLoading]);
+
+  // Rebuild static layer when images finish loading OR when the map changes
+  useEffect(() => {
+    if (!imagesLoading) {
+      buildStaticLayer();
+    }
+  }, [
+    imagesLoading,
+    numActiveTeams,
+    stateRef.current.rocks.length,
+    buildStaticLayer,
+  ]);
+
   // =================== MAIN GAME LOOP ===================
   useEffect(() => {
-    if (canvasRef.current === null || loading) {
+    if (canvasRef.current === null || imagesLoading) {
       return;
     }
 
@@ -1048,7 +1187,7 @@ const BoatGame = () => {
     };
 
     const render = () => {
-      const { teams, ducks, rocks } = stateRef.current;
+      const { teams, ducks } = stateRef.current;
       const { scaleX, scaleY } = canvasScaleRef.current;
       const dpr = window.devicePixelRatio || 1;
 
@@ -1060,9 +1199,21 @@ const BoatGame = () => {
       // Clear with the virtual canvas dimensions
       ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-      drawBackground(ctx);
-      drawLandBorders(ctx);
-      drawRocks(ctx, rocks);
+      // Draw pre-rendered static layer if available, otherwise show imagesLoading text
+      if (offscreenCanvasRef.current) {
+        // The cached bitmap is in device pixels; draw it scaled back to logical units
+        ctx.drawImage(
+          offscreenCanvasRef.current,
+          0,
+          0,
+          CANVAS_WIDTH,
+          CANVAS_HEIGHT
+        );
+      } else {
+        ctx.fillStyle = "#4A90E2";
+        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      }
+
       drawDucks(ctx, ducks);
       drawBoats(ctx, teams);
 
@@ -1070,123 +1221,6 @@ const BoatGame = () => {
     };
 
     // Render helper functions
-    const drawBackground = (ctx: CanvasRenderingContext2D) => {
-      const waterImg = imagesRef.current.get("/boat/water48.png");
-      if (waterImg) {
-        const pattern = ctx.createPattern(waterImg, "repeat");
-        if (pattern) {
-          ctx.fillStyle = pattern;
-          ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-        }
-      } else {
-        ctx.fillStyle = "#4A90E2";
-        ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-      }
-    };
-
-    const drawLandBorders = (ctx: CanvasRenderingContext2D) => {
-      // Draw left border
-      const leftImg = imagesRef.current.get("/boat/landborder_left_1.png");
-      if (leftImg) {
-        for (
-          let y = BORDER_TILE_SIZE;
-          y < CANVAS_HEIGHT - BORDER_TILE_SIZE;
-          y += BORDER_TILE_SIZE
-        ) {
-          ctx.drawImage(leftImg, 0, y, BORDER_TILE_SIZE, BORDER_TILE_SIZE);
-        }
-      }
-
-      // Draw right border
-      const rightImg = imagesRef.current.get("/boat/landborder_right_1.png");
-      if (rightImg) {
-        for (let y = 0; y < CANVAS_HEIGHT; y += BORDER_TILE_SIZE) {
-          ctx.drawImage(
-            rightImg,
-            CANVAS_WIDTH - BORDER_TILE_SIZE,
-            y,
-            BORDER_TILE_SIZE,
-            BORDER_TILE_SIZE
-          );
-        }
-      }
-
-      // Draw top border
-      const topImg = imagesRef.current.get("/boat/landborder_top_1.png");
-      if (topImg) {
-        ctx.drawImage(
-          imagesRef.current.get("/boat/landborder_topleft.png")!,
-          0,
-          0,
-          BORDER_TILE_SIZE,
-          BORDER_TILE_SIZE
-        );
-        for (
-          let x = BORDER_TILE_SIZE;
-          x < CANVAS_WIDTH - BORDER_TILE_SIZE;
-          x += BORDER_TILE_SIZE
-        ) {
-          ctx.drawImage(topImg, x, 0, BORDER_TILE_SIZE, BORDER_TILE_SIZE);
-        }
-        ctx.drawImage(
-          imagesRef.current.get("/boat/landborder_topright.png")!,
-          CANVAS_WIDTH - BORDER_TILE_SIZE,
-          0,
-          BORDER_TILE_SIZE,
-          BORDER_TILE_SIZE
-        );
-      }
-
-      // Draw bottom border
-      const bottomImg = imagesRef.current.get("/boat/landborder_bottom_1.png");
-      if (bottomImg) {
-        ctx.drawImage(
-          imagesRef.current.get("/boat/landborder_bottomleft.png")!,
-          0,
-          CANVAS_HEIGHT - BORDER_TILE_SIZE,
-          BORDER_TILE_SIZE,
-          BORDER_TILE_SIZE
-        );
-        for (
-          let x = BORDER_TILE_SIZE;
-          x < CANVAS_WIDTH - BORDER_TILE_SIZE;
-          x += BORDER_TILE_SIZE
-        ) {
-          ctx.drawImage(
-            bottomImg,
-            x,
-            CANVAS_HEIGHT - BORDER_TILE_SIZE,
-            BORDER_TILE_SIZE,
-            BORDER_TILE_SIZE
-          );
-        }
-        ctx.drawImage(
-          imagesRef.current.get("/boat/landborder_bottomright.png")!,
-          CANVAS_WIDTH - BORDER_TILE_SIZE,
-          CANVAS_HEIGHT - BORDER_TILE_SIZE,
-          BORDER_TILE_SIZE,
-          BORDER_TILE_SIZE
-        );
-      }
-    };
-
-    const drawRocks = (ctx: CanvasRenderingContext2D, rocks: Rock[]) => {
-      for (const rock of rocks) {
-        const imagePath = `/boat/${rock.variant}${
-          rock.hasMoss ? "_moss" : ""
-        }.png`;
-        const rockImg = imagesRef.current.get(imagePath);
-        if (rockImg) {
-          const size = rock.radius * 2;
-          ctx.save();
-          ctx.translate(rock.x, rock.y);
-          ctx.rotate(rock.rotation);
-          ctx.drawImage(rockImg, -rock.radius, -rock.radius, size, size);
-          ctx.restore();
-        }
-      }
-    };
-
     const drawDucks = (ctx: CanvasRenderingContext2D, ducks: Duck[]) => {
       const duckImg = imagesRef.current.get("/boat/duck.png");
       if (!duckImg) return;
@@ -1237,6 +1271,9 @@ const BoatGame = () => {
       }
     };
 
+    let frameCount = 0;
+    let lastFpsTime = performance.now();
+
     const loop = (time: DOMHighResTimeStamp) => {
       if (stateRef.current.lastTick === 0) {
         stateRef.current.lastTick = time;
@@ -1246,6 +1283,13 @@ const BoatGame = () => {
 
       const deltaTime = time - stateRef.current.lastTick;
       stateRef.current.lastTick = time;
+
+      frameCount++;
+      if (time - lastFpsTime > 1000) {
+        console.log(`FPS: ${frameCount}`);
+        frameCount = 0;
+        lastFpsTime = time;
+      }
 
       update(deltaTime);
       render();
@@ -1259,7 +1303,7 @@ const BoatGame = () => {
       window.cancelAnimationFrame(animationFrameId);
     };
   }, [
-    loading,
+    imagesLoading,
     playSound,
     moveBoats,
     handleBoatDuckCollision,
@@ -1339,7 +1383,10 @@ const BoatGame = () => {
       pausedTime: 0,
       latestDuckId: 0,
     };
-  }, [numActiveTeams]);
+
+    // Map might have changed → rebuild static layer
+    buildStaticLayer();
+  }, [numActiveTeams, buildStaticLayer]);
 
   // Add pause/resume functionality
   const pauseResume = useCallback(() => {
@@ -1455,7 +1502,7 @@ const BoatGame = () => {
               <div className="border-t border-gray-600 pt-8">
                 <button
                   className="bg-blue-500 hover:bg-blue-600 text-white text-sm px-4 py-2 rounded disabled:opacity-50 whitespace-nowrap cursor-pointer w-full"
-                  disabled={loading}
+                  disabled={imagesLoading}
                   onClick={() => {
                     if (
                       stateRef.current.phase === "not_started" ||

@@ -1271,9 +1271,6 @@ const BoatGame = () => {
       }
     };
 
-    let frameCount = 0;
-    let lastFpsTime = performance.now();
-
     const loop = (time: DOMHighResTimeStamp) => {
       if (stateRef.current.lastTick === 0) {
         stateRef.current.lastTick = time;
@@ -1283,13 +1280,6 @@ const BoatGame = () => {
 
       const deltaTime = time - stateRef.current.lastTick;
       stateRef.current.lastTick = time;
-
-      frameCount++;
-      if (time - lastFpsTime > 1000) {
-        console.log(`FPS: ${frameCount}`);
-        frameCount = 0;
-        lastFpsTime = time;
-      }
 
       update(deltaTime);
       render();

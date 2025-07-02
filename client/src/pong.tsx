@@ -118,12 +118,14 @@ const INITIAL_BALL_SPEED = 0.18 * SCALE_FACTOR;
 
 // Game mechanics
 const JOYSTICK_SENSITIVITY = 0.6 * SCALE_FACTOR;
-const COLLISION_EXTENSION = 1000 * SCALE_FACTOR; // Helps prevent tunneling at high speeds
 
 // Unscaled constants
 const STARTING_LIVES = 2;
 const SPEED_MULTIPLIER = 1.1;
 const MAX_SPEED = 5 * INITIAL_BALL_SPEED;
+
+// Collision thickness for paddle (1–2 px front face). Keeps visuals thick but collisions thin.
+const PADDLE_COLLISION_THICKNESS = 2 * SCALE_FACTOR;
 
 // ============================================================================
 // CONSTANTS - GAME DATA
@@ -793,21 +795,44 @@ const Quadrapong = () => {
 
       // Helper function to add an effective paddle to the array
       const addEffectivePaddle = (start: number, end: number) => {
+        let x1: number, x2: number, y1: number, y2: number;
+
         if (position === "left" || position === "right") {
           // For vertical paddles, x is fixed, y varies
-          const x1 = playersOfTeam[start].x;
-          const x2 = x1 + PADDLE_THICKNESS;
-          const y1 = playersOfTeam[start].y;
-          const y2 = playersOfTeam[end].y + playersOfTeam[end].paddleLength;
-          effectivePaddles.push([x1, x2, y1, y2]);
+          if (position === "left") {
+            // Use the rightmost edge of the left paddle
+            x1 =
+              playersOfTeam[start].x +
+              PADDLE_THICKNESS -
+              PADDLE_COLLISION_THICKNESS;
+          } else {
+            // Right paddle – use the leftmost edge
+            x1 = playersOfTeam[start].x;
+          }
+
+          x2 = x1 + PADDLE_COLLISION_THICKNESS;
+          y1 = playersOfTeam[start].y;
+          y2 = playersOfTeam[end].y + playersOfTeam[end].paddleLength;
         } else {
           // For horizontal paddles, y is fixed, x varies
-          const x1 = playersOfTeam[start].x;
-          const x2 = playersOfTeam[end].x + playersOfTeam[end].paddleLength;
-          const y1 = playersOfTeam[start].y;
-          const y2 = y1 + PADDLE_THICKNESS;
-          effectivePaddles.push([x1, x2, y1, y2]);
+          x1 = playersOfTeam[start].x;
+          x2 = playersOfTeam[end].x + playersOfTeam[end].paddleLength;
+
+          if (position === "top") {
+            // Bottom edge of the top paddle
+            y1 =
+              playersOfTeam[start].y +
+              PADDLE_THICKNESS -
+              PADDLE_COLLISION_THICKNESS;
+          } else {
+            // Top edge of the bottom paddle
+            y1 = playersOfTeam[start].y;
+          }
+
+          y2 = y1 + PADDLE_COLLISION_THICKNESS;
         }
+
+        effectivePaddles.push([x1, x2, y1, y2]);
       };
 
       let overlapStartIndex: number = 0;
@@ -838,18 +863,7 @@ const Quadrapong = () => {
       }
 
       // For each effective paddle, check if the ball is colliding with it
-      for (let [pl, pr, pt, pb] of effectivePaddles) {
-        // Avoid tunneling effect from fast balls
-        if (position === "left") {
-          pl -= COLLISION_EXTENSION;
-        } else if (position === "right") {
-          pr += COLLISION_EXTENSION;
-        } else if (position === "top") {
-          pt -= COLLISION_EXTENSION;
-        } else if (position === "bottom") {
-          pb += COLLISION_EXTENSION;
-        }
-
+      for (const [pl, pr, pt, pb] of effectivePaddles) {
         // Check if ball is colliding with paddle
         if (bl < pr && br > pl && bt < pb && bb > pt) {
           // Reset ball to 'front' of paddle
@@ -907,23 +921,12 @@ const Quadrapong = () => {
 
   const handleWallCollision = useCallback(
     (ball: Ball, wall: Wall) => {
-      let [wl, wr, wt, wb] = [
+      const [wl, wr, wt, wb] = [
         wall.x,
         wall.x + wall.width,
         wall.y,
         wall.y + wall.height,
       ];
-
-      // Avoid tunneling effect from fast balls
-      if (wall.position === "left") {
-        wl -= COLLISION_EXTENSION;
-      } else if (wall.position === "right") {
-        wr += COLLISION_EXTENSION;
-      } else if (wall.position === "top") {
-        wt -= COLLISION_EXTENSION;
-      } else if (wall.position === "bottom") {
-        wb += COLLISION_EXTENSION;
-      }
 
       const [bl, br, bt, bb] = [
         ball.x,

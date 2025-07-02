@@ -1096,7 +1096,7 @@ const NinjaRun = () => {
 
   const checkGameOver = useCallback(() => {
     const state = gameState.current;
-    if (state.phase === "game_over") {
+    if (state.phase !== "in_progress") {
       return;
     }
 

@@ -88,7 +88,6 @@ function kickPlayer(wsId: string): string {
     })
   );
   db.kickedPlayerIds.add(entry.player.id);
-  entry.ws.close();
   db.wsPlayerMap.delete(wsId);
 
   return entry.player.id;

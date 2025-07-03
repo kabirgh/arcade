@@ -624,8 +624,12 @@ if (process.env.NODE_ENV === "production") {
     .get("*", ({ html }) => html(indexHTML));
 }
 
+// Binds to all interfaces
 app.listen(config.server.port);
 
 logInfo(
-  `🦊 Elysia is running at http://${app.server?.hostname}:${app.server?.port}`
+  `🦊 Elysia is running at http://${config.server.host}:${config.server.port}`
+);
+logInfo(
+  `🛠️ The admin page is available at http://${config.server.host}:${config.server.port}/admin`
 );

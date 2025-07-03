@@ -19,8 +19,6 @@ import {
 } from "../shared/types/domain/codenames";
 import { shuffle } from "../shared/utils";
 
-const client = new OpenAI({ apiKey: process.env["OPENAI_API_KEY"] });
-
 const words = await Bun.file("./server/words.txt").text();
 
 const makePrompt = (gameState: GameState) => {
@@ -77,6 +75,8 @@ const makePrompt = (gameState: GameState) => {
 };
 
 class CodenamesGame {
+  private client: OpenAI | null = null;
+
   private gameState: GameState = {
     board: [],
     turn: "red",
@@ -91,6 +91,13 @@ class CodenamesGame {
     this.startGame();
   }
 
+  private getClient(): OpenAI {
+    if (!this.client) {
+      this.client = new OpenAI({ apiKey: process.env["OPENAI_API_KEY"] });
+    }
+    return this.client;
+  }
+
   public getGameState(): GameState {
     return this.gameState;
   }
@@ -98,7 +105,7 @@ class CodenamesGame {
   public async *askLlm(): AsyncGenerator<CodenamesAskLlmResponse> {
     console.log("prompt", makePrompt(this.gameState));
 
-    const stream = await client.responses.create({
+    const stream = await this.getClient().responses.create({
       model: "o4-mini-2025-04-16",
       reasoning: { effort: "low", summary: "auto" },
       input: makePrompt(this.gameState),

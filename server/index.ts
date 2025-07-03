@@ -145,6 +145,11 @@ const handleWebSocketMessage = (ws: ElysiaWS, message: WebSocketMessage) => {
 
         case MessageType.LEAVE: {
           const player = db.wsPlayerMap.get(ws.id)?.player;
+          if (player && player.name !== message.payload.playerName) {
+            logWarn(
+              `Player name in message payload ${message.payload.playerName} does not match player name in websocket map ${player?.name}. Using player from websocket map`
+            );
+          }
           if (player) {
             db.wsPlayerMap.delete(ws.id);
             db.kickedPlayerIds.delete(player.id);

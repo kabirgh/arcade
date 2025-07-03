@@ -1,9 +1,14 @@
-function logInfo(...data: any[]) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function logInfo(...data: any[]) {
   console.log(`[${new Date().toLocaleTimeString()}]`, ...data);
 }
 
-function logError(...data: any[]) {
-  console.error(`[${new Date().toLocaleTimeString()}]`, ...data);
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function logWarn(...data: any[]) {
+  console.warn(`[${new Date().toLocaleTimeString()}]`, ...data);
 }
 
-export { logError, logInfo };
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export function logError(...data: any[]) {
+  console.error(`[${new Date().toLocaleTimeString()}]`, ...data);
+}

@@ -22,7 +22,10 @@ export type PlayerJoinMessage = Static<typeof PlayerJoinMessageType>;
 const PlayerLeaveMessageType = t.Object({
   channel: t.Literal(Channel.PLAYER),
   messageType: t.Literal(MessageType.LEAVE),
-  // No payload as relevant player is derived from websocket connection map
+  payload: t.Object({
+    // Name is used only for logging
+    playerName: t.String(),
+  }),
 });
 export type PlayerLeaveMessage = Static<typeof PlayerLeaveMessageType>;
 

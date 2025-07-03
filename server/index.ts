@@ -25,7 +25,7 @@ import {
   handleCodenamesState,
 } from "./codenames";
 import DB from "./db";
-import { logError, logInfo } from "./utils";
+import { logError, logInfo, logWarn } from "./utils";
 
 const db = new DB();
 
@@ -61,10 +61,21 @@ function broadcastAllPlayers(): PlayerListAllMessage {
 
 function kickPlayer(wsId: string): string {
   const entry = db.wsPlayerMap.get(wsId);
-  if (!entry || !entry.player || !entry.ws) {
-    logError("Entry/player/ws not found:", wsId);
+
+  if (!entry) {
+    logError("No entry found for websocket ID:", wsId);
     return "";
   }
+  if (!entry.ws) {
+    logError("No websocket found for websocket ID:", wsId);
+    return "";
+  }
+  // This can happen if the client is on the join screen and hasn't created a player yet
+  if (!entry.player) {
+    logWarn("No player found for websocket ID:", wsId);
+    return "";
+  }
+
   // Emit a message to the client to clear localstorage
   // and prevent the player from rejoining
   entry.ws.send(
@@ -76,8 +87,10 @@ function kickPlayer(wsId: string): string {
       },
     })
   );
-  db.wsPlayerMap.delete(wsId);
   db.kickedPlayerIds.add(entry.player.id);
+  entry.ws.close();
+  db.wsPlayerMap.delete(wsId);
+
   return entry.player.id;
 }
 
@@ -263,6 +276,9 @@ const app = new Elysia()
       }
       // Then start a new session
       const sessionData = db.startNewSession();
+
+      broadcastAllPlayers();
+
       return {
         ok: true as const,
         data: sessionData,

@@ -69,19 +69,23 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({
   }, []);
 
   const clearSessionPlayer = useCallback(() => {
+    const playerName = player?.name ?? "";
     setPlayer(null);
     localStorage.removeItem("player");
     if (readyState === ReadyState.OPEN) {
       publish({
         channel: Channel.PLAYER,
         messageType: MessageType.LEAVE,
+        payload: {
+          playerName: playerName,
+        },
       });
     } else {
       localStorage.setItem("playerDueToLeave", "true");
     }
-  }, [publish, readyState]);
+  }, [publish, readyState, player]);
 
-  useEffect(() => {
+  const refreshSessionId = useCallback(() => {
     apiFetch(APIRoute.SessionId).then(({ sessionId: fetchedSessionId }) => {
       const storedSessionId = localStorage.getItem("sessionId");
       // If its a new session, clear player data
@@ -93,6 +97,16 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({
       setSessionValidated(true);
     });
   }, [clearSessionPlayer]);
+
+  // Refresh session ID on mount
+  useEffect(() => {
+    refreshSessionId();
+
+    return () => {
+      // Require session validation on next mount
+      setSessionValidated(false);
+    };
+  }, [refreshSessionId]);
 
   // Handles:
   // 1. setSessionPlayer - sends JOIN message to server.
@@ -115,26 +129,32 @@ export const PlayerProvider: React.FC<{ children: ReactNode }> = ({
   useEffect(() => {
     const playerDueToLeave = localStorage.getItem("playerDueToLeave");
     if (readyState === ReadyState.OPEN && playerDueToLeave === "true") {
+      setPlayer(null);
       publish({
         channel: Channel.PLAYER,
         messageType: MessageType.LEAVE,
+        payload: {
+          playerName: player?.name ?? "",
+        },
       });
       localStorage.removeItem("playerDueToLeave");
     }
-  }, [publish, readyState]);
+  }, [publish, readyState, player]);
 
   // Remove player if kicked by server
   useEffect(() => {
     const unsubscribe = subscribe(Channel.PLAYER, (message) => {
       if (message.messageType === MessageType.KICK) {
         clearSessionPlayer();
+        // Refresh session ID in case the server has started a new session
+        refreshSessionId();
         // Don't care about publishing LEAVE beause server has already removed the player
         setLocation(PlayerScreen.Join);
       }
     });
 
     return unsubscribe;
-  }, [clearSessionPlayer, subscribe, setLocation]);
+  }, [clearSessionPlayer, refreshSessionId, subscribe, setLocation]);
 
   return (
     <PlayerContext.Provider

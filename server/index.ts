@@ -274,7 +274,7 @@ const app = new Elysia()
       for (const wsId of db.wsPlayerMap.keys()) {
         kickPlayer(wsId);
       }
-      // Then start a new session
+      // Then start a new session (this clears the player map)
       const sessionData = db.startNewSession();
 
       broadcastAllPlayers();

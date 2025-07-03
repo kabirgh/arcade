@@ -217,7 +217,7 @@ class DB {
   public endSession(): void {
     this.db.exec("DELETE FROM session");
     this.wsPlayerMap.clear();
-    this.kickedPlayerIds.clear();
+    // Keep kicked player ids in case clients didn't receive the KICK message
     this.screen = PlayerScreen.Buzzer;
   }
 }

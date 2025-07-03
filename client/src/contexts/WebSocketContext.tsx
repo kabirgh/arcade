@@ -66,6 +66,8 @@ export const WebSocketProvider: React.FC<{ children: React.ReactNode }> = ({
       );
       return true; // Instructs react-use-websocket to attempt reconnection
     },
+    reconnectAttempts: 100,
+    reconnectInterval: 3000,
   });
 
   // Handle incoming messages from react-use-websocket

@@ -618,28 +618,6 @@ const BoatGame = () => {
     return unsubscribe;
   }, [subscribe]);
 
-  // Subscribe to duck spawn interval updates from WebSocket
-  useEffect(() => {
-    const unsubscribe = subscribe(Channel.GAME, (message: WebSocketMessage) => {
-      if (message.messageType === MessageType.DUCK_SPAWN_INTERVAL) {
-        stateRef.current.duckSpawnInterval = message.payload.intervalMs;
-      }
-    });
-
-    return unsubscribe;
-  }, [subscribe]);
-
-  // Subscribe to game phase updates from WebSocket
-  useEffect(() => {
-    const unsubscribe = subscribe(Channel.GAME, (message: WebSocketMessage) => {
-      if (message.messageType === MessageType.BOAT_ADD_TIME) {
-        setGameDuration((prev) => prev + message.payload.timeSeconds * 1000);
-      }
-    });
-
-    return unsubscribe;
-  }, [subscribe]);
-
   // =================== INPUT HANDLING ===================
   // Subscribe to joystick move updates from WebSocket
   useEffect(() => {
@@ -1392,6 +1370,21 @@ const BoatGame = () => {
       stateRef.current.phase = "in_progress";
     }
   }, []);
+
+  // Subscribe to game messages from WebSocket
+  useEffect(() => {
+    const unsubscribe = subscribe(Channel.GAME, (message: WebSocketMessage) => {
+      if (message.messageType === MessageType.START_GAME) {
+        start();
+      } else if (message.messageType === MessageType.DUCK_SPAWN_INTERVAL) {
+        stateRef.current.duckSpawnInterval = message.payload.intervalMs;
+      } else if (message.messageType === MessageType.BOAT_ADD_TIME) {
+        setGameDuration((prev) => prev + message.payload.timeSeconds * 1000);
+      }
+    });
+
+    return unsubscribe;
+  }, [start, subscribe]);
 
   // =================== RENDER ===================
   return (

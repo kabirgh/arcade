@@ -719,6 +719,16 @@ const NinjaRun = () => {
   }, [playSound]);
 
   useEffect(() => {
+    const unsubscribe = subscribe(Channel.GAME, (message: WebSocketMessage) => {
+      if (message.messageType === MessageType.START_GAME) {
+        start();
+      }
+    });
+
+    return unsubscribe;
+  }, [start, subscribe]);
+
+  useEffect(() => {
     // Preload images to avoid flickering
     for (const animation of Object.values(ANIMATIONS)) {
       const img = new Image();

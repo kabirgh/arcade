@@ -1388,6 +1388,16 @@ const Quadrapong = () => {
     setupWalls();
   }, [resetGameState, setupWalls]);
 
+  useEffect(() => {
+    const unsubscribe = subscribe(Channel.GAME, (message: WebSocketMessage) => {
+      if (message.messageType === MessageType.START_GAME) {
+        start();
+      }
+    });
+
+    return unsubscribe;
+  }, [start, subscribe]);
+
   // =================== RENDER ===================
   return (
     <div className="flex flex-col items-center justify-center h-screen bg-gray-950">

@@ -205,10 +205,8 @@ const handleWebSocketMessage = (ws: ElysiaWS, message: WebSocketMessage) => {
 
     case Channel.GAME:
       switch (message.messageType) {
+        case MessageType.START_GAME:
         case MessageType.DUCK_SPAWN_INTERVAL:
-          sendHostMessage(message);
-          break;
-
         case MessageType.BOAT_ADD_TIME:
           sendHostMessage(message);
           break;

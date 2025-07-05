@@ -91,6 +91,12 @@ const NavigateHostMessageType = t.Object({
 });
 export type NavigateHostMessage = Static<typeof NavigateHostMessageType>;
 
+const StartGameMessageType = t.Object({
+  channel: t.Literal(Channel.GAME),
+  messageType: t.Literal(MessageType.START_GAME),
+});
+export type StartGameMessage = Static<typeof StartGameMessageType>;
+
 const SetDuckSpawnIntervalMessageType = t.Object({
   channel: t.Literal(Channel.GAME),
   messageType: t.Literal(MessageType.DUCK_SPAWN_INTERVAL),
@@ -122,6 +128,7 @@ export const WebSocketMessageType = t.Union([
   ClaimHostMessageType,
   NavigatePlayerMessageType,
   NavigateHostMessageType,
+  StartGameMessageType,
   SetDuckSpawnIntervalMessageType,
   BoatAddTimeMessageType,
 ]);

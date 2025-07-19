@@ -1448,11 +1448,11 @@ const BoatGame = () => {
                         setGameDuration(parseInt(e.target.value))
                       }
                     >
+                      <option value={30 * 1000}>30 seconds</option>
                       <option value={60 * 1000}>1 minute</option>
+                      <option value={90 * 1000}>1.5 minutes</option>
                       <option value={2 * 60 * 1000}>2 minutes</option>
                       <option value={3 * 60 * 1000}>3 minutes</option>
-                      <option value={5 * 60 * 1000}>5 minutes</option>
-                      <option value={10 * 60 * 1000}>10 minutes</option>
                     </select>
                   </div>
                 )}

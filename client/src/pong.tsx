@@ -319,8 +319,8 @@ const calculatePaddleLengthsAndCoordinates = (
   numPlayers: number
 ): { paddleLength: number; coordinates: number[] } => {
   // Custom paddle lengths for different numbers of players
-  // multiplying lengths: approx increase by 10px for total size. 80, 90, 100, 110, 120, 130
-  const paddleLengths = [80, 45, 33, 28, 24, 22];
+  // multiplying lengths: approx increase by 15px for total size. 90, 105, 120, 135, 150, 165
+  const paddleLengths = [90, 52, 40, 34, 30, 28];
   const paddleLength =
     paddleLengths[Math.min(numPlayers - 1, paddleLengths.length - 1)];
 

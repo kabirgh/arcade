@@ -4,6 +4,7 @@
   "type": "module",
   "module": "src/index.js",
   "scripts": {
+    "postinstall": "bun install --cwd client",
     "dev": "cross-env NODE_ENV=development bun run qr && cross-env NODE_ENV=development concurrently -k -n server,client \"bun --watch server/index.ts\" \"bun run --cwd client dev\"",
     "build:client": "bun run --cwd client build",
     "build:server": "bun build --compile --minify-whitespace --minify-syntax --target bun --outfile app ./server/index.ts",

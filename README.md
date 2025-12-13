@@ -22,7 +22,8 @@ Players use their phone to press a big red button to buzz in to answer quiz ques
     - [Multiplayer arcade games](#multiplayer-arcade-games)
   - [Installation \& setup](#installation--setup)
     - [Prerequisites](#prerequisites)
-    - [Instructions](#instructions)
+    - [Local mode setup](#local-mode-setup)
+    - [Internet mode setup (remote play)](#internet-mode-setup-remote-play)
   - [Admin controls](#admin-controls)
 
 ## Features
@@ -58,14 +59,19 @@ Avoid obstacles as the course speeds up. Players press the big red button to jum
 ### Prerequisites
 - The [Bun](https://bun.sh) javascript runtime
 - A computer to run the server
-- A WiFi network connection, ideally one that lets you set up a static IP address for the server computer
 - A display device (TV/projector) for the main game screen
 - Mobile phones for players
 
-> [!NOTE]
-> This project does not have internet-grade security. I recommend only exposing the server to your local WiFi network.
+**For local mode (LAN game nights):**
+- A WiFi network connection, ideally one that lets you set up a static IP address for the server computer
 
-### Instructions
+**For internet mode (remote play):**
+- A VPS or cloud server with a public IP
+- A domain name pointing to your server
+- TLS certificates (free from Let's Encrypt)
+
+### Local mode setup
+
 1. **Clone and install dependencies**
 
    ```bash
@@ -77,6 +83,18 @@ Avoid obstacles as the course speeds up. Players press the big red button to jum
 1. **Set up configuration**
 
    Update `config.ts` with your WiFi credentials and server IP address. This is used to generate QR codes that players can scan to connect to the WiFi and join the game.
+
+   ```typescript
+   mode: "local",
+   wifi: {
+     ssid: "YourWiFiName",
+     password: "YourWiFiPassword",
+   },
+   server: {
+     host: "192.168.1.xxx", // Your server's local IP
+     port: 3001,
+   },
+   ```
 
 1. **Start the server**
 
@@ -91,6 +109,54 @@ Avoid obstacles as the course speeds up. Players press the big red button to jum
 1. **Navigate between screens using the admin controls**
 
    Open the admin panel on your main display at `http://{server.host}:{server.port}/admin` to use the admin controls.
+
+### Internet mode setup (remote play)
+
+1. **Clone and install dependencies** (same as local mode)
+
+1. **Obtain TLS certificates**
+
+   Use Let's Encrypt with certbot to get free certificates:
+   ```bash
+   sudo certbot certonly --standalone -d arcade.yourdomain.com
+   ```
+
+   Copy the certificates to your project:
+   ```bash
+   mkdir certs
+   sudo cp /etc/letsencrypt/live/arcade.yourdomain.com/fullchain.pem ./certs/
+   sudo cp /etc/letsencrypt/live/arcade.yourdomain.com/privkey.pem ./certs/
+   sudo chown $USER ./certs/*.pem
+   ```
+
+1. **Update configuration for internet mode**
+
+   ```typescript
+   mode: "internet",
+   internet: {
+     domain: "arcade.yourdomain.com",
+     port: 443,
+     tls: {
+       certPath: "./certs/fullchain.pem",
+       keyPath: "./certs/privkey.pem",
+     },
+   },
+   ```
+
+1. **Start the server**
+
+   ```bash
+   bun prod
+   ```
+
+   Note: Port 443 may require root privileges. You can either:
+   - Run with `sudo bun prod`
+   - Use a higher port (e.g., 8443) and set up a reverse proxy
+   - Use `setcap` to allow Bun to bind to port 443
+
+1. **Connect devices**
+
+   Share your URL (`https://arcade.yourdomain.com`) with friends. They can open it directly or scan the QR code on the lobby screen.
 
 ## Admin controls
 

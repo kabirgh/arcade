@@ -7,11 +7,28 @@ import React, {
 } from "react";
 import useWebSocket, { ReadyState } from "react-use-websocket";
 
+import config from "../../../config";
 import type { WebSocketMessage } from "../../../shared/types/api/websocket";
 import { Channel } from "../../../shared/types/domain/websocket";
 
-// Use relative URL for WebSocket connection
-const WS_URL = `ws://${window.location.hostname}:3001/ws`;
+// Determine WebSocket URL based on environment and hosting mode
+function getWebSocketUrl(): string {
+  const isDev = import.meta.env.DEV;
+
+  if (isDev) {
+    // Development: connect directly to backend server
+    const port =
+      config.mode === "internet" ? config.internet.port : config.server.port;
+    const protocol = config.mode === "internet" ? "wss:" : "ws:";
+    return `${protocol}//${window.location.hostname}:${port}/ws`;
+  } else {
+    // Production: server serves everything on same origin
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    return `${protocol}//${window.location.host}/ws`;
+  }
+}
+
+const WS_URL = getWebSocketUrl();
 
 type WebSocketCallback = (message: WebSocketMessage) => void;
 

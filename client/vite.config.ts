@@ -1,5 +1,6 @@
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
+import fs from "fs";
 import { defineConfig } from "vite";
 
 import config from "../config.ts";
@@ -10,11 +11,33 @@ export default defineConfig({
   server: {
     proxy: {
       "/api": {
-        target: `http://localhost:${config.server.port}`,
+        target:
+          config.mode === "internet"
+            ? `https://localhost:${config.internet.port}`
+            : `http://localhost:${config.server.port}`,
         changeOrigin: true,
+        secure: false, // Allow self-signed certs in dev
+      },
+      "/ws": {
+        target:
+          config.mode === "internet"
+            ? `wss://localhost:${config.internet.port}`
+            : `ws://localhost:${config.server.port}`,
+        ws: true,
+        secure: false,
       },
     },
     host: true, // bind to all interfaces including 0.0.0.0
     port: config.vite.port,
+    // Enable HTTPS in dev mode when using internet mode (for testing wss://)
+    ...(config.mode === "internet" &&
+    fs.existsSync(config.internet.tls.certPath)
+      ? {
+          https: {
+            key: fs.readFileSync(config.internet.tls.keyPath),
+            cert: fs.readFileSync(config.internet.tls.certPath),
+          },
+        }
+      : {}),
   },
 });

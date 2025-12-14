@@ -666,13 +666,13 @@ if (config.mode === "internet") {
   // Local mode: HTTP only
   app.listen({
     hostname: "0.0.0.0",
-    port: config.server.port,
+    port: config.local.server.port,
   });
 
   logInfo(
-    `🦊 Elysia is running at http://${config.server.host}:${config.server.port}`
+    `🦊 Elysia is running at http://${config.local.server.host}:${config.local.server.port}`
   );
   logInfo(
-    `🛠️ The admin page is available at http://${config.server.host}:${config.server.port}/admin`
+    `🛠️ The admin page is available at http://${config.local.server.host}:${config.local.server.port}/admin`
   );
 }

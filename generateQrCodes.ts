@@ -6,7 +6,7 @@ import config from "./config";
 if (config.mode === "local") {
   QRCode.toFile(
     `./client/public/qr-wifi.png`,
-    `WIFI:S:${config.wifi.ssid};T:WPA;P:${config.wifi.password};;`,
+    `WIFI:S:${config.local.wifi.ssid};T:WPA;P:${config.local.wifi.password};;`,
     {
       width: 800,
       margin: 2,
@@ -30,9 +30,9 @@ if (config.mode === "internet") {
   // Local mode: use IP address with HTTP
   const port =
     process.env.NODE_ENV === "production"
-      ? config.server.port
-      : config.vite.port;
-  joinUrl = `http://${config.server.host}:${port}/join`;
+      ? config.local.server.port
+      : config.local.vite.port;
+  joinUrl = `http://${config.local.server.host}:${port}/join`;
 }
 
 QRCode.toFile(

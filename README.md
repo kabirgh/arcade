@@ -22,8 +22,8 @@ Players use their phone to press a big red button to buzz in to answer quiz ques
     - [Multiplayer arcade games](#multiplayer-arcade-games)
   - [Installation \& setup](#installation--setup)
     - [Prerequisites](#prerequisites)
-    - [Local mode setup](#local-mode-setup)
-    - [Internet mode setup (remote play)](#internet-mode-setup-remote-play)
+    - [Local network setup](#local-network-setup)
+    - [Internet setup](#internet-setup)
   - [Admin controls](#admin-controls)
 
 ## Features
@@ -58,105 +58,115 @@ Avoid obstacles as the course speeds up. Players press the big red button to jum
 
 ### Prerequisites
 - The [Bun](https://bun.sh) javascript runtime
-- A computer to run the server
+- A server
+  - This can be your computer, if running locally
+  - Or a VPS, if you want people to connect over the Internet
 - A display device (TV/projector) for the main game screen
 - Mobile phones for players
 
-**For local mode (LAN game nights):**
-- A WiFi network connection, ideally one that lets you set up a static IP address for the server computer
-
-**For internet mode (remote play):**
-- A VPS or cloud server with a public IP
-- A domain name pointing to your server
-- TLS certificates (free from Let's Encrypt)
-
-### Local mode setup
+### Local network setup
 
 1. **Clone and install dependencies**
 
-   ```bash
-   git clone https://github.com/kabirgh/arcade.git
-   cd arcade
-   bun install
-   ```
+```bash
+git clone https://github.com/kabirgh/arcade.git
+cd arcade
+bun install
+```
 
 1. **Set up configuration**
 
-   Update `config.ts` with your WiFi credentials and server IP address. This is used to generate QR codes that players can scan to connect to the WiFi and join the game.
+Copy the template config file:
 
-   ```typescript
-   mode: "local",
-   wifi: {
-     ssid: "YourWiFiName",
-     password: "YourWiFiPassword",
-   },
-   server: {
-     host: "192.168.1.xxx", // Your server's local IP
-     port: 3001,
-   },
-   ```
+```bash
+cp config.template.ts config.ts
+```
+
+Update `config.ts` with your WiFi credentials and server IP address. This is used to generate QR codes that players can scan to connect to the WiFi and join the game.
+
+```typescript
+mode: "local",
+local: {
+  wifi: {
+    ssid: "YourWiFiName",
+    password: "YourWiFiPassword",
+  },
+  server: {
+    host: "192.168.1.xxx", // Your server's local IP
+    port: 3001,
+  },
+},
+```
 
 1. **Start the server**
 
-   Use `bun prod` to compile and start the application.
+Use `bun prod` to compile and start the application.
 
-   If you're editing the code, you can start the server with `bun dev`. This starts the application with hot reloading.
+If you're editing the code, you can start the server with `bun dev`. This starts the application with hot reloading.
 
 1. **Connect devices**
 
-   Display the main game on your TV at `http://{server.host}:{server.port}`, where host and port are the values from `config.ts`. Players can join by scanning the QR code on the screen.
+Display the main game on your TV at `http://{server.host}:{server.port}`, where host and port are the values from `config.ts`. Players can join by scanning the QR code on the screen.
 
 1. **Navigate between screens using the admin controls**
 
-   Open the admin panel on your main display at `http://{server.host}:{server.port}/admin` to use the admin controls.
+Open the admin panel on your main display at `http://{server.host}:{server.port}/admin` to use the admin controls.
 
-### Internet mode setup (remote play)
+### Internet setup
 
-1. **Clone and install dependencies** (same as local mode)
+1. **Clone and install dependencies** (same as local network)
+
+1. **Set up configuration** 
+
+Copy the template config file:
+
+```bash
+cp config.template.ts config.ts
+```
+
+In `config.ts`, set the mode to `"internet"` and update the internet settings:
+
+```typescript
+mode: "internet",
+internet: {
+  domain: "arcade.yourdomain.com",
+  port: 443,
+  tls: {
+    certPath: "./certs/fullchain.pem",
+    keyPath: "./certs/privkey.pem",
+  },
+},
+```
 
 1. **Obtain TLS certificates**
 
-   Use Let's Encrypt with certbot to get free certificates:
-   ```bash
-   sudo certbot certonly --standalone -d arcade.yourdomain.com
-   ```
+Use Let's Encrypt with certbot to get free certificates:
+```bash
+sudo certbot certonly --standalone -d arcade.yourdomain.com
+```
 
-   Copy the certificates to your project:
-   ```bash
-   mkdir certs
-   sudo cp /etc/letsencrypt/live/arcade.yourdomain.com/fullchain.pem ./certs/
-   sudo cp /etc/letsencrypt/live/arcade.yourdomain.com/privkey.pem ./certs/
-   sudo chown $USER ./certs/*.pem
-   ```
-
-1. **Update configuration for internet mode**
-
-   ```typescript
-   mode: "internet",
-   internet: {
-     domain: "arcade.yourdomain.com",
-     port: 443,
-     tls: {
-       certPath: "./certs/fullchain.pem",
-       keyPath: "./certs/privkey.pem",
-     },
-   },
-   ```
+Copy the certificates to your project:
+```bash
+mkdir certs
+sudo cp /etc/letsencrypt/live/arcade.yourdomain.com/fullchain.pem ./certs/
+sudo cp /etc/letsencrypt/live/arcade.yourdomain.com/privkey.pem ./certs/
+sudo chown $USER ./certs/*.pem
+```
 
 1. **Start the server**
 
-   ```bash
-   bun prod
-   ```
+```bash
+bun prod
+```
 
-   Note: Port 443 may require root privileges. You can either:
-   - Run with `sudo bun prod`
-   - Use a higher port (e.g., 8443) and set up a reverse proxy
-   - Use `setcap` to allow Bun to bind to port 443
+Note: Port 443 may require root privileges. You can either:
+- Run with `sudo bun prod`
+- Use a higher port (e.g., 8443) and set up a reverse proxy
+- Use `setcap` to allow Bun to bind to port 443
 
 1. **Connect devices**
 
-   Share your URL (`https://arcade.yourdomain.com`) with friends. They can open it directly or scan the QR code on the lobby screen.
+Share your URL (`https://arcade.yourdomain.com`) with friends. They can open it directly or scan the QR code on the lobby screen.
 
 ## Admin controls
 

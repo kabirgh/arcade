@@ -18,7 +18,7 @@ function getWebSocketUrl(): string {
   if (isDev) {
     // Development: connect directly to backend server
     const port =
-      config.mode === "internet" ? config.internet.port : config.server.port;
+      config.mode === "internet" ? config.internet.port : config.local.server.port;
     const protocol = config.mode === "internet" ? "wss:" : "ws:";
     return `${protocol}//${window.location.hostname}:${port}/ws`;
   } else {

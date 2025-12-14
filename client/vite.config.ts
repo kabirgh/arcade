@@ -14,7 +14,7 @@ export default defineConfig({
         target:
           config.mode === "internet"
             ? `https://localhost:${config.internet.port}`
-            : `http://localhost:${config.server.port}`,
+            : `http://localhost:${config.local.server.port}`,
         changeOrigin: true,
         secure: false, // Allow self-signed certs in dev
       },
@@ -22,13 +22,13 @@ export default defineConfig({
         target:
           config.mode === "internet"
             ? `wss://localhost:${config.internet.port}`
-            : `ws://localhost:${config.server.port}`,
+            : `ws://localhost:${config.local.server.port}`,
         ws: true,
         secure: false,
       },
     },
     host: true, // bind to all interfaces including 0.0.0.0
-    port: config.vite.port,
+    port: config.local.vite.port,
     // Enable HTTPS in dev mode when using internet mode (for testing wss://)
     ...(config.mode === "internet" &&
     fs.existsSync(config.internet.tls.certPath)

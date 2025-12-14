@@ -11,6 +11,7 @@
 
 # config
 config.ts
+.env
 
 # images
 **/qr-wifi.png

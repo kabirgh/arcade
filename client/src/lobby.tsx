@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 
+import config from "../../config";
 import { APIRoute } from "../../shared/types/api/schema";
 import type { WebSocketMessage } from "../../shared/types/api/websocket";
 import { type Player, type Team } from "../../shared/types/domain/player";
@@ -303,15 +304,19 @@ export default function Home() {
         <div className="flex w-full h-full">
           {/* QR codes */}
           <div className="flex flex-col items-center justify-evenly w-[35%] h-full">
-            <div className="flex flex-col items-center justify-center w-[300px]">
-              <img src="/qr-wifi.png" width="85%" height="auto" />
-              <p className="text-lg mt-3 text-center">
-                1. Connect to the wifi network
-              </p>
-            </div>
+            {config.mode === "local" && (
+              <div className="flex flex-col items-center justify-center w-[300px]">
+                <img src="/qr-wifi.png" width="85%" height="auto" />
+                <p className="text-lg mt-3 text-center">
+                  1. Connect to the wifi network
+                </p>
+              </div>
+            )}
             <div className="flex flex-col items-center justify-center w-[300px]">
               <img src="/qr-joinurl.png" width="85%" height="auto" />
-              <p className="text-lg mt-3 text-center">2. Join the game</p>
+              <p className="text-lg mt-3 text-center">
+                {config.mode === "local" ? "2. Join the game" : "Scan to join"}
+              </p>
             </div>
           </div>
 

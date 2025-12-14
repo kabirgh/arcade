@@ -642,12 +642,37 @@ if (process.env.NODE_ENV === "production") {
     .get("*", ({ html }) => html(indexHTML));
 }
 
-// Binds to all interfaces
-app.listen(config.server.port);
+// Configure server based on hosting mode
+if (config.mode === "internet") {
+  // Internet mode: HTTPS with TLS
+  const tlsConfig = config.internet.tls;
 
-logInfo(
-  `🦊 Elysia is running at http://${config.server.host}:${config.server.port}`
-);
-logInfo(
-  `🛠️ The admin page is available at http://${config.server.host}:${config.server.port}/admin`
-);
+  app.listen({
+    hostname: "0.0.0.0",
+    port: config.internet.port,
+    tls: {
+      key: Bun.file(tlsConfig.keyPath),
+      cert: Bun.file(tlsConfig.certPath),
+    },
+  });
+
+  logInfo(
+    `🦊 Elysia is running at https://${config.internet.domain}:${config.internet.port}`
+  );
+  logInfo(
+    `🛠️ The admin page is available at https://${config.internet.domain}:${config.internet.port}/admin`
+  );
+} else {
+  // Local mode: HTTP only
+  app.listen({
+    hostname: "0.0.0.0",
+    port: config.local.server.port,
+  });
+
+  logInfo(
+    `🦊 Elysia is running at http://${config.local.server.host}:${config.local.server.port}`
+  );
+  logInfo(
+    `🛠️ The admin page is available at http://${config.local.server.host}:${config.local.server.port}/admin`
+  );
+}
